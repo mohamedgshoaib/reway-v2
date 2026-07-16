@@ -1,6 +1,7 @@
 "use client"
 
 import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox"
+import { CheckIcon, MinusIcon } from "@phosphor-icons/react"
 import type React from "react"
 
 import { cn } from "@/lib/utils"
@@ -27,37 +28,17 @@ export function Checkbox({
         ) => (
           <span {...props}>
             {state.indeterminate ? (
-              <svg
+              <MinusIcon
                 aria-hidden="true"
                 className="size-3.5 sm:size-3"
-                fill="none"
-                height="24"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="3"
-                viewBox="0 0 24 24"
-                width="24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M5.252 12h13.496" />
-              </svg>
+                weight="regular"
+              />
             ) : (
-              <svg
+              <CheckIcon
                 aria-hidden="true"
                 className="size-3.5 sm:size-3"
-                fill="none"
-                height="24"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="3"
-                viewBox="0 0 24 24"
-                width="24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M5.252 12.7 10.2 18.63 18.748 5.37" />
-              </svg>
+                weight="regular"
+              />
             )}
           </span>
         )}

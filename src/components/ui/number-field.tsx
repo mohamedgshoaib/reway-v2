@@ -1,7 +1,7 @@
 "use client"
 
 import { NumberField as NumberFieldPrimitive } from "@base-ui/react/number-field"
-import { MinusIcon, PlusIcon } from "lucide-react"
+import { MinusIcon, PlusIcon } from "@phosphor-icons/react"
 import * as React from "react"
 
 import { Label } from "@/components/ui/label"
@@ -66,7 +66,7 @@ export function NumberFieldDecrement({
       data-slot="number-field-decrement"
       {...props}
     >
-      <MinusIcon />
+      <MinusIcon weight="regular" />
     </NumberFieldPrimitive.Decrement>
   )
 }
@@ -84,7 +84,7 @@ export function NumberFieldIncrement({
       data-slot="number-field-increment"
       {...props}
     >
-      <PlusIcon />
+      <PlusIcon weight="regular" />
     </NumberFieldPrimitive.Increment>
   )
 }
