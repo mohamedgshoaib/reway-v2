@@ -106,8 +106,8 @@ The public brand does not lead with stack inventory. For implementation, use the
 
 - Local coss ui components under `src/components/ui`.
 - Base UI when a lower-level accessible primitive fits better than a coss ui component.
-- Phosphor Icons, Geist for body and brand typography, and a separately tokenized heading face (currently Fraunces).
-- The heading typeface will be deliberately revisited later; the semantic body/heading split must remain intact so that change stays centralized.
+- Phosphor Icons, and the Cal Sans family for typography: Cal Sans UI for body and brand text, Cal Sans Text for headings, and Cal Sans Geo for display, with JetBrains Mono for code.
+- Any future font change must preserve the semantic body/heading/display split so the change stays centralized.
 - Accessible, responsive, theme-aware UI.
 
 **Interactions and state**
