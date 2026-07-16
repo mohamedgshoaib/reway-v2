@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "endOfLine": "lf",
+  "semi": false,
+  "singleQuote": false,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "printWidth": 80,
+  "embeddedLanguageFormatting": "auto",
+  "sortImports": {},
+  "sortPackageJson": {
+    "sortScripts": true
+  },
+  "sortTailwindcss": {
+    "stylesheet": "src/styles.css",
+    "functions": ["cn", "cva"]
+  },
+  "ignorePatterns": [
+    "spec/**",
+    ".agents/skills/**",
+    ".claude/skills/**",
+    "src/routeTree.gen.ts",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock"
+  ]
+}

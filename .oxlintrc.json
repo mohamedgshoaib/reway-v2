@@ -1,0 +1,50 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "oxc",
+    "import",
+    "react",
+    "jsx-a11y",
+    "promise",
+    "node",
+    "vitest"
+  ],
+  "categories": {
+    "correctness": "error"
+  },
+  "options": {
+    "typeAware": true
+  },
+  "env": {
+    "builtin": true,
+    "browser": true,
+    "es2024": true,
+    "node": true
+  },
+  "ignorePatterns": [
+    "spec/**",
+    ".agents/skills/**",
+    ".claude/skills/**",
+    "src/routeTree.gen.ts",
+    "dist/**",
+    "coverage/**"
+  ],
+  "rules": {
+    "import/no-cycle": "off",
+    "typescript/array-type": "off",
+    "typescript/require-await": "off"
+  },
+  "overrides": [
+    {
+      "files": ["src/components/ui/**"],
+      "rules": {
+        "jsx-a11y/no-autofocus": "off",
+        "jsx-a11y/no-static-element-interactions": "off",
+        "jsx-a11y/prefer-tag-over-role": "off"
+      }
+    }
+  ]
+}
