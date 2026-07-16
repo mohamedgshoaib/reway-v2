@@ -1,6 +1,8 @@
 @import "tailwindcss";
-@import "@fontsource-variable/inter";
-@import "geist";
+@import "@calcom/cal-sans-ui/ui.css";
+@import "@calcom/cal-sans-ui/text.css";
+@import "@calcom/cal-sans-ui/geo.css";
+@import "@fontsource-variable/jetbrains-mono/wght.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -11,9 +13,10 @@
     --animate-toast-error-odd: toast-error-odd 0.28s cubic-bezier(0.5, 1, 0.89, 1);
     --animate-toast-error-even: toast-error-even 0.28s cubic-bezier(0.5, 1, 0.89, 1);
     --animate-caret-blink: 1s ease-out infinite caret-blink;
-    --font-heading: 'Inter', sans-serif;
-    --font-mono: 'Geist Mono', monospace;
-    --font-sans: 'Inter', sans-serif;
+    --font-heading: "Cal Sans Text";
+    --font-display: "Cal Sans Geo";
+    --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+    --font-sans: "Cal Sans UI";
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
     --color-sidebar-primary: var(--sidebar-primary);
@@ -239,6 +242,6 @@
     font-family: var(--font-mono);
     }
   html {
-    @apply font-sans font-mono;
+    @apply font-sans;
     }
 }

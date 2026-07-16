@@ -40,8 +40,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
-        {children}
+      <body className="relative">
+        <div className="relative isolate flex min-h-svh flex-col">
+          {children}
+        </div>
         <TanStackDevtools
           config={{
             position: "bottom-right",
