@@ -11,6 +11,9 @@ import {
   PencilSimpleIcon,
   ShareIcon,
   ShareNetworkIcon,
+  TextBolderIcon,
+  TextItalicIcon,
+  TextUnderlineIcon,
   TrashIcon,
 } from "@phosphor-icons/react"
 import { useHotkey } from "@tanstack/react-hotkeys"
@@ -135,8 +138,10 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   Tooltip,
+  TooltipCreateHandle,
   TooltipPopup,
   TooltipProvider,
   TooltipTrigger,
@@ -175,6 +180,11 @@ const commandGroups: CommandGroupData[] = [
   { value: "Suggestions", items: commandSuggestions },
   { value: "Commands", items: commandActions },
 ]
+
+// One handle shared by every trigger below (coss's p-tooltip-3 pattern):
+// a single Tooltip.Root slides/morphs between whichever trigger is active
+// instead of each trigger owning an independent popup.
+const formatTooltipHandle = TooltipCreateHandle<string>()
 
 function DialogDemo(): React.ReactElement {
   return (
@@ -813,6 +823,42 @@ function ContextMenuDemo(): React.ReactElement {
   )
 }
 
+function TooltipAnimatedDemo(): React.ReactElement {
+  return (
+    <TooltipProvider>
+      <ToggleGroup defaultValue={["bold"]} multiple>
+        <TooltipTrigger
+          handle={formatTooltipHandle}
+          payload="Make text bold"
+          render={<ToggleGroupItem aria-label="Toggle bold" value="bold" />}
+        >
+          <TextBolderIcon />
+        </TooltipTrigger>
+        <TooltipTrigger
+          handle={formatTooltipHandle}
+          payload="Apply italic formatting"
+          render={<ToggleGroupItem aria-label="Toggle italic" value="italic" />}
+        >
+          <TextItalicIcon />
+        </TooltipTrigger>
+        <TooltipTrigger
+          handle={formatTooltipHandle}
+          payload="Underline text"
+          render={
+            <ToggleGroupItem aria-label="Toggle underline" value="underline" />
+          }
+        >
+          <TextUnderlineIcon />
+        </TooltipTrigger>
+      </ToggleGroup>
+
+      <Tooltip handle={formatTooltipHandle}>
+        {({ payload }) => <TooltipPopup>{payload}</TooltipPopup>}
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
+
 function CommandDemo(): React.ReactElement {
   const [open, setOpen] = React.useState(false)
 
@@ -993,6 +1039,10 @@ export function OverlaysSection(): React.ReactElement {
             <TooltipPopup>Settings</TooltipPopup>
           </Tooltip>
         </TooltipProvider>
+      </AuditGroup>
+
+      <AuditGroup label="Tooltip — animated (shared handle, adjacent triggers)">
+        <TooltipAnimatedDemo />
       </AuditGroup>
 
       <AuditGroup label="Preview card">
