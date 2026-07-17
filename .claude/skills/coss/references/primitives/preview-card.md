@@ -74,6 +74,7 @@ See `p-preview-card-1` for the core pattern.
 - Using preview card for critical workflows requiring explicit modal interaction.
 - Missing accessible trigger labels when using icon-only triggers.
 - Rendering heavy async content on every hover without throttling/caching strategy.
+- **`PreviewCardPopup` is `flex` (row direction) by default, not `flex-col`.** It does not own stacking layout for its content. Multi-line content (e.g. title + description) must be wrapped in its own `<div className="flex flex-col gap-1">`, as shown above — passing sibling elements directly renders them inline in a row instead of stacked.
 
 ## Useful particle references
 

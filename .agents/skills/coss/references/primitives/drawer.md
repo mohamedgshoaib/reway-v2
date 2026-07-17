@@ -107,6 +107,7 @@ See `p-drawer-1` through `p-drawer-13` for inset, straight, scrollable, nested, 
 - Using drawer for desktop modal flows where dialog/sheet is clearer.
 - Forgetting responsive switch logic when drawer is mobile-only variant.
 - Breaking section layout by putting the whole dialog in a block-level `<form>`; prefer **header outside**, **`Form className="contents"`** around **panel + footer** (see dialog/form skills).
+- **`DrawerViewport` must declare `[--inset:0px]`, not `[--inset:--spacing(0)]`.** In this project's installed Tailwind v4 (4.3.2), `--spacing(0)` compiles to a bare unitless `0` instead of `0px`. That breaks every `calc(-100% - var(--inset))` / `calc(100% + ... + var(--inset))` expression used in the non-`inset` variants' `data-starting-style`/`data-ending-style` transforms (invalid `calc()` operand → whole `transform` declaration dropped → drawer mounts with zero motion instead of sliding in/out), and also corrupts the bottom-position snap-points entrance transform (drawer briefly renders at full/natural height before snapping to the target point instead of animating directly to it). Only `variant="inset"` happened to work, because it separately overrides `--inset` with a properly-unit-typed `calc(var(--spacing) * 4)`. If `drawer.tsx` is ever re-copied from `npx shadcn@latest add @coss/drawer` or coss's registry, this line will silently regress — re-apply `[--inset:0px]` after any re-install.
 
 ## Useful particle references
 

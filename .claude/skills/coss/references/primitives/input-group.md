@@ -75,7 +75,7 @@ Input with interactive button addon:
 <InputGroup>
   <InputGroupInput placeholder="Enter value..." />
   <InputGroupAddon>
-    <Button size="icon" variant="ghost" aria-label="Clear">
+    <Button size="icon-xs" variant="ghost" aria-label="Clear">
       <XIcon aria-hidden="true" />
     </Button>
   </InputGroupAddon>
@@ -83,6 +83,10 @@ Input with interactive button addon:
 ```
 
 `InputGroupAddon` must be after `InputGroupInput`/`InputGroupTextarea` in DOM order for proper focus behavior.
+
+## Icon button sizing inside addons
+
+Icon-only `Button`s placed inside `InputGroupAddon` must use `size="icon-xs"`. It is the only button size with an `InputGroupAddon`-aware selector (`not-in-data-[slot=input-group]:...` in `button.tsx`); every other icon size (`icon`, `icon-sm`, `icon-lg`, `icon-xl`) is sized for standalone use and will render flush against — or overflowing — the input group's border.
 
 ### More examples
 
@@ -93,6 +97,7 @@ See `p-input-group-1` through `p-input-group-29` for icons, text prefixes, inter
 - Using `Input`/`Textarea` directly instead of `InputGroupInput`/`InputGroupTextarea`.
 - Wrong addon DOM order.
 - Missing explicit input types.
+- Icon button in an addon using `size="icon"`/`icon-sm`/`icon-lg`/`icon-xl` instead of `icon-xs` — only `icon-xs` is addon-aware; the rest overflow or sit flush against the group border.
 
 ## Useful particle references
 

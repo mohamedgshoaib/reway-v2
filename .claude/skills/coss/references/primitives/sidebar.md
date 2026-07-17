@@ -53,7 +53,9 @@ import {
         <SidebarGroupContent>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton>Dashboard</SidebarMenuButton>
+              <SidebarMenuButton>
+                <span>Dashboard</span>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>
@@ -83,12 +85,12 @@ Sidebar with grouped navigation and footer:
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton render={<a href="/dashboard" />}>
-                Dashboard
+                <span>Dashboard</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton render={<a href="/projects" />}>
-                Projects
+                <span>Projects</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
@@ -98,7 +100,9 @@ Sidebar with grouped navigation and footer:
     <SidebarFooter>
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton>Settings</SidebarMenuButton>
+          <SidebarMenuButton>
+            <span>Settings</span>
+          </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
     </SidebarFooter>
@@ -128,6 +132,7 @@ See `p-toolbar-1`, `p-breadcrumb-1`, `p-tabs-1`, `p-menu-1` for related app-shel
 - Skipping the `SidebarMenu` > `SidebarMenuItem` > `SidebarMenuButton` hierarchy for nav items.
 - Missing responsive collapse strategy for narrow/mobile layouts.
 - Replacing `SidebarContent`'s scroll area with a raw `ScrollArea` without `fill` when the body uses `mt-auto` to pin footers—use `fill` (see scroll-area primitive docs).
+- **`SidebarMenuButton` label text must be the last child wrapped in `<span>`, never a raw text node.** The button's own class list ends with `[&>span:last-child]:truncate`, which single-lines and ellipsizes the label as the button's width animates on collapse (`transition-[width,height,padding]`). Passing text directly (`<Icon /> Label`) means there's no `<span>` for that rule to target, so the label falls back to default text wrapping — as the button shrinks toward the icon-only width, the label visibly reflows into broken multi-line text instead of clipping cleanly.
 
 ## Useful particle references
 

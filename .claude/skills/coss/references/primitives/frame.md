@@ -76,6 +76,7 @@ See `p-frame-1` through `p-frame-3` for basic and separated panel patterns.
 - Using nested frames excessively, causing dense double borders.
 - Applying frame as layout grid replacement instead of content surface wrapper.
 - Forgetting to align inner component width expectations (table/list full width).
+- **`FrameHeader`/`FrameFooter` are direct children of `Frame`, siblings of `FramePanel` — never nested inside it.** Both already carry `px-5 py-4`; nesting one inside `FramePanel` (which has its own `p-5`) doubles the padding and invites a `className="p-0"` patch to compensate — that patch also strips the component's horizontal padding, leaving text flush against the edge.
 
 ## Useful particle references
 

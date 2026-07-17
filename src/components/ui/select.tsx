@@ -119,7 +119,7 @@ export function SelectPopup({
   sideOffset = 4,
   align = "start",
   alignOffset = 0,
-  alignItemWithTrigger = true,
+  alignItemWithTrigger = false,
   anchor,
   portalProps,
   ...props

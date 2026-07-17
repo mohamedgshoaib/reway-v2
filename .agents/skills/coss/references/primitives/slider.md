@@ -60,6 +60,7 @@ See `p-slider-1` through `p-slider-5` for label, range, vertical, and form integ
 - Using slider for discrete option labels where select/radio is clearer.
 - Not exposing current value context in nearby UI text when needed.
 - Confusing single-value vs range value shapes in controlled mode.
+- **`Slider` renders `{children}` immediately above `Control` with no built-in gap.** A label/value row passed as children (e.g. `<div className="flex justify-between text-sm">...</div>`) sits flush against the track, and since the thumb (`size-5`/`size-4`) is taller than the track (`h-1`) and overflows above it by several px, the thumb visually crowds or touches the value text. Always give that row its own bottom margin (`mb-2`), as shown in the "Key patterns" example above — don't drop the margin when copying the pattern.
 
 ## Useful particle references
 

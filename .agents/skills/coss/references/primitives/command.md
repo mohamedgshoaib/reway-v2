@@ -63,18 +63,27 @@ const items = [
   <CommandDialogPopup>
     <Command items={items}>
       <CommandInput placeholder="Search..." />
-      <CommandEmpty>No results found.</CommandEmpty>
-      <CommandList>
-        {(item) => (
-          <CommandItem key={item.value} value={item.value}>
-            {item.label}
-          </CommandItem>
-        )}
-      </CommandList>
+      <CommandPanel>
+        <CommandEmpty>No results found.</CommandEmpty>
+        <CommandList>
+          {(item) => (
+            <CommandItem key={item.value} value={item.value}>
+              {item.label}
+            </CommandItem>
+          )}
+        </CommandList>
+      </CommandPanel>
+      <CommandFooter>{/* nav/select/close hints */}</CommandFooter>
     </Command>
   </CommandDialogPopup>
 </CommandDialog>
 ```
+
+**Structure inside `Command`** (order matters — `CommandInput` and `CommandFooter` sit *outside* `CommandPanel`):
+
+- `CommandInput` — search field, directly under `Command`.
+- `CommandPanel` — the scrollable content region; wraps `CommandEmpty` + `CommandList`. Supplies the inner bordered/rounded panel and the scroll area. Used **inside** the dialog, not only standalone.
+- `CommandFooter` — optional hint bar (⌘ nav/select/close), directly under `Command` after the panel.
 
 ## Patterns from coss particles
 
@@ -82,28 +91,29 @@ const items = [
 
 ### Key patterns
 
-Command with grouped sections:
+Grouped items — nest `CommandGroup` + `CommandCollection` inside `CommandList` (keep the outer `CommandInput`/`CommandPanel`/`CommandFooter` structure from the minimal pattern):
 
 ```tsx
-<Command items={items}>
-  <CommandInput placeholder="Type a command..." />
-  <CommandEmpty>No results found.</CommandEmpty>
-  <CommandList>
-    <CommandGroup>
-      <CommandGroupLabel>Suggestions</CommandGroupLabel>
-      <CommandCollection>
-        {(item) => (
-          <CommandItem key={item.value} value={item.value}>
-            {item.label}
-          </CommandItem>
-        )}
-      </CommandCollection>
-    </CommandGroup>
-  </CommandList>
-</Command>
+<CommandList>
+  {(group) => (
+    <Fragment key={group.value}>
+      <CommandGroup items={group.items}>
+        <CommandGroupLabel>{group.value}</CommandGroupLabel>
+        <CommandCollection>
+          {(item) => (
+            <CommandItem key={item.value} value={item.value}>
+              {item.label}
+            </CommandItem>
+          )}
+        </CommandCollection>
+      </CommandGroup>
+      <CommandSeparator />
+    </Fragment>
+  )}
+</CommandList>
 ```
 
-Use `CommandDialog` + `CommandDialogTrigger` + `CommandDialogPopup` to wrap `Command` in a dialog overlay. Use controlled `open`/`onOpenChange` state for keyboard-shortcut activation.
+Keyboard shortcut: use controlled `open`/`onOpenChange`, and wire the toggle with `useHotkey("Mod+J", () => setOpen((o) => !o))` from `@tanstack/react-hotkeys` — **not** the `useEffect` + `addEventListener` the coss docs show (this repo bans `useEffect` in components; same pattern as `ThemeHotkey`).
 
 ### More examples
 
@@ -114,6 +124,7 @@ See `p-command-1` and `p-command-2` for dialog palette and grouped action patter
 - Using command list without clear grouping and action labels.
 - Binding critical destructive actions without confirmation pathway.
 - Missing keyboard accessibility checks for arrow/select/escape interactions.
+- Omitting `CommandPanel` around the list (or putting `CommandInput` inside it) breaks scrolling and the panel/footer border seams — see the structure note under Minimal pattern.
 
 ## Useful particle references
 

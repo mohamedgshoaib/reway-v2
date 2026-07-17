@@ -75,7 +75,7 @@ For form-bound selects, prefer wrapping with `Field` + `FieldLabel` + `FieldErro
 - **Grouped options**: use `SelectGroup` + `SelectGroupLabel`; combine with `SelectSeparator` between groups when needed.
 - **Disabled options**: pass `disabled` on individual `SelectItem` rows (for unavailable choices).
 - **Rich row/trigger rendering**: render custom content (icons, avatars, secondary text) in both `SelectValue` and `SelectItem`; adjust row density via `className` where needed.
-- **Alignment tuning**: use `alignItemWithTrigger={false}` only when the default selected-item alignment causes layout issues.
+- **Alignment tuning**: this project's `SelectPopup` defaults `alignItemWithTrigger` to `false` (popup opens attached to the trigger, not aligned to the selected item). Pass `alignItemWithTrigger` explicitly only when the selected-item-aligned behavior is specifically wanted.
 
 ## Portal forwarding
 

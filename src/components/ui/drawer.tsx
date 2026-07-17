@@ -120,7 +120,7 @@ export function DrawerViewport({
   return (
     <DrawerPrimitive.Viewport
       className={cn(
-        "fixed inset-0 z-50 [--bleed:--spacing(12)] [--inset:--spacing(0)]",
+        "fixed inset-0 z-50 [--bleed:--spacing(12)] [--inset:0px]",
         "touch-none",
         position === "bottom" && "grid grid-rows-[1fr_auto] pt-12",
         position === "top" && "grid grid-rows-[auto_1fr] pb-12",

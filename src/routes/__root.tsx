@@ -2,6 +2,9 @@ import { TanStackDevtools } from "@tanstack/react-devtools"
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 
+import { ThemeHotkey } from "@/components/theme-hotkey"
+import { themeInitScript } from "@/hooks/use-theme"
+
 import appCss from "../styles.css?url"
 
 export const Route = createRootRoute({
@@ -38,9 +41,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
+        {/* Runs before hydration so the dark class is set before first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <HeadContent />
       </head>
       <body className="relative">
+        <ThemeHotkey />
         <div className="relative isolate flex min-h-svh flex-col">
           {children}
         </div>
