@@ -43,6 +43,7 @@ For optional **`portalProps`** on composed `*Popup` components and **toast** pro
 - **ToggleGroup** — Grouped pressed-state controls. `./references/primitives/toggle-group.md`
 
 ## Layout & Navigation
+- **NavigationMenu** — Hover-activated top-level nav with dropdown/nested panels (not a coss primitive; built on Base UI, see guide for divergences). `./references/primitives/navigation-menu.md`
 - **Tabs** — Mutually exclusive tabbed panels. `./references/primitives/tabs.md`
 - **Accordion** — Collapsible content sections. `./references/primitives/accordion.md`
 - **Collapsible** — Single expand/collapse region. `./references/primitives/collapsible.md`
