@@ -2,9 +2,19 @@
 
 import type React from "react"
 
-export function Logo(props: React.SVGProps<SVGSVGElement>): React.ReactElement {
+import { cn } from "@/lib/utils"
+
+export function Logo({
+  className,
+  ...props
+}: React.SVGProps<SVGSVGElement>): React.ReactElement {
   return (
-    <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <svg
+      className={cn("shrink-0", className)}
+      viewBox="0 0 512 512"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
       <g fill="currentColor">
         <path
           d="M0 122.542v-109c0-10 7-17 17-17h219c47 0 84 38 84 92v150H214c-14-2-39-11-71-26-15-7-22-14-18-22 4-9 20-14 46-18 27-4 45-8 45-23v-30c0-7-6-13-13-13H26c-10 0-19 6-26 16"

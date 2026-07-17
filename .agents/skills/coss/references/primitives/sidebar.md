@@ -31,7 +31,9 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
+  SidebarMenuButtonLabel,
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
@@ -132,7 +134,19 @@ See `p-toolbar-1`, `p-breadcrumb-1`, `p-tabs-1`, `p-menu-1` for related app-shel
 - Skipping the `SidebarMenu` > `SidebarMenuItem` > `SidebarMenuButton` hierarchy for nav items.
 - Missing responsive collapse strategy for narrow/mobile layouts.
 - Replacing `SidebarContent`'s scroll area with a raw `ScrollArea` without `fill` when the body uses `mt-auto` to pin footers—use `fill` (see scroll-area primitive docs).
-- **`SidebarMenuButton` label text must be the last child wrapped in `<span>`, never a raw text node.** The button's own class list ends with `[&>span:last-child]:truncate`, which single-lines and ellipsizes the label as the button's width animates on collapse (`transition-[width,height,padding]`). Passing text directly (`<Icon /> Label`) means there's no `<span>` for that rule to target, so the label falls back to default text wrapping — as the button shrinks toward the icon-only width, the label visibly reflows into broken multi-line text instead of clipping cleanly.
+- **`SidebarMenuButton` label text must be the last child wrapped in a `<span>`, never a raw text node.** The button's own class list ends with `[&>span:last-child]:truncate`, which single-lines and ellipsizes the label as the button's width animates on collapse (`transition-[width,height,padding]`). Passing text directly (`<Icon /> Label`) means there's no `<span>` for that rule to target, so the label falls back to default text wrapping — as the button shrinks toward the icon-only width, the label visibly reflows into broken multi-line text instead of clipping cleanly. **In this project, use `SidebarMenuButtonLabel` rather than a bare `<span>`** — it renders a real `<span>` (so `truncate` still applies) and adds the opacity fade the clip alone lacks.
+
+## Local divergences from upstream (survive a re-install!)
+
+`sidebar.tsx` has **no official docs page and no particles** — it exists in the coss registry (`@coss/sidebar`) but isn't published under `apps/ui/content/docs/components`. The installed file was byte-diffed against the upstream registry source and matched exactly apart from formatting, import aliasing, and the project-wide lucide→phosphor icon swap. The changes below were made *after* that check, so `npx shadcn@latest add @coss/sidebar` would silently revert them:
+
+- **`SidebarMenuButtonLabel`** — added export (`m.span`, opacity fade on collapse). Not upstream.
+- **`SidebarMenuBadge`** — converted from `div` to `m.div`; dropped `group-data-[collapsible=icon]:hidden` in favour of an animated opacity. The badge is `absolute right-1`, so while the row is still icon-width it physically sits **on top of the menu icon** — the hidden→visible snap made counts pop in over the icons mid-expand. The fade is deliberately asymmetric (`delay: 0.18, duration: 0.12` in; `duration: 0.08` out) so it stays invisible until the 200ms width transition has cleared the icon. Verified via frame-sampled rect intersection: 0px visible overlap.
+- **Easing** — all four `ease-linear` transitions (`sidebar-gap`, `sidebar-container`, `SidebarRail`, `SidebarGroupLabel`) → `ease-in-out-strong`; `sidebarMenuButtonVariants` gained explicit `duration-200 ease-in-out-strong` (it previously fell back to Tailwind's 150ms default, desyncing it from the container's 200ms).
+
+Both motion-driven parts need a `LazyMotion` ancestor — mounted once in `src/routes/__root.tsx` with `strict`, so use `m.*`, never `motion.*`.
+
+Known-deferred: the collapse animates `width`/`padding` (layout-thrashing rather than compositor-only). Left as upstream on purpose; see `plans/README.md`.
 
 ## Useful particle references
 

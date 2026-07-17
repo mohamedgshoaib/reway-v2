@@ -3,7 +3,7 @@
 Write facts only. No plans, no advice, no narration.
 
 **Filename:** `session-01.md`
-**Session Status:** Closed
+**Session Status:** Open
 
 ---
 
@@ -27,6 +27,8 @@ Write facts only. No plans, no advice, no narration.
 - Root-caused and fixed a real drawer animation bug in `src/components/ui/drawer.tsx`: `--inset:--spacing(0)` compiled to a unitless `0` in this Tailwind version, invalidating `calc()` chains and killing entrance/exit transitions on non-`inset` drawer variants (and corrupting snap-points behavior); fixed to `--inset:0px`.
 - Documented the drawer `--inset` gotcha in coss skill docs (`.claude/skills/coss/references/primitives/drawer.md`, mirrored in `.agents`) so a future component re-install doesn't silently reintroduce it.
 - Verified full animation matrix (13 cases: every drawer variant × position, open + close) via automated frame sampling — all pass, zero console errors; cross-checked against coss.com's live site.
+- Fixed demo-usage bugs (root cause, not component) in slider, preview card, command, and frame audit groups, added a reusable `Logo` component (`src/components/logo.tsx`, `src/logo.svg` using `currentColor`), swapped it into the sidebar header, fixed a `SidebarMenuButton` label-wrapping bug (missing `<span>` broke the primitive's own truncate rule, causing text reflow during collapse/expand), and identified the sidebar's `width`/`padding`-based collapse animation as a layout-thrashing pattern worth a future `clip-path`+`opacity` rework.
+- Added `motion` (lazy-loaded via `LazyMotion` + `strict` in `src/routes/__root.tsx`, features code-split into their own chunk) and `--ease-out-strong`/`--ease-in-out-strong` tokens in `src/styles.css`, then polished the sidebar collapse per `plans/001-*.md`: replaced `ease-linear` with real curves, synced the menu button's duration to the container's 200ms, added `SidebarMenuButtonLabel` (motion opacity fade), gave `SidebarMenuBadge` an asymmetric fade (180ms delay in, 80ms snap out) so counts no longer render over the collection icons mid-expand, and fixed the logo being flex-squished to 15×20 and sitting 2px right of the icon column.
 
 ---
 
@@ -45,7 +47,7 @@ Write facts only. No plans, no advice, no narration.
 
 ## Session End
 
-- Session ended
+- Not yet ended
 
 ---
 

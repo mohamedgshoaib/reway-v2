@@ -1,11 +1,15 @@
 import { TanStackDevtools } from "@tanstack/react-devtools"
 import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
+import { LazyMotion } from "motion/react"
 
 import { ThemeHotkey } from "@/components/theme-hotkey"
 import { themeInitScript } from "@/hooks/use-theme"
 
 import appCss from "../styles.css?url"
+
+const loadMotionFeatures = () =>
+  import("@/lib/motion-features").then((mod) => mod.default)
 
 export const Route = createRootRoute({
   head: () => ({
@@ -47,9 +51,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="relative">
         <ThemeHotkey />
-        <div className="relative isolate flex min-h-svh flex-col">
-          {children}
-        </div>
+        <LazyMotion features={loadMotionFeatures} strict>
+          <div className="relative isolate flex min-h-svh flex-col">
+            {children}
+          </div>
+        </LazyMotion>
         <TanStackDevtools
           config={{
             position: "bottom-right",

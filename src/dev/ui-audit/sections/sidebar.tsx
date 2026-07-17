@@ -18,8 +18,9 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuButtonLabel,
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
@@ -46,7 +47,9 @@ export function SidebarSection(): React.ReactElement {
         <SidebarProvider className="h-[420px] min-h-0" defaultOpen>
           <Sidebar collapsible="icon">
             <SidebarHeader>
-              <div className="flex items-center px-2 py-1">
+              {/* size-8 mirrors the collapsed menu button, aligning the logo
+                  with the icons below it. */}
+              <div className="flex size-8 items-center justify-center">
                 <Logo className="size-5 text-foreground" />
               </div>
             </SidebarHeader>
@@ -58,7 +61,9 @@ export function SidebarSection(): React.ReactElement {
                     <SidebarMenuItem>
                       <SidebarMenuButton isActive tooltip="All bookmarks">
                         <BookmarkSimpleIcon />
-                        <span>All bookmarks</span>
+                        <SidebarMenuButtonLabel>
+                          All bookmarks
+                        </SidebarMenuButtonLabel>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   </SidebarMenu>
@@ -72,7 +77,9 @@ export function SidebarSection(): React.ReactElement {
                       <SidebarMenuItem key={collection.label}>
                         <SidebarMenuButton tooltip={collection.label}>
                           <FolderIcon />
-                          <span>{collection.label}</span>
+                          <SidebarMenuButtonLabel>
+                            {collection.label}
+                          </SidebarMenuButtonLabel>
                         </SidebarMenuButton>
                         <SidebarMenuBadge>{collection.count}</SidebarMenuBadge>
                       </SidebarMenuItem>
@@ -88,7 +95,7 @@ export function SidebarSection(): React.ReactElement {
                       <SidebarMenuItem key={tag}>
                         <SidebarMenuButton size="sm" tooltip={tag}>
                           <HashIcon />
-                          <span>{tag}</span>
+                          <SidebarMenuButtonLabel>{tag}</SidebarMenuButtonLabel>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     ))}
@@ -101,13 +108,13 @@ export function SidebarSection(): React.ReactElement {
                 <SidebarMenuItem>
                   <SidebarMenuButton tooltip="Trash">
                     <TrashIcon />
-                    <span>Trash</span>
+                    <SidebarMenuButtonLabel>Trash</SidebarMenuButtonLabel>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton tooltip="Settings">
                     <GearIcon />
-                    <span>Settings</span>
+                    <SidebarMenuButtonLabel>Settings</SidebarMenuButtonLabel>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
