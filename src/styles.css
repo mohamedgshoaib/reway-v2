@@ -291,4 +291,80 @@
   html {
     @apply font-sans;
   }
+
+  /* `scrollbar-color`/`scrollbar-width` cover Firefox; `::-webkit-scrollbar-*`
+     adds the transparent track, rounded thumb, and arrow-glyph recoloring the
+     standard properties can't express. Two platform limits, not bugs: Chrome
+     and Edge have shipped no scrollbar arrows since 2014, so the
+     `:single-button` rules are inert there by design; macOS's auto-hiding
+     overlay scrollbar ignores both approaches unless "Show scroll bars:
+     Always" is set. */
+  html {
+    scrollbar-color: var(--muted-foreground) transparent;
+    scrollbar-width: thin;
+  }
+
+  ::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background-color: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-clip: padding-box;
+    background-color: var(--muted-foreground);
+    border: 2px solid transparent;
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--foreground);
+  }
+
+  ::-webkit-scrollbar-button {
+    background-color: transparent;
+    display: block;
+    height: 10px;
+    width: 10px;
+  }
+
+  ::-webkit-scrollbar-button:single-button {
+    background-color: var(--muted-foreground);
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23000' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23000' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5'/%3E%3C/svg%3E");
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-size: 8px 5px;
+    mask-size: 8px 5px;
+  }
+
+  ::-webkit-scrollbar-button:single-button:hover {
+    background-color: var(--foreground);
+  }
+
+  ::-webkit-scrollbar-button:single-button:vertical:decrement {
+    transform: rotate(180deg);
+  }
+
+  ::-webkit-scrollbar-button:single-button:horizontal:decrement {
+    transform: rotate(90deg);
+  }
+
+  ::-webkit-scrollbar-button:single-button:horizontal:increment {
+    transform: rotate(-90deg);
+  }
+
+  /* Inverted selection: swapping foreground/background carries the pair's
+     existing text/surface contrast straight over to the highlight, instead
+     of leaving the browser's default (often low-contrast) blue in place. */
+  ::selection {
+    background-color: var(--foreground);
+    color: var(--background);
+  }
 }
