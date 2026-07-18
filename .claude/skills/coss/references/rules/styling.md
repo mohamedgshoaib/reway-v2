@@ -90,6 +90,16 @@ border: "--alpha(var(--color-black) / 8%)"
 border: "color-mix(in srgb, var(--color-black) 8%, transparent)"
 ```
 
+## Reway-specific conventions (not upstream coss)
+
+These are project-local additions layered on top of coss's own conventions above — they won't survive a `npx shadcn add @coss/<component>` reinstall unless reapplied, same as any other local divergence. Apply them to new primitives as they're built or touched, not retroactively to every existing one in one pass.
+
+- **Scale-on-press feedback.** `[:active,[data-pressed]]:scale-97` + `transition-[scale,<other-animated-properties>] duration-150 ease-out-strong` on any pressable primitive (`button.tsx`, `checkbox.tsx`, `toggle.tsx`, `theme-toggle.tsx`). Match both `:active` (native) and `[data-pressed]` (Base UI's synthetic press state on some primitives) so touch/keyboard-driven presses get the same feedback as a mouse click. **Exception: `switch.tsx`** — it already has its own considered iOS-style thumb-stretch (`scale-x-110` on the thumb specifically, not the whole control); don't add a blanket `scale-97` there, it would conflict rather than complement. Always include the actually-transitioning property in `transition-[...]` explicitly — Tailwind v4's `scale-*` utility sets the standalone CSS `scale` property, not `transform`, so a `transition-[transform,...]` list silently fails to animate a `scale-*` change.
+- **`AnimatedIcon` (`src/components/ui/animated-icon.tsx`)** for any icon that swaps based on state (a copy button's icon flipping to a checkmark, a toast's icon changing with its type, a checkbox's check/minus swap) — never a bare conditional render for this case. See `./primitives/animated-icon.md`.
+- **`text-wrap` pairing.** `text-balance` on every Title-shaped export, `text-pretty` on every Description-shaped export, project-wide (`Card`/`CardFrame`/`Dialog`/`AlertDialog`/`Drawer`/`Sheet`/`Alert`/`Frame` at minimum). Apply to both halves of a Title+Description pair together — don't add one without the other. Skip components that don't have a genuine Title/Description-shaped pair (e.g. `Command`'s group label, `NavigationMenu`) rather than forcing the pairing where the content doesn't fit that shape.
+- **`antialiased`** on the root `<body>` (`src/routes/__root.tsx`) — global, not per-component.
+- **`prefers-reduced-motion`** — any component using Motion's spring/blur/scale treatment (not a plain CSS transition) should degrade to an opacity-only fallback via `useReducedMotion()` from `motion/react` when the user has it enabled. Don't extend this reflexively to every CSS `transition-*` in the app — it matters most for real vestibular-trigger cases (a component whose motion is the primary point, and where the underlying values aren't otherwise load-bearing for actual positioning/gesture state, e.g. `drawer.tsx`'s open/closed transform is structural, not decorative — don't strip it under reduced-motion without a much larger, deliberate rewrite).
+
 ## Check Before Finalizing
 
 1. Any raw color classes that should be semantic?

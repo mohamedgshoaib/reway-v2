@@ -41,6 +41,7 @@ For optional **`portalProps`** on composed `*Popup` components and **toast** pro
 - **Switch** — Binary on/off preference toggle. `./references/primitives/switch.md`
 - **Toggle** — Pressable two-state command button. `./references/primitives/toggle.md`
 - **ToggleGroup** — Grouped pressed-state controls. `./references/primitives/toggle-group.md`
+- **ThemeToggle** — Segmented light/dark/system theme control (not a coss primitive; project-original). `./references/primitives/theme-toggle.md`
 
 ## Layout & Navigation
 - **NavigationMenu** — Hover-activated top-level nav with dropdown/nested panels (not a coss primitive; built on Base UI, see guide for divergences). `./references/primitives/navigation-menu.md`
@@ -74,3 +75,4 @@ For optional **`portalProps`** on composed `*Popup` components and **toast** pro
 
 ## Actions
 - **Button** — Primary/secondary action trigger. `./references/primitives/button.md`
+- **AnimatedIcon** — Swaps an icon for another with a spring transition instead of an instant toggle (not a coss primitive; project-original utility, not a standalone control). `./references/primitives/animated-icon.md`
