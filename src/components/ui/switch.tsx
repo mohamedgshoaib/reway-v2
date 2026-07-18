@@ -1,14 +1,20 @@
 "use client"
 
 import { Switch as SwitchPrimitive } from "@base-ui/react/switch"
+import { minimal } from "@sounds"
+import { useSound } from "@web-kits/audio/react"
 import type React from "react"
 
 import { cn } from "@/lib/utils"
 
 export function Switch({
   className,
+  onCheckedChange,
   ...props
 }: SwitchPrimitive.Root.Props): React.ReactElement {
+  const playOn = useSound(minimal.toggleOn)
+  const playOff = useSound(minimal.toggleOff)
+
   return (
     <SwitchPrimitive.Root
       className={cn(
@@ -16,6 +22,14 @@ export function Switch({
         className
       )}
       data-slot="switch"
+      onCheckedChange={(checked, eventDetails) => {
+        if (checked) {
+          playOn()
+        } else {
+          playOff()
+        }
+        onCheckedChange?.(checked, eventDetails)
+      }}
       {...props}
     >
       <SwitchPrimitive.Thumb

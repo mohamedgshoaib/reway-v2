@@ -1,6 +1,8 @@
 "use client"
 
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs"
+import { minimal } from "@sounds"
+import { useSound } from "@web-kits/audio/react"
 import type React from "react"
 
 import { cn } from "@/lib/utils"
@@ -9,8 +11,11 @@ export type TabsVariant = "default" | "underline"
 
 export function Tabs({
   className,
+  onValueChange,
   ...props
 }: TabsPrimitive.Root.Props): React.ReactElement {
+  const playTabSwitch = useSound(minimal.tabSwitch)
+
   return (
     <TabsPrimitive.Root
       className={cn(
@@ -18,6 +23,14 @@ export function Tabs({
         className
       )}
       data-slot="tabs"
+      onValueChange={(value, eventDetails) => {
+        // "none" is base-ui's reason for user-initiated changes (click/keyboard);
+        // other reasons (initial, disabled, missing) are not user actions.
+        if (eventDetails.reason === "none") {
+          playTabSwitch()
+        }
+        onValueChange?.(value, eventDetails)
+      }}
       {...props}
     />
   )

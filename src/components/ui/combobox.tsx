@@ -2,6 +2,8 @@
 
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox"
 import { CaretUpDownIcon, CheckIcon, XIcon } from "@phosphor-icons/react"
+import { minimal } from "@sounds"
+import { useSound } from "@web-kits/audio/react"
 import * as React from "react"
 
 import { Input } from "@/components/ui/input"
@@ -19,13 +21,33 @@ export const ComboboxContext: React.Context<{
   multiple: false,
 })
 
-export function Combobox<Value, Multiple extends boolean | undefined = false>(
-  props: ComboboxPrimitive.Root.Props<Value, Multiple>
-): React.ReactElement {
+export function Combobox<Value, Multiple extends boolean | undefined = false>({
+  onValueChange,
+  ...props
+}: ComboboxPrimitive.Root.Props<Value, Multiple>): React.ReactElement {
   const chipsRef = React.useRef<Element | null>(null)
+  const playSelect = useSound(minimal.select)
+  const playDeselect = useSound(minimal.deselect)
+  const previousValueRef = React.useRef(props.value ?? props.defaultValue)
+
   return (
     <ComboboxContext.Provider value={{ chipsRef, multiple: !!props.multiple }}>
-      <ComboboxPrimitive.Root {...props} />
+      <ComboboxPrimitive.Root
+        {...props}
+        onValueChange={(value, eventDetails) => {
+          const previous = previousValueRef.current
+          if (Array.isArray(value) && Array.isArray(previous)) {
+            if (value.length > previous.length) playSelect()
+            else if (value.length < previous.length) playDeselect()
+          } else if (value == null) {
+            if (previous != null) playDeselect()
+          } else {
+            playSelect()
+          }
+          previousValueRef.current = value
+          onValueChange?.(value, eventDetails)
+        }}
+      />
     </ComboboxContext.Provider>
   )
 }

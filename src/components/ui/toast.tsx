@@ -8,7 +8,10 @@ import {
   WarningCircleIcon,
   WarningIcon,
 } from "@phosphor-icons/react"
+import { minimal } from "@sounds"
+import { useSound } from "@web-kits/audio/react"
 import type React from "react"
+import { useEffect, useRef } from "react"
 
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -20,6 +23,40 @@ const TOAST_ICONS = {
   success: CheckCircleIcon,
   warning: WarningIcon,
 } as const
+
+function useToastSounds(toasts: { id: string; type?: string }[]): void {
+  const playSuccess = useSound(minimal.success)
+  const playError = useSound(minimal.error)
+  const playWarning = useSound(minimal.warning)
+  const playInfo = useSound(minimal.info)
+  const playNotification = useSound(minimal.notification)
+  const seenIdsRef = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    for (const toast of toasts) {
+      if (seenIdsRef.current.has(toast.id)) continue
+      switch (toast.type) {
+        case "success":
+          playSuccess()
+          break
+        case "error":
+          playError()
+          break
+        case "warning":
+          playWarning()
+          break
+        case "info":
+          playInfo()
+          break
+        case "loading":
+          break
+        default:
+          playNotification()
+      }
+    }
+    seenIdsRef.current = new Set(toasts.map((toast) => toast.id))
+  }, [toasts, playSuccess, playError, playWarning, playInfo, playNotification])
+}
 
 type SwipeDirection = "up" | "down" | "left" | "right"
 
@@ -69,6 +106,7 @@ function Toasts({
 }): React.ReactElement {
   const { toasts } = Toast.useToastManager()
   const swipeDirection = getSwipeDirection(position)
+  useToastSounds(toasts)
 
   return (
     <Toast.Portal data-slot="toast-portal" {...portalProps}>
@@ -192,6 +230,7 @@ function AnchoredToasts({
   portalProps?: React.ComponentProps<typeof Toast.Portal>
 }): React.ReactElement {
   const { toasts } = Toast.useToastManager()
+  useToastSounds(toasts)
 
   return (
     <Toast.Portal data-slot="toast-portal-anchored" {...portalProps}>

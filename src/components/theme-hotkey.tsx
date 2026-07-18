@@ -1,6 +1,8 @@
 "use client"
 
+import { minimal } from "@sounds"
 import { useHotkey } from "@tanstack/react-hotkeys"
+import { useSound } from "@web-kits/audio/react"
 
 import { useTheme } from "@/hooks/use-theme"
 
@@ -11,9 +13,18 @@ import { useTheme } from "@/hooks/use-theme"
  * typing "d" in a text field never triggers it.
  */
 export function ThemeHotkey(): null {
-  const { toggleTheme } = useTheme()
+  const { theme, toggleTheme } = useTheme()
+  const playOn = useSound(minimal.toggleOn)
+  const playOff = useSound(minimal.toggleOff)
 
-  useHotkey("D", toggleTheme)
+  useHotkey("D", () => {
+    if (theme === "dark") {
+      playOn()
+    } else {
+      playOff()
+    }
+    toggleTheme()
+  })
 
   return null
 }

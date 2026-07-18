@@ -1,6 +1,8 @@
 "use client"
 
 import { Toggle as TogglePrimitive } from "@base-ui/react/toggle"
+import { minimal } from "@sounds"
+import { useSound } from "@web-kits/audio/react"
 import { cva, type VariantProps } from "class-variance-authority"
 import type React from "react"
 
@@ -32,13 +34,25 @@ export function Toggle({
   className,
   variant,
   size,
+  onPressedChange,
   ...props
 }: TogglePrimitive.Props &
   VariantProps<typeof toggleVariants>): React.ReactElement {
+  const playOn = useSound(minimal.toggleOn)
+  const playOff = useSound(minimal.toggleOff)
+
   return (
     <TogglePrimitive
       className={cn(toggleVariants({ className, size, variant }))}
       data-slot="toggle"
+      onPressedChange={(pressed, eventDetails) => {
+        if (pressed) {
+          playOn()
+        } else {
+          playOff()
+        }
+        onPressedChange?.(pressed, eventDetails)
+      }}
       {...props}
     />
   )

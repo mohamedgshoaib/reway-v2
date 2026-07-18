@@ -7,7 +7,9 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["vite/client"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@sounds": ["./.web-kits/index.ts"],
+      "@sounds/*": ["./.web-kits/*"]
     },
 
     /* Bundler mode */

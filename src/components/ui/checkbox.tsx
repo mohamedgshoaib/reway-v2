@@ -2,14 +2,20 @@
 
 import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox"
 import { CheckIcon, MinusIcon } from "@phosphor-icons/react"
+import { minimal } from "@sounds"
+import { useSound } from "@web-kits/audio/react"
 import type React from "react"
 
 import { cn } from "@/lib/utils"
 
 export function Checkbox({
   className,
+  onCheckedChange,
   ...props
 }: CheckboxPrimitive.Root.Props): React.ReactElement {
+  const playChecked = useSound(minimal.checkbox)
+  const playUnchecked = useSound(minimal.deselect)
+
   return (
     <CheckboxPrimitive.Root
       className={cn(
@@ -17,6 +23,14 @@ export function Checkbox({
         className
       )}
       data-slot="checkbox"
+      onCheckedChange={(checked, eventDetails) => {
+        if (checked) {
+          playChecked()
+        } else {
+          playUnchecked()
+        }
+        onCheckedChange?.(checked, eventDetails)
+      }}
       {...props}
     >
       <CheckboxPrimitive.Indicator

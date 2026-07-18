@@ -2,18 +2,27 @@
 
 import { Radio as RadioPrimitive } from "@base-ui/react/radio"
 import { RadioGroup as RadioGroupPrimitive } from "@base-ui/react/radio-group"
+import { minimal } from "@sounds"
+import { useSound } from "@web-kits/audio/react"
 import type React from "react"
 
 import { cn } from "@/lib/utils"
 
 export function RadioGroup({
   className,
+  onValueChange,
   ...props
 }: RadioGroupPrimitive.Props): React.ReactElement {
+  const playSelect = useSound(minimal.select)
+
   return (
     <RadioGroupPrimitive
       className={cn("flex flex-col gap-3", className)}
       data-slot="radio-group"
+      onValueChange={(value, eventDetails) => {
+        playSelect()
+        onValueChange?.(value, eventDetails)
+      }}
       {...props}
     />
   )

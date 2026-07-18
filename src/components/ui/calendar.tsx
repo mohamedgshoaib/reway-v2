@@ -5,6 +5,8 @@ import {
   CaretRightIcon,
   CaretUpDownIcon,
 } from "@phosphor-icons/react"
+import { minimal } from "@sounds"
+import { useSound } from "@web-kits/audio/react"
 import type * as React from "react"
 import { DayPicker } from "react-day-picker"
 
@@ -21,6 +23,12 @@ export function Calendar({
   mode = "single",
   ...props
 }: React.ComponentProps<typeof DayPicker>): React.ReactElement {
+  const playSelect = useSound(minimal.select)
+  // `onSelect`'s signature varies by `mode` via a discriminated union that
+  // isn't destructurable from the combined props type, so it's read here
+  // defensively instead.
+  const onSelect = (props as { onSelect?: (...args: unknown[]) => void })
+    .onSelect
   const defaultClassNames = {
     button_next: buttonClassNames,
     button_previous: buttonClassNames,
@@ -132,6 +140,10 @@ export function Calendar({
     mode,
     showOutsideDays,
     ...props,
+    onSelect: (...args: unknown[]) => {
+      playSelect()
+      onSelect?.(...args)
+    },
   }
 
   return (

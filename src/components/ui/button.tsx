@@ -2,6 +2,8 @@
 
 import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
+import { minimal } from "@sounds"
+import { useSound } from "@web-kits/audio/react"
 import { cva, type VariantProps } from "class-variance-authority"
 import type * as React from "react"
 
@@ -69,6 +71,11 @@ export function Button({
   const typeValue: React.ButtonHTMLAttributes<HTMLButtonElement>["type"] =
     render ? undefined : "button"
 
+  const playClick = useSound(minimal.click)
+  const playDelete = useSound(minimal._delete)
+  const isDestructive =
+    variant === "destructive" || variant === "destructive-outline"
+
   const defaultProps = {
     children: (
       <>
@@ -86,6 +93,7 @@ export function Button({
     "data-loading": loading ? "" : undefined,
     "data-slot": "button",
     disabled: isDisabled,
+    onClick: () => (isDestructive ? playDelete() : playClick()),
     type: typeValue,
   }
 

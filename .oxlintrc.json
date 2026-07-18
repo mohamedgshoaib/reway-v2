@@ -28,6 +28,7 @@
     "spec/**",
     ".agents/skills/**",
     ".claude/skills/**",
+    ".web-kits/**",
     "src/routeTree.gen.ts",
     "dist/**",
     "coverage/**"

@@ -19,6 +19,7 @@
     "spec/**",
     ".agents/skills/**",
     ".claude/skills/**",
+    ".web-kits/**",
     "src/routeTree.gen.ts",
     "package-lock.json",
     "pnpm-lock.yaml",

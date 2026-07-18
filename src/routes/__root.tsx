@@ -3,6 +3,7 @@ import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { LazyMotion } from "motion/react"
 
+import { SoundProvider } from "@/components/sound-provider"
 import { ThemeHotkey } from "@/components/theme-hotkey"
 import { themeInitScript } from "@/hooks/use-theme"
 
@@ -51,11 +52,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body className="relative">
         <ThemeHotkey />
-        <LazyMotion features={loadMotionFeatures} strict>
-          <div className="relative isolate flex min-h-svh flex-col">
-            {children}
-          </div>
-        </LazyMotion>
+        <SoundProvider>
+          <LazyMotion features={loadMotionFeatures} strict>
+            <div className="relative isolate flex min-h-svh flex-col">
+              {children}
+            </div>
+          </LazyMotion>
+        </SoundProvider>
         <TanStackDevtools
           config={{
             position: "bottom-right",

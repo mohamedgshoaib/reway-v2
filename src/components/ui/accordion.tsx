@@ -2,6 +2,8 @@
 
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion"
 import { CaretDownIcon } from "@phosphor-icons/react"
+import { minimal } from "@sounds"
+import { useSound } from "@web-kits/audio/react"
 import type React from "react"
 
 import { cn } from "@/lib/utils"
@@ -14,12 +16,28 @@ export function Accordion(
 
 export function AccordionItem({
   className,
+  onOpenChange,
   ...props
 }: AccordionPrimitive.Item.Props): React.ReactElement {
+  const playExpand = useSound(minimal.expand)
+  const playCollapse = useSound(minimal.collapse)
+
   return (
     <AccordionPrimitive.Item
       className={cn("border-b last:border-b-0", className)}
       data-slot="accordion-item"
+      onOpenChange={(open, eventDetails) => {
+        // "trigger-press" is base-ui's reason for a user clicking the
+        // trigger; "none" covers controlled/initial changes, not a user action.
+        if (eventDetails.reason === "trigger-press") {
+          if (open) {
+            playExpand()
+          } else {
+            playCollapse()
+          }
+        }
+        onOpenChange?.(open, eventDetails)
+      }}
       {...props}
     />
   )
