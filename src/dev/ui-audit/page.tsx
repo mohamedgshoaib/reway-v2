@@ -1,5 +1,6 @@
 import type * as React from "react"
 
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { AnchoredToastProvider, ToastProvider } from "@/components/ui/toast"
 import { ActionsSection } from "@/dev/ui-audit/sections/actions"
 import { DataLayoutSection } from "@/dev/ui-audit/sections/data-layout"
@@ -49,15 +50,18 @@ export function UiAuditPage(): React.ReactElement {
           </aside>
 
           <main className="flex min-w-0 flex-1 flex-col gap-14">
-            <header>
-              <h1 className="text-2xl font-semibold">Component audit</h1>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                Every coss primitive currently installed under{" "}
-                <code>src/components/ui</code>, rendered with its documented
-                variants and states. This page is dev-only scaffolding, not
-                product UI — see the removal note in{" "}
-                <code>src/dev/ui-audit/page.tsx</code>.
-              </p>
+            <header className="flex items-start justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-semibold">Component audit</h1>
+                <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                  Every coss primitive currently installed under{" "}
+                  <code>src/components/ui</code>, rendered with its documented
+                  variants and states. This page is dev-only scaffolding, not
+                  product UI — see the removal note in{" "}
+                  <code>src/dev/ui-audit/page.tsx</code>.
+                </p>
+              </div>
+              <ThemeToggle className="shrink-0" />
             </header>
 
             <ActionsSection />

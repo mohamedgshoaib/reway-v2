@@ -4,9 +4,11 @@ import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { LazyMotion } from "motion/react"
 
 import { ErrorState, UnexpectedErrorPage } from "@/components/error-state"
-import { SoundProvider } from "@/components/sound-provider"
-import { ThemeHotkey } from "@/components/theme-hotkey"
-import { themeInitScript } from "@/hooks/use-theme"
+import { SoundProvider } from "@/components/providers/sound-provider"
+import {
+  ThemeProvider,
+  ThemeScript,
+} from "@/components/providers/theme-provider"
 
 import appCss from "../styles.css?url"
 
@@ -42,20 +44,20 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Runs before hydration so the dark class is set before first paint. */}
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <ThemeScript />
         <HeadContent />
       </head>
-      <body className="relative">
-        <ThemeHotkey />
+      <body className="relative antialiased">
         <SoundProvider>
-          <LazyMotion features={loadMotionFeatures} strict>
-            <div className="relative isolate flex min-h-svh flex-col">
-              {children}
-            </div>
-          </LazyMotion>
+          <ThemeProvider>
+            <LazyMotion features={loadMotionFeatures} strict>
+              <div className="relative isolate flex min-h-svh flex-col">
+                {children}
+              </div>
+            </LazyMotion>
+          </ThemeProvider>
         </SoundProvider>
         <TanStackDevtools
           config={{
