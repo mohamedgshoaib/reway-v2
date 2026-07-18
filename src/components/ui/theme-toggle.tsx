@@ -39,7 +39,7 @@ export function ThemeToggle({ className }: { className?: string }) {
             aria-label={label}
             aria-pressed={isSelected}
             className={cn(
-              "size-6 rounded-full text-muted-foreground transition-colors duration-200 ease-out outline-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50",
+              "size-6 rounded-full text-muted-foreground transition-[scale,color] duration-150 ease-out-strong outline-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 active:scale-97",
               isSelected && "bg-muted text-foreground"
             )}
             onClick={() => setTheme(value)}

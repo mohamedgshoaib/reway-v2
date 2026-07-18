@@ -54,7 +54,7 @@ export function FrameTitle({
 }: React.ComponentProps<"div">): React.ReactElement {
   return (
     <div
-      className={cn("text-sm font-semibold", className)}
+      className={cn("text-sm font-semibold text-balance", className)}
       data-slot="frame-panel-title"
       {...props}
     />
@@ -67,7 +67,7 @@ export function FrameDescription({
 }: React.ComponentProps<"div">): React.ReactElement {
   return (
     <div
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("text-sm text-pretty text-muted-foreground", className)}
       data-slot="frame-panel-description"
       {...props}
     />
