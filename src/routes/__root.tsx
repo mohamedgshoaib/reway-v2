@@ -3,6 +3,7 @@ import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 import { LazyMotion } from "motion/react"
 
+import { ErrorState, UnexpectedErrorPage } from "@/components/error-state"
 import { SoundProvider } from "@/components/sound-provider"
 import { ThemeHotkey } from "@/components/theme-hotkey"
 import { themeInitScript } from "@/hooks/use-theme"
@@ -33,12 +34,9 @@ export const Route = createRootRoute({
       },
     ],
   }),
-  notFoundComponent: () => (
-    <main className="container mx-auto p-4 pt-16">
-      <h1>404</h1>
-      <p>The requested page could not be found.</p>
-    </main>
-  ),
+  notFoundComponent: () => <ErrorState kind="notFound" />,
+  onCatch: console.error,
+  errorComponent: ({ reset }) => <UnexpectedErrorPage reset={reset} />,
   shellComponent: RootDocument,
 })
 

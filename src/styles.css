@@ -22,6 +22,14 @@
   --font-display: "Cal Sans Geo";
   --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
   --font-sans: "Cal Sans UI";
+  /* Fluid public typography roles (spec/identity/design-language.md). Only
+     the roles actually in use are implemented; add more as real surfaces
+     need them, not speculatively. Clamp curves target 32-48px / 18-20px
+     across a 400-1280px viewport range. */
+  --text-section-title: clamp(2rem, 1.55rem + 1.82vw, 3rem);
+  --text-section-title--line-height: 1.1;
+  --text-content: clamp(1.125rem, 1.07rem + 0.23vw, 1.25rem);
+  --text-content--line-height: 1.55;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
