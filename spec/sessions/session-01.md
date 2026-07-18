@@ -39,6 +39,7 @@ Write facts only. No plans, no advice, no narration.
 - Replaced the raw pre-hydration theme script with TanStack Router's server-only `ScriptOnce`, kept light as the default, moved theme sound/hotkey behavior inside the provider hierarchy so it respects persisted sound settings, and fixed toggle sound direction to follow the destination theme.
 - Theme-provider changes pass `pnpm typecheck`, `pnpm lint`, `pnpm format`, `pnpm build`, and React Doctor at 100/100; Playwright and automated tests were skipped at the user's direction, and all temporary browser/server artifacts were removed.
 - Deslopped the current diff by removing unreachable sound-provider Context state, stale theme-toggle classes, redundant theme subscription bookkeeping, and repeated audio unlock; `pnpm typecheck`, `pnpm lint`, `pnpm format`, and `pnpm build` pass, and React Doctor reports 100/100 with no issues.
+- Ran `make-interfaces-feel-better`/`emil-design-eng`/`apple-design`/`find-animation-opportunities` polish sweeps plus a full `spec/research/design-craft/*` audit, then closed all four resulting plans (`plans/001-004`: sidebar easing, component consistency pass, research-folder correction, primitive smoke tests + CI wired into `.github/workflows/ci.yml`) — `pnpm run check` and `pnpm run test` (4 files, 12 tests) both clean.
 
 ---
 
