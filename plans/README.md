@@ -1,23 +1,24 @@
-# Animation plans
+# Plans
 
 | #   | Title                                                                                   | Severity   | Status |
 | --- | --------------------------------------------------------------------------------------- | ---------- | ------ |
 | 001 | [Sidebar collapse easing and label fade](001-sidebar-collapse-easing-and-label-fade.md) | LOW/MEDIUM | DONE   |
+| 002 | [Component consistency pass](002-component-consistency-pass.md)                         | LOW/MEDIUM | DONE   |
+| 003 | [Research folder correction](003-research-folder-correction.md)                         | MEDIUM     | DONE   |
+| 004 | [Primitive smoke tests and CI](004-primitive-smoke-tests-and-ci.md)                     | LOW        | DONE   |
+
+Renamed from "Animation plans" — 002 also touches typography and documentation, 003 and 004 aren't animation work at all. Scope was never actually limited to animation; the old title just hadn't been revisited since there was only one plan.
 
 ## Execution order
 
-001 has no dependencies. Originally scoped as a pure-CSS polish pass; executed with `motion` (lazy-loaded via `LazyMotion`) added as a new dependency for the label fade specifically — see the plan for what changed from the original draft.
+001 has no dependencies (already done). 002, 003, and 004 are mutually independent — no plan blocks another. Suggested order is by cost/risk, cheapest and lowest-risk first: 003 (docs only, no code) → 002 (the bulk of the value, all UI code) → 004 (new test infrastructure, most effort).
 
 ## Deferred, not planned
 
-**Sidebar `clip-path` rewrite** (replace `sidebar-container`'s `width` animation with a fixed-width box + animated `clip-path: inset()` reveal, eliminating the layout-recalculation cost of the collapse entirely, not just its visible symptom).
+**Sidebar `clip-path` rewrite** — see the "Deferred, not planned" note that used to live here; unchanged, still not worth doing (see git history for the original reasoning if needed, or ask — the reasoning was: no observed dropped frames, low toggle frequency, high effort to handle every `collapsible`×`variant`×`side` combination, and it would fork further from upstream coss `sidebar.tsx`). Revisit only if the sidebar ships with a materially longer nav list and someone observes real dropped frames.
 
-Not written as a plan because leverage (impact ÷ effort) is currently poor:
+**`table.tsx` `nth-child` row striping** — real, cheap, well-evidenced (Guri's uncommon-Tailwind-classes post), but no real data-dense table exists outside the `/ui` audit demo yet. Revisit once a real dashboard table view exists.
 
-- **Impact**: theoretical. Frame-sampling the existing demo (short list, modern browser) showed no dropped frames. The collapse toggle isn't a high-frequency action. The bug this was originally investigating (label text reflowing into broken multi-line text during collapse) is already fixed at its actual root cause — a missing `<span>` wrapper on the label, not the width animation itself.
-- **Effort**: high. `Sidebar` is a shared primitive; the rewrite has to correctly handle every combination of `collapsible` (`offcanvas`/`icon`/`none`) × `variant` (`sidebar`/`floating`/`inset`) × `side` (`left`/`right`) × the mobile `Sheet` fallback, plus `pointer-events` correctness on the clipped-but-still-full-width region during the transition.
-- **Divergence cost**: confirmed (byte-diffed against the live upstream registry source) that our installed `sidebar.tsx` is unmodified coss code — only formatting, import aliasing, and an established icon-library swap differ. A `clip-path` rewrite becomes a permanent local fork that a future `npx shadcn@latest add @coss/sidebar` reinstall would silently wipe out, same class of risk already documented for the drawer `--inset` fix.
+**Dev-only breakpoint indicator badge** — cheap, pairs naturally with keeping `/ui` around and the already-stripped `TanStackDevtools` panel. Not planned because it's pure nice-to-have with zero current pain point, not because it's a bad idea. Revisit if responsive-layout bugs actually start costing time to diagnose.
 
-Revisit if: the sidebar ships in the actual dashboard with a materially longer nav list, and someone observes real dropped frames (DevTools Performance panel, not assumption) during collapse/expand.
-
-Note: `motion` is now a project dependency (added for plan 001). If this is revisited, `motion`'s `layout` animations (the `domMax` feature bundle, not the `domAnimation` bundle already loaded for 001) use the FLIP technique to animate layout/size changes via `transform` under the hood — a lower-effort path to the same GPU-composited goal than hand-rolling `clip-path`, worth evaluating first.
+**`color-mix(in srgb, …)` vs `in oklch`/`in oklab`** (`styles.css`, 3 spots: `--card`, `--popover`, `--code`) — technically not what `jakub-krehel.md` claims about this project's color system, but the blends are 2–8% tints; the perceptual difference between srgb and oklch interpolation at that range is not worth a change on its own. Revisit only if it's ever touched for an unrelated reason.
