@@ -6,6 +6,7 @@ import { minimal } from "@sounds"
 import { useSound } from "@web-kits/audio/react"
 import type React from "react"
 
+import { AnimatedIcon } from "@/components/ui/animated-icon"
 import { cn } from "@/lib/utils"
 
 export function Checkbox({
@@ -41,19 +42,23 @@ export function Checkbox({
           state: CheckboxPrimitive.Indicator.State
         ) => (
           <span {...props}>
-            {state.indeterminate ? (
-              <MinusIcon
-                aria-hidden="true"
-                className="size-3.5 sm:size-3"
-                weight="regular"
-              />
-            ) : (
-              <CheckIcon
-                aria-hidden="true"
-                className="size-3.5 sm:size-3"
-                weight="regular"
-              />
-            )}
+            <AnimatedIcon
+              transitionKey={state.indeterminate ? "indeterminate" : "checked"}
+            >
+              {state.indeterminate ? (
+                <MinusIcon
+                  aria-hidden="true"
+                  className="size-3.5 sm:size-3"
+                  weight="regular"
+                />
+              ) : (
+                <CheckIcon
+                  aria-hidden="true"
+                  className="size-3.5 sm:size-3"
+                  weight="regular"
+                />
+              )}
+            </AnimatedIcon>
           </span>
         )}
       />

@@ -1,6 +1,13 @@
-import { ArrowRightIcon, HeartIcon, TrashIcon } from "@phosphor-icons/react"
-import type * as React from "react"
+import {
+  ArrowRightIcon,
+  CheckIcon,
+  CopyIcon,
+  HeartIcon,
+  TrashIcon,
+} from "@phosphor-icons/react"
+import * as React from "react"
 
+import { AnimatedIcon } from "@/components/ui/animated-icon"
 import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { Button, type ButtonProps } from "@/components/ui/button"
 import { Kbd, KbdGroup } from "@/components/ui/kbd"
@@ -8,6 +15,31 @@ import { Separator } from "@/components/ui/separator"
 import { Toggle } from "@/components/ui/toggle"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { AuditGroup, AuditSection } from "@/dev/ui-audit/section-shell"
+
+function CopyButtonDemo(): React.ReactElement {
+  const [copied, setCopied] = React.useState(false)
+
+  return (
+    <Button
+      aria-label={copied ? "Copied" : "Copy link"}
+      onClick={() => {
+        void navigator.clipboard?.writeText("https://reway.page/library")
+        setCopied(true)
+        window.setTimeout(() => setCopied(false), 1500)
+      }}
+      size="icon"
+      variant="outline"
+    >
+      <AnimatedIcon transitionKey={copied ? "check" : "copy"}>
+        {copied ? (
+          <CheckIcon aria-hidden="true" />
+        ) : (
+          <CopyIcon aria-hidden="true" />
+        )}
+      </AnimatedIcon>
+    </Button>
+  )
+}
 
 const buttonVariantNames = [
   "default",
@@ -90,6 +122,10 @@ export function ActionsSection(): React.ReactElement {
         <Button loading variant="outline">
           Loading outline
         </Button>
+      </AuditGroup>
+
+      <AuditGroup label="Button — copy, animated icon transition">
+        <CopyButtonDemo />
       </AuditGroup>
 
       <AuditGroup label="Toggle — variant / size">

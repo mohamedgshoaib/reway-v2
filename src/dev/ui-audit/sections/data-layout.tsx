@@ -220,6 +220,36 @@ const projectColumns: ColumnDef<Project>[] = [
   },
 ]
 
+function TabularNumsDemo(): React.ReactElement {
+  const [value, setValue] = React.useState(84213)
+
+  return (
+    <div className="flex flex-col items-start gap-3">
+      <Button
+        onClick={() => setValue(Math.floor(Math.random() * 900_000) + 1)}
+        size="sm"
+        variant="outline"
+      >
+        Randomize
+      </Button>
+      <div className="flex flex-col gap-1.5 text-sm">
+        <p>
+          Without <code className="text-xs">tabular-nums</code>:{" "}
+          <span className="font-semibold">{value.toLocaleString()}</span>{" "}
+          bookmarks saved
+        </p>
+        <p>
+          With <code className="text-xs">tabular-nums</code>:{" "}
+          <span className="font-semibold tabular-nums">
+            {value.toLocaleString()}
+          </span>{" "}
+          bookmarks saved
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function DataTableDemo(): React.ReactElement {
   const [rowSelection, setRowSelection] = React.useState({})
 
@@ -343,6 +373,10 @@ export function DataLayoutSection(): React.ReactElement {
 
       <AuditGroup label="Table — data table with TanStack" wrap={false}>
         <DataTableDemo />
+      </AuditGroup>
+
+      <AuditGroup label="Tabular nums — jitter comparison" wrap={false}>
+        <TabularNumsDemo />
       </AuditGroup>
 
       <AuditGroup label="Card" wrap={false}>

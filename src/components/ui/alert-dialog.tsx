@@ -131,7 +131,7 @@ export function AlertDialogTitle({
   return (
     <AlertDialogPrimitive.Title
       className={cn(
-        "font-heading text-xl leading-none font-semibold",
+        "font-heading text-xl leading-none font-semibold text-balance",
         className
       )}
       data-slot="alert-dialog-title"
@@ -146,7 +146,7 @@ export function AlertDialogDescription({
 }: AlertDialogPrimitive.Description.Props): React.ReactElement {
   return (
     <AlertDialogPrimitive.Description
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("text-sm text-pretty text-muted-foreground", className)}
       data-slot="alert-dialog-description"
       {...props}
     />

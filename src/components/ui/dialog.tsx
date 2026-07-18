@@ -165,7 +165,7 @@ export function DialogTitle({
   return (
     <DialogPrimitive.Title
       className={cn(
-        "font-heading text-xl leading-none font-semibold",
+        "font-heading text-xl leading-none font-semibold text-balance",
         className
       )}
       data-slot="dialog-title"
@@ -180,7 +180,7 @@ export function DialogDescription({
 }: DialogPrimitive.Description.Props): React.ReactElement {
   return (
     <DialogPrimitive.Description
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("text-sm text-pretty text-muted-foreground", className)}
       data-slot="dialog-description"
       {...props}
     />

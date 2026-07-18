@@ -1,0 +1,34 @@
+"use client"
+
+import { AnimatePresence, m } from "motion/react"
+import type React from "react"
+
+/**
+ * Swaps its child for a new one whenever `transitionKey` changes, animating
+ * opacity/scale/blur instead of an instant toggle. Requires the `m` component
+ * (not `motion`) since the root LazyMotion provider runs in `strict` mode.
+ */
+export function AnimatedIcon({
+  children,
+  className,
+  transitionKey,
+}: {
+  children: React.ReactNode
+  className?: string
+  transitionKey: string | number
+}): React.ReactElement {
+  return (
+    <AnimatePresence initial={false} mode="popLayout">
+      <m.span
+        animate={{ filter: "blur(0px)", opacity: 1, scale: 1 }}
+        className={className}
+        exit={{ filter: "blur(4px)", opacity: 0, scale: 0.25 }}
+        initial={{ filter: "blur(4px)", opacity: 0, scale: 0.25 }}
+        key={transitionKey}
+        transition={{ bounce: 0, duration: 0.3, type: "spring" }}
+      >
+        {children}
+      </m.span>
+    </AnimatePresence>
+  )
+}
