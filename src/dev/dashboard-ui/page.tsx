@@ -5,7 +5,12 @@ import { SidebarProvider } from "@/components/ui/sidebar"
 import { BookmarkGrid } from "@/dev/dashboard-ui/bookmark-grid"
 import { BookmarkList } from "@/dev/dashboard-ui/bookmark-list"
 import { BookmarkControlsBar } from "@/dev/dashboard-ui/controls-bar"
-import type { SortOption, ViewMode } from "@/dev/dashboard-ui/mock-bookmarks"
+import {
+  mockBookmarks,
+  type MockBookmark,
+  type SortOption,
+  type ViewMode,
+} from "@/dev/dashboard-ui/mock-bookmarks"
 import { DashboardSidebar } from "@/dev/dashboard-ui/sidebar"
 
 /**
@@ -19,8 +24,76 @@ import { DashboardSidebar } from "@/dev/dashboard-ui/sidebar"
  * src/routeTree.gen.ts regenerates without the /dashboard-ui route.
  */
 export function DashboardUiPage(): React.ReactElement {
+  const [bookmarks, setBookmarks] =
+    React.useState<MockBookmark[]>(mockBookmarks)
+  const [selectedBookmarkIds, setSelectedBookmarkIds] = React.useState<
+    Set<string>
+  >(() => new Set())
   const [sort, setSort] = React.useState<SortOption>("date")
   const [viewMode, setViewMode] = React.useState<ViewMode>("list")
+
+  const updateBookmark = (
+    bookmarkId: string,
+    update: (bookmark: MockBookmark) => MockBookmark
+  ): void => {
+    setBookmarks((currentBookmarks) =>
+      currentBookmarks.map((bookmark) =>
+        bookmark.id === bookmarkId ? update(bookmark) : bookmark
+      )
+    )
+  }
+
+  const actionHandlers = {
+    onAddToCollection: (bookmarkId: string, collection: string): void => {
+      updateBookmark(bookmarkId, (bookmark) => ({
+        ...bookmark,
+        collections: Array.from(
+          new Set([...(bookmark.collections ?? []), collection])
+        ),
+      }))
+    },
+    onDelete: (bookmarkId: string): void => {
+      setBookmarks((currentBookmarks) =>
+        currentBookmarks.filter((bookmark) => bookmark.id !== bookmarkId)
+      )
+      setSelectedBookmarkIds((currentSelectedIds) => {
+        const nextSelectedIds = new Set(currentSelectedIds)
+        nextSelectedIds.delete(bookmarkId)
+        return nextSelectedIds
+      })
+    },
+    onMoveToCollection: (bookmarkId: string, collection: string): void => {
+      updateBookmark(bookmarkId, (bookmark) => ({
+        ...bookmark,
+        collections: [collection],
+      }))
+    },
+    onReenrich: (bookmarkId: string): void => {
+      updateBookmark(bookmarkId, (bookmark) => ({
+        ...bookmark,
+        metadataStatus: "pending",
+      }))
+    },
+    onSelectChange: (bookmarkId: string, selected: boolean): void => {
+      setSelectedBookmarkIds((currentSelectedIds) => {
+        const nextSelectedIds = new Set(currentSelectedIds)
+
+        if (selected) {
+          nextSelectedIds.add(bookmarkId)
+        } else {
+          nextSelectedIds.delete(bookmarkId)
+        }
+
+        return nextSelectedIds
+      })
+    },
+    onTagsChange: (bookmarkId: string, tags: string[]): void => {
+      updateBookmark(bookmarkId, (bookmark) => ({ ...bookmark, tags }))
+    },
+    onTitleChange: (bookmarkId: string, title: string): void => {
+      updateBookmark(bookmarkId, (bookmark) => ({ ...bookmark, title }))
+    },
+  }
 
   return (
     // h-svh (fixed, not min-h-svh) gives this column a real, bounded
@@ -62,9 +135,17 @@ export function DashboardUiPage(): React.ReactElement {
                 provides that space inside its ScrollArea. */}
             <div className="p-2">
               {viewMode === "list" ? (
-                <BookmarkList sort={sort} />
+                <BookmarkList
+                  {...actionHandlers}
+                  bookmarks={bookmarks}
+                  selectedBookmarkIds={selectedBookmarkIds}
+                  sort={sort}
+                />
               ) : (
                 <BookmarkGrid
+                  {...actionHandlers}
+                  bookmarks={bookmarks}
+                  selectedBookmarkIds={selectedBookmarkIds}
                   showImage={viewMode === "grid-image"}
                   sort={sort}
                 />

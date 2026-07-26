@@ -1,6 +1,24 @@
 export type SortOption = "date" | "visits" | "alpha"
 export type ViewMode = "list" | "grid" | "grid-image"
 
+export interface MockTag {
+  label: string
+  value: string
+}
+
+export const mockTags: MockTag[] = [
+  { label: "Engineering", value: "engineering" },
+  { label: "Design", value: "design" },
+  { label: "Product", value: "product" },
+  { label: "Research", value: "research" },
+  { label: "Marketing", value: "marketing" },
+  { label: "AI", value: "ai" },
+  { label: "Typography", value: "typography" },
+  { label: "Accessibility", value: "accessibility" },
+  { label: "Performance", value: "performance" },
+  { label: "Writing", value: "writing" },
+]
+
 export const mockCollections = [
   { label: "Research", count: 24 },
   { label: "Reading list", count: 9 },
@@ -22,6 +40,8 @@ export interface MockBookmark {
   createdAt: number
   visitCount: number
   metadataStatus: "pending" | "enriched" | "failed"
+  collections?: string[]
+  tags?: string[]
 }
 
 function daysAgo(days: number, hours = 0): number {
