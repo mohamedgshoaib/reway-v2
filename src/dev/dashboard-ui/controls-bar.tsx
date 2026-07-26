@@ -104,6 +104,7 @@ export function BookmarkControlsBar({
                   render={
                     <ToggleGroupItem
                       aria-label={option.label}
+                      className="sm:min-w-9"
                       value={option.value}
                     />
                   }
@@ -141,6 +142,7 @@ export function BookmarkControlsBar({
                   render={
                     <ToggleGroupItem
                       aria-label={option.label}
+                      className="sm:min-w-9"
                       value={option.value}
                     />
                   }

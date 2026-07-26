@@ -33,7 +33,7 @@ function BookmarkGridCard({
   showImage: boolean
 }): React.ReactElement {
   return (
-    <div className="flex flex-col gap-2 rounded-lg p-2 hover:bg-accent">
+    <div className="relative isolate flex min-h-10 flex-col gap-2 rounded-[18px] p-3 before:pointer-events-none before:absolute before:inset-0.5 before:-z-10 before:rounded-2xl before:transition-colors before:duration-150 before:ease-out-strong hover:before:bg-accent">
       {showImage ? <BookmarkImage ogImage={bookmark.ogImage} /> : null}
       <div className="flex items-center gap-2">
         <BookmarkFavicon domain={bookmark.domain} />
@@ -53,7 +53,7 @@ export function BookmarkGrid({
   showImage: boolean
 }): React.ReactElement {
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid grid-cols-3">
       {sortBookmarks(mockBookmarks, sort).map((bookmark) => (
         <BookmarkGridCard
           bookmark={bookmark}
