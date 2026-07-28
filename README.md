@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="./public/logo.svg" alt="Reway logo" width="72" height="72" />
-</p>
+![Reway website preview](public/reway-dev-cover.webp)
 
 <h1 align="center">Reway</h1>
 
