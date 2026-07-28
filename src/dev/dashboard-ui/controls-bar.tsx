@@ -1,9 +1,9 @@
 import {
-  ClockIcon,
+  CalendarIcon,
   FireIcon,
-  GridFourIcon,
-  ImageSquareIcon,
+  ImageIcon,
   ListIcon,
+  SquaresFourIcon,
   SortAscendingIcon,
 } from "@phosphor-icons/react"
 import * as m from "motion/react-m"
@@ -27,9 +27,9 @@ const viewTooltipHandle = TooltipCreateHandle<string>()
 const sortOptions: {
   value: SortOption
   label: string
-  icon: React.ComponentType<{ className?: string }>
+  icon: React.ComponentType<{ weight?: "duotone" | "regular" }>
 }[] = [
-  { icon: ClockIcon, label: "Date added", value: "date" },
+  { icon: CalendarIcon, label: "Date added", value: "date" },
   { icon: FireIcon, label: "Most visited", value: "visits" },
   { icon: SortAscendingIcon, label: "Alphabetical", value: "alpha" },
 ]
@@ -37,11 +37,11 @@ const sortOptions: {
 const viewOptions: {
   value: ViewMode
   label: string
-  icon: React.ComponentType<{ className?: string }>
+  icon: React.ComponentType<{ weight?: "duotone" | "regular" }>
 }[] = [
   { icon: ListIcon, label: "List", value: "list" },
-  { icon: GridFourIcon, label: "Grid", value: "grid" },
-  { icon: ImageSquareIcon, label: "Grid with images", value: "grid-image" },
+  { icon: SquaresFourIcon, label: "Grid", value: "grid" },
+  { icon: ImageIcon, label: "Grid with images", value: "grid-image" },
 ]
 
 /**
@@ -109,7 +109,7 @@ export function BookmarkControlsBar({
                     />
                   }
                 >
-                  <option.icon />
+                  <option.icon weight="duotone" />
                 </TooltipTrigger>
               ))}
             </ToggleGroup>
@@ -147,7 +147,7 @@ export function BookmarkControlsBar({
                     />
                   }
                 >
-                  <option.icon />
+                  <option.icon weight="duotone" />
                 </TooltipTrigger>
               ))}
             </ToggleGroup>

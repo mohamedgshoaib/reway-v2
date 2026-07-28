@@ -1,10 +1,19 @@
 import {
-  BookmarkSimpleIcon,
+  AirplaneTiltIcon,
+  BookOpenTextIcon,
+  BookmarkIcon,
+  BriefcaseIcon,
   CaretDownIcon,
-  FolderIcon,
+  CodesandboxLogoIcon,
+  CookingPotIcon,
+  FileMagnifyingGlassIcon,
   GearIcon,
-  HashIcon,
+  HouseLineIcon,
+  NotebookIcon,
+  PaintBrushIcon,
+  TagChevronIcon,
   TrashIcon,
+  UserCircleIcon,
 } from "@phosphor-icons/react"
 import * as m from "motion/react-m"
 import type * as React from "react"
@@ -47,6 +56,19 @@ const tags = [
   "performance",
   "writing",
 ]
+
+const collectionIcons = {
+  "Book notes": NotebookIcon,
+  "Client work": UserCircleIcon,
+  "Design references": PaintBrushIcon,
+  "Home renovation": HouseLineIcon,
+  "Job hunting": BriefcaseIcon,
+  "Reading list": BookOpenTextIcon,
+  Recipes: CookingPotIcon,
+  Research: FileMagnifyingGlassIcon,
+  "Side project": CodesandboxLogoIcon,
+  "Travel planning": AirplaneTiltIcon,
+} as const
 
 /**
  * Sidebar shell + content, mounted inside a plain, non-fixed <aside> —
@@ -106,7 +128,7 @@ export function DashboardSidebar(): React.ReactElement {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton isActive tooltip="All bookmarks">
-                  <BookmarkSimpleIcon />
+                  <BookmarkIcon weight="duotone" />
                   <SidebarMenuButtonLabel>All bookmarks</SidebarMenuButtonLabel>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -133,17 +155,24 @@ export function DashboardSidebar(): React.ReactElement {
             <CollapsiblePanel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {mockCollections.map((collection) => (
-                    <SidebarMenuItem key={collection.label}>
-                      <SidebarMenuButton tooltip={collection.label}>
-                        <FolderIcon />
-                        <SidebarMenuButtonLabel>
-                          {collection.label}
-                        </SidebarMenuButtonLabel>
-                      </SidebarMenuButton>
-                      <SidebarMenuBadge>{collection.count}</SidebarMenuBadge>
-                    </SidebarMenuItem>
-                  ))}
+                  {mockCollections.map((collection) => {
+                    const CollectionIcon =
+                      collectionIcons[
+                        collection.label as keyof typeof collectionIcons
+                      ]
+
+                    return (
+                      <SidebarMenuItem key={collection.label}>
+                        <SidebarMenuButton tooltip={collection.label}>
+                          <CollectionIcon weight="duotone" />
+                          <SidebarMenuButtonLabel>
+                            {collection.label}
+                          </SidebarMenuButtonLabel>
+                        </SidebarMenuButton>
+                        <SidebarMenuBadge>{collection.count}</SidebarMenuBadge>
+                      </SidebarMenuItem>
+                    )
+                  })}
                 </SidebarMenu>
               </SidebarGroupContent>
             </CollapsiblePanel>
@@ -172,7 +201,7 @@ export function DashboardSidebar(): React.ReactElement {
                   {tags.map((tag) => (
                     <SidebarMenuItem key={tag}>
                       <SidebarMenuButton size="sm" tooltip={tag}>
-                        <HashIcon />
+                        <TagChevronIcon weight="duotone" />
                         <SidebarMenuButtonLabel>{tag}</SidebarMenuButtonLabel>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -187,13 +216,13 @@ export function DashboardSidebar(): React.ReactElement {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Settings">
-              <GearIcon />
+              <GearIcon weight="duotone" />
               <SidebarMenuButtonLabel>Settings</SidebarMenuButtonLabel>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Trash">
-              <TrashIcon />
+              <TrashIcon weight="duotone" />
               <SidebarMenuButtonLabel>Trash</SidebarMenuButtonLabel>
             </SidebarMenuButton>
           </SidebarMenuItem>

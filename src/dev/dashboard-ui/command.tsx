@@ -82,7 +82,7 @@ export function DashboardCommand(): React.ReactElement {
   return (
     <CommandDialog onOpenChange={setOpen} open={open}>
       <CommandDialogTrigger render={<SidebarMenuButton tooltip="Search" />}>
-        <MagnifyingGlassIcon />
+        <MagnifyingGlassIcon weight="duotone" />
         <SidebarMenuButtonLabel className="flex flex-1 items-center justify-between gap-2">
           <span>Search</span>
           <KbdGroup>

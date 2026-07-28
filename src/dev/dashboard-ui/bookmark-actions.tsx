@@ -2,12 +2,13 @@
 
 import {
   ArrowClockwiseIcon,
+  ArrowUpRightIcon,
   CheckSquareOffsetIcon,
   CopyIcon,
   DotsThreeIcon,
   FolderIcon,
   PencilSimpleIcon,
-  TagIcon,
+  TagChevronIcon,
   TrashIcon,
 } from "@phosphor-icons/react"
 import * as React from "react"
@@ -386,14 +387,15 @@ export function BookmarkActions({
                   <DrawerClose
                     render={<DrawerMenuItem onClick={openBookmark} />}
                   >
+                    <ArrowUpRightIcon aria-hidden="true" weight="regular" />
                     Open in new tab
                   </DrawerClose>
                   <DrawerClose render={<DrawerMenuItem onClick={copyLink} />}>
-                    <CopyIcon aria-hidden="true" />
+                    <CopyIcon aria-hidden="true" weight="duotone" />
                     Copy link
                   </DrawerClose>
                   <DrawerClose render={<DrawerMenuItem onClick={openEdit} />}>
-                    <PencilSimpleIcon aria-hidden="true" />
+                    <PencilSimpleIcon aria-hidden="true" weight="duotone" />
                     Edit
                   </DrawerClose>
                 </DrawerMenuGroup>
@@ -402,7 +404,7 @@ export function BookmarkActions({
                   <DrawerMenuGroupLabel>Organize</DrawerMenuGroupLabel>
                   <Drawer>
                     <DrawerMenuTrigger>
-                      <TagIcon aria-hidden="true" />
+                      <TagChevronIcon aria-hidden="true" weight="duotone" />
                       Tags
                     </DrawerMenuTrigger>
                     <DrawerPopup showBar>
@@ -444,7 +446,10 @@ export function BookmarkActions({
                       />
                     }
                   >
-                    <CheckSquareOffsetIcon aria-hidden="true" />
+                    <CheckSquareOffsetIcon
+                      aria-hidden="true"
+                      weight="regular"
+                    />
                     {isSelected ? "Remove from selection" : "Select"}
                   </DrawerClose>
                   <DrawerClose
@@ -452,7 +457,7 @@ export function BookmarkActions({
                       <DrawerMenuItem onClick={() => onReenrich(bookmark.id)} />
                     }
                   >
-                    <ArrowClockwiseIcon aria-hidden="true" />
+                    <ArrowClockwiseIcon aria-hidden="true" weight="duotone" />
                     Re-enrich
                   </DrawerClose>
                 </DrawerMenuGroup>
@@ -467,7 +472,7 @@ export function BookmarkActions({
                       />
                     }
                   >
-                    <TrashIcon aria-hidden="true" />
+                    <TrashIcon aria-hidden="true" weight="duotone" />
                     Delete
                   </DrawerClose>
                 </DrawerMenuGroup>
@@ -487,13 +492,16 @@ export function BookmarkActions({
         <MenuPopup align="end">
           <MenuGroup>
             <MenuGroupLabel>Bookmark</MenuGroupLabel>
-            <MenuItem onClick={openBookmark}>Open in new tab</MenuItem>
+            <MenuItem onClick={openBookmark}>
+              <ArrowUpRightIcon aria-hidden="true" weight="regular" />
+              Open in new tab
+            </MenuItem>
             <MenuItem onClick={copyLink}>
-              <CopyIcon aria-hidden="true" />
+              <CopyIcon aria-hidden="true" weight="duotone" />
               Copy link
             </MenuItem>
             <MenuItem onClick={openEdit}>
-              <PencilSimpleIcon aria-hidden="true" />
+              <PencilSimpleIcon aria-hidden="true" weight="duotone" />
               Edit
             </MenuItem>
           </MenuGroup>
@@ -501,7 +509,7 @@ export function BookmarkActions({
           <MenuGroup>
             <MenuGroupLabel>Organize</MenuGroupLabel>
             <MenuItem onClick={() => setTagsOpen(true)}>
-              <TagIcon aria-hidden="true" />
+              <TagChevronIcon aria-hidden="true" weight="duotone" />
               Tags
             </MenuItem>
             <MenuSub>
@@ -544,11 +552,11 @@ export function BookmarkActions({
           <MenuSeparator />
           <MenuGroup>
             <MenuItem onClick={() => onSelectChange(bookmark.id, !isSelected)}>
-              <CheckSquareOffsetIcon aria-hidden="true" />
+              <CheckSquareOffsetIcon aria-hidden="true" weight="regular" />
               {isSelected ? "Remove from selection" : "Select"}
             </MenuItem>
             <MenuItem onClick={() => onReenrich(bookmark.id)}>
-              <ArrowClockwiseIcon aria-hidden="true" />
+              <ArrowClockwiseIcon aria-hidden="true" weight="duotone" />
               Re-enrich
             </MenuItem>
           </MenuGroup>
@@ -556,7 +564,7 @@ export function BookmarkActions({
           <MenuGroup>
             <MenuGroupLabel>Danger</MenuGroupLabel>
             <MenuItem onClick={() => setDeleteOpen(true)} variant="destructive">
-              <TrashIcon aria-hidden="true" />
+              <TrashIcon aria-hidden="true" weight="duotone" />
               Delete
             </MenuItem>
           </MenuGroup>
@@ -606,10 +614,11 @@ export function BookmarkContextMenu({
           <ContextMenuGroup>
             <ContextMenuGroupLabel>Bookmark</ContextMenuGroupLabel>
             <ContextMenuItem onClick={openBookmark}>
+              <ArrowUpRightIcon aria-hidden="true" weight="regular" />
               Open in new tab
             </ContextMenuItem>
             <ContextMenuItem onClick={copyLink}>
-              <CopyIcon aria-hidden="true" />
+              <CopyIcon aria-hidden="true" weight="duotone" />
               Copy link
             </ContextMenuItem>
             <ContextMenuItem
@@ -618,7 +627,7 @@ export function BookmarkContextMenu({
                 setEditOpen(true)
               }}
             >
-              <PencilSimpleIcon aria-hidden="true" />
+              <PencilSimpleIcon aria-hidden="true" weight="duotone" />
               Edit
             </ContextMenuItem>
           </ContextMenuGroup>
@@ -626,7 +635,7 @@ export function BookmarkContextMenu({
           <ContextMenuGroup>
             <ContextMenuGroupLabel>Organize</ContextMenuGroupLabel>
             <ContextMenuItem onClick={() => setTagsOpen(true)}>
-              <TagIcon aria-hidden="true" />
+              <TagChevronIcon aria-hidden="true" weight="duotone" />
               Tags
             </ContextMenuItem>
             <ContextMenuSub>
@@ -671,11 +680,11 @@ export function BookmarkContextMenu({
             <ContextMenuItem
               onClick={() => onSelectChange(bookmark.id, !isSelected)}
             >
-              <CheckSquareOffsetIcon aria-hidden="true" />
+              <CheckSquareOffsetIcon aria-hidden="true" weight="regular" />
               {isSelected ? "Remove from selection" : "Select"}
             </ContextMenuItem>
             <ContextMenuItem onClick={() => onReenrich(bookmark.id)}>
-              <ArrowClockwiseIcon aria-hidden="true" />
+              <ArrowClockwiseIcon aria-hidden="true" weight="duotone" />
               Re-enrich
             </ContextMenuItem>
           </ContextMenuGroup>
@@ -686,7 +695,7 @@ export function BookmarkContextMenu({
               onClick={() => setDeleteOpen(true)}
               variant="destructive"
             >
-              <TrashIcon aria-hidden="true" />
+              <TrashIcon aria-hidden="true" weight="duotone" />
               Delete
             </ContextMenuItem>
           </ContextMenuGroup>

@@ -41,6 +41,10 @@ Write facts only. No plans, no advice, no narration.
 - Added `p-2` inside the bookmark `ScrollArea` (matching `SidebarGroup`'s own `p-2`) so content isn't flush against the viewport edge.
 - Enabled `scrollbarGutter` on both `ScrollArea` instances (`sidebar.tsx`'s `SidebarContent`, and the bookmark area's) — fixed content leaking behind the scroll thumb in both panels.
 - `pnpm run check` and `react-doctor --scope changed` (100/100) both clean; deslop pass found no AI-slop to remove.
+- Rewrote the root `README.md` as an application/product README based on the current UI-only checkout, separating shipped UI foundation work from the specified but unimplemented backend, authentication, extension, and live bookmark scope.
+- Validated `README.md` with `pnpm exec oxfmt --check README.md`, `git diff --check -- README.md`, local link and image target checks, and a stale-template scan.
+- Updated `dashboard-ui` Phosphor icons and weights across controls, sidebar navigation, collection rows, search, and bookmark menus; requested icons are duotone except the regular open-in-new-tab and selection icons.
+- Verified the icon change with focused oxfmt, oxlint, and TypeScript checks; old requested icon names are absent from `src/dev/dashboard-ui`.
 
 ---
 
