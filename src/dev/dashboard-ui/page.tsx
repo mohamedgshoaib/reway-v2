@@ -4,8 +4,18 @@ import * as React from "react"
 
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { SidebarProvider } from "@/components/ui/sidebar"
+import type { BookmarkActionHandlers } from "@/dev/dashboard-ui/bookmark-actions"
 import { BookmarkGrid } from "@/dev/dashboard-ui/bookmark-grid"
 import { BookmarkList } from "@/dev/dashboard-ui/bookmark-list"
+import {
+  createCollectionOrders,
+  moveBookmarkId,
+  orderBookmarksByIds,
+} from "@/dev/dashboard-ui/bookmark-order"
+import {
+  BookmarkReorderArea,
+  BookmarkReorderBar,
+} from "@/dev/dashboard-ui/bookmark-reorder"
 import { BookmarkControlsBar } from "@/dev/dashboard-ui/controls-bar"
 import {
   mockBookmarks,
@@ -18,32 +28,17 @@ import { DashboardSidebar } from "@/dev/dashboard-ui/sidebar"
 import { useIsMobile } from "@/hooks/use-media-query"
 import { sidebarRailTransition } from "@/lib/motion"
 
-/**
- * Disposable dashboard shell wireframe. Not linked from product navigation.
- *
- * Slice 5: View mode (List / Grid / Grid with images) switchable from the
- * sidebar. Filter is still deferred — see spec/sessions/session-02.md.
- *
- * To remove this page entirely: delete src/routes/dashboard-ui.tsx and
- * src/dev/dashboard-ui/, then run the dev server or build once so
- * src/routeTree.gen.ts regenerates without the /dashboard-ui route.
- */
-export function DashboardUiPage({
-  initialNavigationPreferences,
-}: {
-  initialNavigationPreferences: DashboardNavigationPreferences
-}): React.ReactElement {
+function useBookmarkWireframeState(): {
+  actionHandlers: BookmarkActionHandlers
+  bookmarks: MockBookmark[]
+  selectedBookmarkIds: Set<string>
+  setSelectedBookmarkIds: React.Dispatch<React.SetStateAction<Set<string>>>
+} {
   const [bookmarks, setBookmarks] =
     React.useState<MockBookmark[]>(mockBookmarks)
   const [selectedBookmarkIds, setSelectedBookmarkIds] = React.useState<
     Set<string>
   >(() => new Set())
-  const [sort, setSort] = React.useState<SortOption>("date")
-  const [viewMode, setViewMode] = React.useState<ViewMode>("list")
-  const [sidebarOpen, setSidebarOpen] = React.useState(true)
-  const isMobile = useIsMobile()
-  const shouldReduceMotion = useReducedMotion()
-  const effectiveViewMode = isMobile && viewMode === "grid" ? "list" : viewMode
 
   const updateBookmark = (
     bookmarkId: string,
@@ -56,8 +51,8 @@ export function DashboardUiPage({
     )
   }
 
-  const actionHandlers = {
-    onAddToCollection: (bookmarkId: string, collection: string): void => {
+  const actionHandlers: BookmarkActionHandlers = {
+    onAddToCollection: (bookmarkId, collection) => {
       updateBookmark(bookmarkId, (bookmark) => ({
         ...bookmark,
         collections: Array.from(
@@ -65,7 +60,7 @@ export function DashboardUiPage({
         ),
       }))
     },
-    onDelete: (bookmarkId: string): void => {
+    onDelete: (bookmarkId) => {
       setBookmarks((currentBookmarks) =>
         currentBookmarks.filter((bookmark) => bookmark.id !== bookmarkId)
       )
@@ -75,19 +70,19 @@ export function DashboardUiPage({
         return nextSelectedIds
       })
     },
-    onMoveToCollection: (bookmarkId: string, collection: string): void => {
+    onMoveToCollection: (bookmarkId, collection) => {
       updateBookmark(bookmarkId, (bookmark) => ({
         ...bookmark,
         collections: [collection],
       }))
     },
-    onReenrich: (bookmarkId: string): void => {
+    onReenrich: (bookmarkId) => {
       updateBookmark(bookmarkId, (bookmark) => ({
         ...bookmark,
         metadataStatus: "pending",
       }))
     },
-    onSelectChange: (bookmarkId: string, selected: boolean): void => {
+    onSelectChange: (bookmarkId, selected) => {
       setSelectedBookmarkIds((currentSelectedIds) => {
         const nextSelectedIds = new Set(currentSelectedIds)
 
@@ -100,13 +95,158 @@ export function DashboardUiPage({
         return nextSelectedIds
       })
     },
-    onTagsChange: (bookmarkId: string, tags: string[]): void => {
+    onTagsChange: (bookmarkId, tags) => {
       updateBookmark(bookmarkId, (bookmark) => ({ ...bookmark, tags }))
     },
-    onTitleChange: (bookmarkId: string, title: string): void => {
+    onTitleChange: (bookmarkId, title) => {
       updateBookmark(bookmarkId, (bookmark) => ({ ...bookmark, title }))
     },
   }
+
+  return {
+    actionHandlers,
+    bookmarks,
+    selectedBookmarkIds,
+    setSelectedBookmarkIds,
+  }
+}
+
+/**
+ * Disposable dashboard shell wireframe. Not linked from product navigation.
+ *
+ * Slice 6: Collection-scoped reorder mode across the existing list and grid
+ * views. Filter is still deferred — see spec/sessions/session-02.md.
+ *
+ * To remove this page entirely: delete src/routes/dashboard-ui.tsx and
+ * src/dev/dashboard-ui/, then run the dev server or build once so
+ * src/routeTree.gen.ts regenerates without the /dashboard-ui route.
+ */
+export function DashboardUiPage({
+  initialNavigationPreferences,
+}: {
+  initialNavigationPreferences: DashboardNavigationPreferences
+}): React.ReactElement {
+  const {
+    actionHandlers,
+    bookmarks,
+    selectedBookmarkIds,
+    setSelectedBookmarkIds,
+  } = useBookmarkWireframeState()
+  const [sort, setSort] = React.useState<SortOption>("date")
+  const [viewMode, setViewMode] = React.useState<ViewMode>("list")
+  const [activeCollection, setActiveCollection] = React.useState<string | null>(
+    "Research"
+  )
+  const [collectionOrders, setCollectionOrders] = React.useState<
+    Record<string, string[]>
+  >(() => createCollectionOrders(mockBookmarks))
+  const [isReordering, setIsReordering] = React.useState(false)
+  const isDraggingRef = React.useRef(false)
+  const [sidebarOpen, setSidebarOpen] = React.useState(true)
+  const isMobile = useIsMobile()
+  const shouldReduceMotion = useReducedMotion()
+  const effectiveViewMode = isMobile && viewMode === "grid" ? "list" : viewMode
+  const scopedBookmarks = React.useMemo(
+    () =>
+      activeCollection
+        ? bookmarks.filter((bookmark) =>
+            bookmark.collections?.includes(activeCollection)
+          )
+        : bookmarks,
+    [activeCollection, bookmarks]
+  )
+  const visibleBookmarks = React.useMemo(() => {
+    if (!(activeCollection && sort === "custom")) return scopedBookmarks
+
+    return orderBookmarksByIds(
+      scopedBookmarks,
+      collectionOrders[activeCollection] ??
+        scopedBookmarks.map((bookmark) => bookmark.id)
+    )
+  }, [activeCollection, collectionOrders, scopedBookmarks, sort])
+  const canReorder = activeCollection !== null && scopedBookmarks.length >= 2
+
+  const focusDisplayTrigger = (): void => {
+    requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>(
+          isMobile
+            ? "[aria-label='Open navigation']"
+            : "[data-dashboard-display-trigger]"
+        )
+        ?.focus()
+    })
+  }
+
+  const exitReorderMode = (restoreFocus: boolean): void => {
+    isDraggingRef.current = false
+    setIsReordering(false)
+    if (restoreFocus) focusDisplayTrigger()
+  }
+
+  const handleSelectAllBookmarks = (): void => {
+    setActiveCollection(null)
+    setSelectedBookmarkIds(new Set())
+    if (sort === "custom") setSort("date")
+  }
+
+  const handleSelectCollection = (collection: string): void => {
+    setActiveCollection(collection)
+    setSelectedBookmarkIds(new Set())
+  }
+
+  const handleNavigation = (): void => {
+    if (isReordering) exitReorderMode(false)
+  }
+
+  const handleSortChange = (nextSort: SortOption): void => {
+    if (!isReordering) setSort(nextSort)
+  }
+
+  const handleViewModeChange = (nextViewMode: ViewMode): void => {
+    if (!isReordering) setViewMode(nextViewMode)
+  }
+
+  const handleStartReorder = (): void => {
+    if (!(activeCollection && canReorder)) return
+
+    setSort("custom")
+    setSelectedBookmarkIds(new Set())
+    setIsReordering(true)
+    requestAnimationFrame(() => {
+      document.querySelector<HTMLElement>("[data-reorder-handle]")?.focus()
+    })
+  }
+
+  const handleMove = (fromIndex: number, toIndex: number): void => {
+    if (!activeCollection) return
+
+    const visibleIds = visibleBookmarks.map((bookmark) => bookmark.id)
+    setCollectionOrders((currentOrders) => ({
+      ...currentOrders,
+      [activeCollection]: moveBookmarkId(visibleIds, fromIndex, toIndex),
+    }))
+  }
+
+  const bookmarkView =
+    effectiveViewMode === "list" ? (
+      <BookmarkList
+        {...actionHandlers}
+        bookmarks={visibleBookmarks}
+        isReordering={isReordering}
+        selectedBookmarkIds={selectedBookmarkIds}
+        sort={sort}
+      />
+    ) : (
+      <BookmarkGrid
+        {...actionHandlers}
+        bookmarks={visibleBookmarks}
+        isReordering={isReordering}
+        selectedBookmarkIds={selectedBookmarkIds}
+        showImage={effectiveViewMode === "grid-image"}
+        sort={sort}
+      />
+    )
 
   return (
     // h-svh (fixed, not min-h-svh) gives this column a real, bounded
@@ -125,9 +265,16 @@ export function DashboardUiPage({
             open={sidebarOpen}
           >
             <DashboardSidebar
+              activeCollection={activeCollection}
+              canReorder={canReorder}
               initialDisclosures={initialNavigationPreferences.desktop}
-              onSortChange={setSort}
-              onViewModeChange={setViewMode}
+              isReordering={isReordering}
+              onNavigate={handleNavigation}
+              onSelectAllBookmarks={handleSelectAllBookmarks}
+              onSelectCollection={handleSelectCollection}
+              onSortChange={handleSortChange}
+              onStartReorder={handleStartReorder}
+              onViewModeChange={handleViewModeChange}
               sort={sort}
               viewMode={viewMode}
             />
@@ -136,6 +283,19 @@ export function DashboardUiPage({
               className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background p-2 min-[800px]:rounded-2xl min-[800px]:border min-[800px]:border-border min-[800px]:bg-card"
               layout
               layoutDependency={sidebarOpen}
+              onKeyDownCapture={(event) => {
+                if (
+                  event.key !== "Escape" ||
+                  !isReordering ||
+                  isDraggingRef.current
+                ) {
+                  return
+                }
+
+                event.preventDefault()
+                event.stopPropagation()
+                exitReorderMode(true)
+              }}
               transition={{
                 layout: shouldReduceMotion
                   ? { duration: 0 }
@@ -153,14 +313,27 @@ export function DashboardUiPage({
                 }}
               >
                 <BookmarkControlsBar
-                  onSortChange={setSort}
-                  onViewModeChange={setViewMode}
+                  activeCollection={activeCollection}
+                  canReorder={canReorder}
+                  isReordering={isReordering}
                   mobileNavigationDisclosures={
                     initialNavigationPreferences.mobile
                   }
+                  onNavigate={handleNavigation}
+                  onSelectAllBookmarks={handleSelectAllBookmarks}
+                  onSelectCollection={handleSelectCollection}
+                  onSortChange={handleSortChange}
+                  onStartReorder={handleStartReorder}
+                  onViewModeChange={handleViewModeChange}
                   sort={sort}
                   viewMode={viewMode}
                 />
+                {isReordering && activeCollection ? (
+                  <BookmarkReorderBar
+                    collection={activeCollection}
+                    onDone={() => exitReorderMode(true)}
+                  />
+                ) : null}
                 {/* The one scrolling region — navigation access stays put above it.
                 The fade mask communicates overflow without reserving a
                 scrollbar gutter, so content keeps one optical edge. */}
@@ -171,21 +344,17 @@ export function DashboardUiPage({
                   scrollFade
                 >
                   <div className="min-[800px]:p-2">
-                    {effectiveViewMode === "list" ? (
-                      <BookmarkList
-                        {...actionHandlers}
-                        bookmarks={bookmarks}
-                        selectedBookmarkIds={selectedBookmarkIds}
-                        sort={sort}
-                      />
+                    {isReordering ? (
+                      <BookmarkReorderArea
+                        onDraggingChange={(dragging) => {
+                          isDraggingRef.current = dragging
+                        }}
+                        onMove={handleMove}
+                      >
+                        {bookmarkView}
+                      </BookmarkReorderArea>
                     ) : (
-                      <BookmarkGrid
-                        {...actionHandlers}
-                        bookmarks={bookmarks}
-                        selectedBookmarkIds={selectedBookmarkIds}
-                        showImage={effectiveViewMode === "grid-image"}
-                        sort={sort}
-                      />
+                      bookmarkView
                     )}
                   </div>
                 </ScrollArea>

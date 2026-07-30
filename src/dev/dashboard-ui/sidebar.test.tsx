@@ -90,6 +90,33 @@ describe("DashboardSidebar", () => {
     expect(onSortChange).toHaveBeenCalledWith("alpha")
   })
 
+  it("offers custom order and reorder only for an active collection", async () => {
+    const onStartReorder = vi.fn<() => void>()
+
+    render(
+      <SidebarProvider>
+        <DashboardSidebar
+          activeCollection="Research"
+          canReorder
+          initialDisclosures={{ collections: true, tags: true }}
+          onSortChange={vi.fn<(sort: SortOption) => void>()}
+          onStartReorder={onStartReorder}
+          onViewModeChange={vi.fn<(viewMode: ViewMode) => void>()}
+          sort="custom"
+          viewMode="list"
+        />
+      </SidebarProvider>
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Display" }))
+
+    expect(
+      await screen.findByRole("menuitemradio", { name: "Custom order" })
+    ).not.toBeNull()
+    fireEvent.click(screen.getByRole("menuitem", { name: "Reorder items" }))
+    expect(onStartReorder).toHaveBeenCalledOnce()
+  })
+
   it("disables hidden group triggers while collapsed", () => {
     const { container } = render(
       <SidebarProvider defaultOpen={false}>

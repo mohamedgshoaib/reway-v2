@@ -1,4 +1,4 @@
-export type SortOption = "date" | "visits" | "alpha"
+export type SortOption = "date" | "visits" | "alpha" | "custom"
 export type ViewMode = "list" | "grid" | "grid-image"
 
 export interface MockTag {
@@ -55,6 +55,7 @@ export const mockBookmarks: MockBookmark[] = [
     domain: "recollect.so",
     ogImage: "https://picsum.photos/seed/recollect/400/240",
     createdAt: daysAgo(0, 2),
+    collections: ["Research", "Design references"],
     metadataStatus: "enriched",
     visitCount: 3,
   },
@@ -64,6 +65,7 @@ export const mockBookmarks: MockBookmark[] = [
     domain: "claude.ai",
     ogImage: "https://picsum.photos/seed/claude/400/240",
     createdAt: daysAgo(0, 5),
+    collections: ["Research"],
     metadataStatus: "enriched",
     visitCount: 42,
   },
@@ -73,6 +75,7 @@ export const mockBookmarks: MockBookmark[] = [
     domain: "perplexity.ai",
     ogImage: "https://picsum.photos/seed/perplexity/400/240",
     createdAt: daysAgo(1),
+    collections: ["Research", "Reading list"],
     metadataStatus: "enriched",
     visitCount: 18,
   },
@@ -82,6 +85,7 @@ export const mockBookmarks: MockBookmark[] = [
     domain: "gemini.google.com",
     ogImage: "https://picsum.photos/seed/gemini/400/240",
     createdAt: daysAgo(1, 6),
+    collections: ["Research"],
     metadataStatus: "enriched",
     visitCount: 5,
   },
@@ -91,6 +95,7 @@ export const mockBookmarks: MockBookmark[] = [
     domain: "uxdesign.cc",
     ogImage: "https://picsum.photos/seed/uxdesign/400/240",
     createdAt: daysAgo(2),
+    collections: ["Research", "Design references"],
     metadataStatus: "enriched",
     visitCount: 1,
   },
@@ -100,6 +105,7 @@ export const mockBookmarks: MockBookmark[] = [
     domain: "chatgpt.com",
     ogImage: "https://picsum.photos/seed/chatgpt/400/240",
     createdAt: daysAgo(3),
+    collections: ["Research"],
     metadataStatus: "enriched",
     visitCount: 67,
   },
@@ -109,6 +115,7 @@ export const mockBookmarks: MockBookmark[] = [
     domain: null,
     ogImage: null,
     createdAt: daysAgo(4),
+    collections: ["Research"],
     metadataStatus: "pending",
     visitCount: 0,
   },
@@ -118,6 +125,7 @@ export const mockBookmarks: MockBookmark[] = [
     domain: "aampe.com",
     ogImage: "https://picsum.photos/seed/aampe/400/240",
     createdAt: daysAgo(5),
+    collections: ["Research", "Design references"],
     metadataStatus: "enriched",
     visitCount: 9,
   },
@@ -243,7 +251,7 @@ export function sortBookmarks(
     sorted.sort((a, b) => b.createdAt - a.createdAt)
   } else if (sort === "visits") {
     sorted.sort((a, b) => b.visitCount - a.visitCount)
-  } else {
+  } else if (sort === "alpha") {
     sorted.sort((a, b) => a.title.localeCompare(b.title))
   }
 

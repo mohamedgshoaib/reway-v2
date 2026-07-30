@@ -6,6 +6,7 @@ import {
   CaretDownIcon,
   CodesandboxLogoIcon,
   CookingPotIcon,
+  DotsSixVerticalIcon,
   FileMagnifyingGlassIcon,
   GearIcon,
   HouseLineIcon,
@@ -44,6 +45,7 @@ import {
   DrawerMenu,
   DrawerMenuGroup,
   DrawerMenuGroupLabel,
+  DrawerMenuItem,
   DrawerMenuRadioGroup,
   DrawerMenuRadioItem,
   DrawerPanel,
@@ -53,7 +55,9 @@ import {
 } from "@/components/ui/drawer"
 import {
   Menu,
+  MenuGroup,
   MenuGroupLabel,
+  MenuItem,
   MenuPopup,
   MenuRadioGroup,
   MenuRadioItem,
@@ -128,14 +132,28 @@ const collectionIcons = {
  * spec/sessions/session-02.md for why.
  */
 export function DashboardSidebar({
+  activeCollection = null,
+  canReorder = false,
   initialDisclosures,
+  isReordering = false,
+  onNavigate,
+  onSelectAllBookmarks,
+  onSelectCollection,
   onSortChange,
+  onStartReorder,
   onViewModeChange,
   sort,
   viewMode,
 }: {
   initialDisclosures: DashboardNavigationDisclosures
+  activeCollection?: string | null
+  canReorder?: boolean
+  isReordering?: boolean
+  onNavigate?: () => void
+  onSelectAllBookmarks?: () => void
+  onSelectCollection?: (collection: string) => void
   onSortChange: (sort: SortOption) => void
+  onStartReorder?: () => void
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
   viewMode: ViewMode
@@ -204,10 +222,17 @@ export function DashboardSidebar({
         </div>
       </SidebarHeader>
       <DashboardNavigationContent
+        activeCollection={activeCollection}
+        canReorder={canReorder}
         collapsed={collapsed}
         disclosures={disclosures}
+        isReordering={isReordering}
         onDisclosureChange={setDisclosure}
+        onNavigate={onNavigate}
+        onSelectAllBookmarks={onSelectAllBookmarks}
+        onSelectCollection={onSelectCollection}
         onSortChange={onSortChange}
+        onStartReorder={onStartReorder}
         onViewModeChange={onViewModeChange}
         sort={sort}
         surface="desktop"
@@ -218,14 +243,28 @@ export function DashboardSidebar({
 }
 
 export function MobileDashboardNavigation({
+  activeCollection = null,
+  canReorder = false,
   initialDisclosures,
+  isReordering = false,
+  onNavigate,
+  onSelectAllBookmarks,
+  onSelectCollection,
   onSortChange,
+  onStartReorder,
   onViewModeChange,
   sort,
   viewMode,
 }: {
   initialDisclosures: DashboardNavigationDisclosures
+  activeCollection?: string | null
+  canReorder?: boolean
+  isReordering?: boolean
+  onNavigate?: () => void
+  onSelectAllBookmarks?: () => void
+  onSelectCollection?: (collection: string) => void
   onSortChange: (sort: SortOption) => void
+  onStartReorder?: () => void
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
   viewMode: ViewMode
@@ -280,13 +319,22 @@ export function MobileDashboardNavigation({
           scrollable={false}
         >
           <DashboardNavigationContent
+            activeCollection={activeCollection}
+            canReorder={canReorder}
             collapsed={false}
             disclosures={disclosures}
+            isReordering={isReordering}
             onDisclosureChange={setDisclosure}
-            onNavigate={() => setOpen(false)}
+            onNavigate={() => {
+              onNavigate?.()
+              setOpen(false)
+            }}
             onOpenCommand={() => setCommandOpen(true)}
             onOpenDisplay={() => setDisplayOpen(true)}
+            onSelectAllBookmarks={onSelectAllBookmarks}
+            onSelectCollection={onSelectCollection}
             onSortChange={onSortChange}
+            onStartReorder={onStartReorder}
             onViewModeChange={onViewModeChange}
             sort={sort}
             surface="mobile"
@@ -301,8 +349,14 @@ export function MobileDashboardNavigation({
         showTrigger={false}
       />
       <MobileDisplayDialog
+        activeCollection={activeCollection}
+        canReorder={canReorder}
         onOpenChange={setDisplayOpen}
         onSortChange={onSortChange}
+        onStartReorder={() => {
+          setOpen(false)
+          onStartReorder?.()
+        }}
         onViewModeChange={onViewModeChange}
         open={displayOpen}
         sort={sort}
@@ -313,15 +367,21 @@ export function MobileDashboardNavigation({
 }
 
 function MobileDisplayDialog({
+  activeCollection,
+  canReorder,
   onOpenChange,
   onSortChange,
+  onStartReorder,
   onViewModeChange,
   open,
   sort,
   viewMode,
 }: {
+  activeCollection: string | null
+  canReorder: boolean
   onOpenChange: (open: boolean) => void
   onSortChange: (sort: SortOption) => void
+  onStartReorder?: () => void
   onViewModeChange: (viewMode: ViewMode) => void
   open: boolean
   sort: SortOption
@@ -354,6 +414,11 @@ function MobileDisplayDialog({
                 <DrawerMenuRadioItem value="alpha">
                   Alphabetical
                 </DrawerMenuRadioItem>
+                {activeCollection ? (
+                  <DrawerMenuRadioItem value="custom">
+                    Custom order
+                  </DrawerMenuRadioItem>
+                ) : null}
               </DrawerMenuRadioGroup>
             </DrawerMenuGroup>
             <DrawerMenuGroup className="mt-2">
@@ -368,6 +433,21 @@ function MobileDisplayDialog({
                 </DrawerMenuRadioItem>
               </DrawerMenuRadioGroup>
             </DrawerMenuGroup>
+            {activeCollection ? (
+              <DrawerMenuGroup className="mt-2">
+                <DrawerMenuGroupLabel>Order</DrawerMenuGroupLabel>
+                <DrawerMenuItem
+                  disabled={!canReorder}
+                  onClick={() => {
+                    onOpenChange(false)
+                    onStartReorder?.()
+                  }}
+                >
+                  <DotsSixVerticalIcon weight="bold" />
+                  Reorder items
+                </DrawerMenuItem>
+              </DrawerMenuGroup>
+            ) : null}
           </DrawerMenu>
         </DialogPanel>
       </DialogPopup>
@@ -376,20 +456,29 @@ function MobileDisplayDialog({
 }
 
 function DashboardNavigationContent({
+  activeCollection,
+  canReorder,
   collapsed,
   disclosures,
+  isReordering,
   onDisclosureChange,
   onNavigate,
   onOpenCommand,
   onOpenDisplay,
+  onSelectAllBookmarks,
+  onSelectCollection,
   onSortChange,
+  onStartReorder,
   onViewModeChange,
   sort,
   surface,
   viewMode,
 }: {
+  activeCollection: string | null
+  canReorder: boolean
   collapsed: boolean
   disclosures: DashboardNavigationDisclosures
+  isReordering: boolean
   onDisclosureChange: (
     section: DashboardNavigationSection,
     open: boolean
@@ -397,7 +486,10 @@ function DashboardNavigationContent({
   onNavigate?: () => void
   onOpenCommand?: () => void
   onOpenDisplay?: () => void
+  onSelectAllBookmarks?: () => void
+  onSelectCollection?: (collection: string) => void
   onSortChange: (sort: SortOption) => void
+  onStartReorder?: () => void
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
   surface: DashboardNavigationSurface
@@ -421,8 +513,11 @@ function DashboardNavigationContent({
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive
-                  onClick={onNavigate}
+                  isActive={activeCollection === null}
+                  onClick={() => {
+                    onSelectAllBookmarks?.()
+                    onNavigate?.()
+                  }}
                   tooltip="All bookmarks"
                 >
                   <BookmarkIcon weight="duotone" />
@@ -466,7 +561,11 @@ function DashboardNavigationContent({
                     return (
                       <SidebarMenuItem key={collection.label}>
                         <SidebarMenuButton
-                          onClick={onNavigate}
+                          isActive={activeCollection === collection.label}
+                          onClick={() => {
+                            onSelectCollection?.(collection.label)
+                            onNavigate?.()
+                          }}
                           tooltip={collection.label}
                         >
                           <CollectionIcon weight="duotone" />
@@ -532,13 +631,25 @@ function DashboardNavigationContent({
           </SidebarMenuItem>
           <SidebarMenuItem>
             {surface === "mobile" && onOpenDisplay ? (
-              <SidebarMenuButton onClick={onOpenDisplay} tooltip="Display">
+              <SidebarMenuButton
+                disabled={isReordering}
+                onClick={onOpenDisplay}
+                tooltip="Display"
+              >
                 <SlidersHorizontalIcon weight="duotone" />
                 <SidebarMenuButtonLabel>Display</SidebarMenuButtonLabel>
               </SidebarMenuButton>
             ) : (
               <Menu>
-                <MenuTrigger render={<SidebarMenuButton tooltip="Display" />}>
+                <MenuTrigger
+                  render={
+                    <SidebarMenuButton
+                      data-dashboard-display-trigger
+                      disabled={isReordering}
+                      tooltip="Display"
+                    />
+                  }
+                >
                   <SlidersHorizontalIcon weight="duotone" />
                   <SidebarMenuButtonLabel>Display</SidebarMenuButtonLabel>
                 </MenuTrigger>
@@ -557,6 +668,11 @@ function DashboardNavigationContent({
                     <MenuRadioItem closeOnClick value="alpha">
                       Alphabetical
                     </MenuRadioItem>
+                    {activeCollection ? (
+                      <MenuRadioItem closeOnClick value="custom">
+                        Custom order
+                      </MenuRadioItem>
+                    ) : null}
                   </MenuRadioGroup>
                   <MenuSeparator />
                   <MenuRadioGroup
@@ -576,6 +692,22 @@ function DashboardNavigationContent({
                       Grid with images
                     </MenuRadioItem>
                   </MenuRadioGroup>
+                  {activeCollection ? (
+                    <>
+                      <MenuSeparator />
+                      <MenuGroup>
+                        <MenuGroupLabel>Order</MenuGroupLabel>
+                        <MenuItem
+                          closeOnClick
+                          disabled={!canReorder}
+                          onClick={onStartReorder}
+                        >
+                          <DotsSixVerticalIcon weight="bold" />
+                          Reorder items
+                        </MenuItem>
+                      </MenuGroup>
+                    </>
+                  ) : null}
                 </MenuPopup>
               </Menu>
             )}

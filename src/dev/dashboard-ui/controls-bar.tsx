@@ -7,23 +7,44 @@ import { MobileDashboardNavigation } from "@/dev/dashboard-ui/sidebar"
  * so the content area has no header there.
  */
 export function BookmarkControlsBar({
-  sort,
-  onSortChange,
-  viewMode,
-  onViewModeChange,
+  activeCollection = null,
+  canReorder = false,
+  isReordering = false,
   mobileNavigationDisclosures,
+  onNavigate,
+  onSelectAllBookmarks,
+  onSelectCollection,
+  onSortChange,
+  onStartReorder,
+  onViewModeChange,
+  sort,
+  viewMode,
 }: {
-  sort: SortOption
-  onSortChange: (sort: SortOption) => void
-  viewMode: ViewMode
-  onViewModeChange: (viewMode: ViewMode) => void
+  activeCollection?: string | null
+  canReorder?: boolean
+  isReordering?: boolean
   mobileNavigationDisclosures: DashboardNavigationDisclosures
+  onNavigate?: () => void
+  onSelectAllBookmarks?: () => void
+  onSelectCollection?: (collection: string) => void
+  onSortChange: (sort: SortOption) => void
+  onStartReorder?: () => void
+  onViewModeChange: (viewMode: ViewMode) => void
+  sort: SortOption
+  viewMode: ViewMode
 }): React.ReactElement {
   return (
     <div className="mb-4 flex h-9 items-center px-2 min-[800px]:hidden">
       <MobileDashboardNavigation
+        activeCollection={activeCollection}
+        canReorder={canReorder}
         initialDisclosures={mobileNavigationDisclosures}
+        isReordering={isReordering}
+        onNavigate={onNavigate}
+        onSelectAllBookmarks={onSelectAllBookmarks}
+        onSelectCollection={onSelectCollection}
         onSortChange={onSortChange}
+        onStartReorder={onStartReorder}
         onViewModeChange={onViewModeChange}
         sort={sort}
         viewMode={viewMode}
