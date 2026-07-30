@@ -66,6 +66,17 @@ Write facts only. No plans, no advice, no narration.
 - `pnpm run check` and `git diff --check` passed after the cleanup.
 - React Doctor scored the 18 changed files 100/100 with no issues.
 - The full React Doctor scan scored 63/100 with 15 existing warnings outside the changed dashboard files.
+- Added collection-scoped bookmark reordering to `/dashboard-ui` with `@dnd-kit/react`, `@dnd-kit/dom`, `@dnd-kit/helpers`, and `@dnd-kit/collision`.
+- Added custom bookmark order helpers and coverage in `src/dev/dashboard-ui/bookmark-order.ts` and `src/dev/dashboard-ui/bookmark-order.test.ts`.
+- Added the reorder mode bar, drag handles, sensors, and sortable wiring in `src/dev/dashboard-ui/bookmark-reorder.tsx`.
+- Added reorder mode and drag-state coverage in `src/dev/dashboard-ui/bookmark-reorder.test.tsx`.
+- Kept bookmark lists and grids semantic with `ul` and `li` markup during sorting.
+- Matched the reorder bar and Done action to the bookmark pane insets.
+- Kept bookmark item dimensions stable when reorder mode replaces their normal actions with drag handles.
+- Used the dragged bookmark itself as opaque feedback so content behind it does not show through.
+- Removed duplicate drag-state attributes, static class composition, and a stale slice comment during the code cleanup.
+- `pnpm check`, the full 33-test Vitest run, `pnpm build`, and `git diff --check` passed after the reorder work.
+- React Doctor scored the changed React files 100/100 with no issues after the reorder work.
 
 ---
 
@@ -85,6 +96,9 @@ Write facts only. No plans, no advice, no narration.
 - Sort and view controls live in the sidebar Display surface.
 - Mobile Search and Display open above the navigation drawer without closing it first.
 - Sidebar width, bookmark pane position and size, labels, and logo state move as one coordinated transition.
+- Bookmark drag reordering is available only inside the active named collection.
+- Sort options and drag reordering remain separate modes; reorder mode uses the collection's custom order.
+- Drag feedback moves one opaque bookmark surface instead of rendering a separate clone.
 
 ---
 
