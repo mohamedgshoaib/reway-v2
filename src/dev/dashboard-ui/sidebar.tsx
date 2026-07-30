@@ -12,15 +12,18 @@ import {
   NotebookIcon,
   PaintBrushIcon,
   SidebarSimpleIcon,
+  SlidersHorizontalIcon,
   TagChevronIcon,
   TrashIcon,
   UserCircleIcon,
   XIcon,
 } from "@phosphor-icons/react"
+import { useReducedMotion } from "motion/react"
 import * as m from "motion/react-m"
 import * as React from "react"
 
 import { Logo } from "@/components/logo"
+import { AnimatedIcon } from "@/components/ui/animated-icon"
 import { Button } from "@/components/ui/button"
 import {
   Collapsible,
@@ -28,14 +31,35 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import {
+  Dialog,
+  DialogHeader,
+  DialogPanel,
+  DialogPopup,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   Drawer,
   DrawerClose,
   DrawerHeader,
+  DrawerMenu,
+  DrawerMenuGroup,
+  DrawerMenuGroupLabel,
+  DrawerMenuRadioGroup,
+  DrawerMenuRadioItem,
   DrawerPanel,
   DrawerPopup,
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer"
+import {
+  Menu,
+  MenuGroupLabel,
+  MenuPopup,
+  MenuRadioGroup,
+  MenuRadioItem,
+  MenuSeparator,
+  MenuTrigger,
+} from "@/components/ui/menu"
 import {
   SidebarContent,
   SidebarFooter,
@@ -51,8 +75,21 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { DashboardCommand } from "@/dev/dashboard-ui/command"
-import { mockCollections } from "@/dev/dashboard-ui/mock-bookmarks"
+import {
+  DashboardCommand,
+  DashboardCommandButton,
+} from "@/dev/dashboard-ui/command"
+import {
+  mockCollections,
+  type SortOption,
+  type ViewMode,
+} from "@/dev/dashboard-ui/mock-bookmarks"
+import {
+  setDashboardNavigationPreference,
+  type DashboardNavigationDisclosures,
+  type DashboardNavigationSection,
+  type DashboardNavigationSurface,
+} from "@/dev/dashboard-ui/navigation-preferences"
 import { easeOutStrong } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
@@ -90,63 +127,127 @@ const collectionIcons = {
  * lives inside the bounded 896px shell instead. See
  * spec/sessions/session-02.md for why.
  */
-export function DashboardSidebar(): React.ReactElement {
-  const { state } = useSidebar()
+export function DashboardSidebar({
+  initialDisclosures,
+  onSortChange,
+  onViewModeChange,
+  sort,
+  viewMode,
+}: {
+  initialDisclosures: DashboardNavigationDisclosures
+  onSortChange: (sort: SortOption) => void
+  onViewModeChange: (viewMode: ViewMode) => void
+  sort: SortOption
+  viewMode: ViewMode
+}): React.ReactElement {
+  const { state, toggleSidebar } = useSidebar()
   const collapsed = state === "collapsed"
+  const shouldReduceMotion = useReducedMotion()
+  const [disclosures, setDisclosure] = useDashboardNavigationDisclosures(
+    "desktop",
+    initialDisclosures
+  )
 
   return (
     <aside
       className={cn(
-        "group hidden min-h-0 shrink-0 flex-col overflow-hidden transition-[width] duration-200 ease-in-out-strong min-[800px]:flex",
+        "group hidden min-h-0 shrink-0 flex-col overflow-hidden min-[800px]:flex",
         collapsed ? "w-(--sidebar-width-icon)" : "w-(--sidebar-width)"
       )}
       data-collapsible={collapsed ? "icon" : ""}
     >
       <SidebarHeader>
         <div className="relative flex h-8 items-center">
-          <div className="flex size-8 items-center justify-center">
-            <Logo className="size-5 text-foreground" />
+          <div className="relative size-8">
+            {collapsed ? (
+              <Button
+                aria-label="Expand sidebar"
+                className="absolute inset-0 size-8"
+                onClick={toggleSidebar}
+                size="icon"
+                variant="ghost"
+              />
+            ) : null}
+            <AnimatedIcon
+              className="pointer-events-none absolute inset-0 flex size-8 items-center justify-center"
+              transitionKey={collapsed ? "expand" : "logo"}
+              variant="crossfade"
+            >
+              {collapsed ? (
+                <SidebarSimpleIcon
+                  aria-hidden="true"
+                  className="size-4.5"
+                  weight="duotone"
+                />
+              ) : (
+                <Logo className="size-5 text-foreground" />
+              )}
+            </AnimatedIcon>
           </div>
-          {/* Absolutely positioned, like SidebarMenuBadge, so fading it
-              never shifts the logo. Same asymmetric timing as the badge
-              counts: wait out the width transition before fading in,
-              snap out fast before the rail narrows. Hidden once collapsed
-              — the icon-only rail has no room for both logo and trigger;
-              it reappears in the bookmark-area controls bar (sort/filter/
-              view row) once that exists. */}
           <m.div
             animate={{ opacity: collapsed ? 0 : 1 }}
+            aria-hidden={collapsed}
             className={cn(
               "absolute right-0",
               collapsed && "pointer-events-none"
             )}
             initial={false}
+            inert={collapsed}
             transition={
-              collapsed
-                ? { duration: 0.08, ease: easeOutStrong }
-                : { delay: 0.18, duration: 0.12, ease: easeOutStrong }
+              shouldReduceMotion
+                ? { duration: 0 }
+                : { duration: 0.12, ease: easeOutStrong }
             }
           >
-            <SidebarTrigger />
+            <SidebarTrigger aria-label="Collapse sidebar" />
           </m.div>
         </div>
       </SidebarHeader>
       <DashboardNavigationContent
         collapsed={collapsed}
-        registerCommandHotkey={false}
+        disclosures={disclosures}
+        onDisclosureChange={setDisclosure}
+        onSortChange={onSortChange}
+        onViewModeChange={onViewModeChange}
+        sort={sort}
+        surface="desktop"
+        viewMode={viewMode}
       />
     </aside>
   )
 }
 
-export function MobileDashboardNavigation(): React.ReactElement {
+export function MobileDashboardNavigation({
+  initialDisclosures,
+  onSortChange,
+  onViewModeChange,
+  sort,
+  viewMode,
+}: {
+  initialDisclosures: DashboardNavigationDisclosures
+  onSortChange: (sort: SortOption) => void
+  onViewModeChange: (viewMode: ViewMode) => void
+  sort: SortOption
+  viewMode: ViewMode
+}): React.ReactElement {
   const [open, setOpen] = React.useState(false)
+  const [commandOpen, setCommandOpen] = React.useState(false)
+  const [displayOpen, setDisplayOpen] = React.useState(false)
+  const [disclosures, setDisclosure] = useDashboardNavigationDisclosures(
+    "mobile",
+    initialDisclosures
+  )
 
   return (
     <Drawer onOpenChange={setOpen} open={open} position="left">
       <DrawerTrigger
         render={
-          <Button aria-label="Open navigation" size="icon" variant="ghost" />
+          <Button
+            aria-label="Open navigation"
+            className="-ms-2 pointer-coarse:hover:bg-transparent pointer-coarse:data-pressed:bg-transparent"
+            size="icon"
+            variant="ghost"
+          />
         }
       >
         <SidebarSimpleIcon weight="duotone" />
@@ -180,35 +281,143 @@ export function MobileDashboardNavigation(): React.ReactElement {
         >
           <DashboardNavigationContent
             collapsed={false}
+            disclosures={disclosures}
+            onDisclosureChange={setDisclosure}
             onNavigate={() => setOpen(false)}
-            registerCommandHotkey
+            onOpenCommand={() => setCommandOpen(true)}
+            onOpenDisplay={() => setDisplayOpen(true)}
+            onSortChange={onSortChange}
+            onViewModeChange={onViewModeChange}
+            sort={sort}
+            surface="mobile"
+            viewMode={viewMode}
           />
         </DrawerPanel>
       </DrawerPopup>
+      <DashboardCommand
+        onOpenChange={setCommandOpen}
+        open={commandOpen}
+        registerHotkey
+        showTrigger={false}
+      />
+      <MobileDisplayDialog
+        onOpenChange={setDisplayOpen}
+        onSortChange={onSortChange}
+        onViewModeChange={onViewModeChange}
+        open={displayOpen}
+        sort={sort}
+        viewMode={viewMode}
+      />
     </Drawer>
+  )
+}
+
+function MobileDisplayDialog({
+  onOpenChange,
+  onSortChange,
+  onViewModeChange,
+  open,
+  sort,
+  viewMode,
+}: {
+  onOpenChange: (open: boolean) => void
+  onSortChange: (sort: SortOption) => void
+  onViewModeChange: (viewMode: ViewMode) => void
+  open: boolean
+  sort: SortOption
+  viewMode: ViewMode
+}): React.ReactElement {
+  return (
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogPopup
+        backdropProps={{ forceRender: true }}
+        bottomStickOnMobile={false}
+        className="max-w-sm"
+      >
+        <DialogHeader className="px-6 pt-5 pb-3">
+          <DialogTitle className="text-base">Display</DialogTitle>
+        </DialogHeader>
+        <DialogPanel className="px-6 pt-1 pb-6">
+          <DrawerMenu>
+            <DrawerMenuGroup>
+              <DrawerMenuGroupLabel>Sort by</DrawerMenuGroupLabel>
+              <DrawerMenuRadioGroup
+                onValueChange={(value) => onSortChange(value as SortOption)}
+                value={sort}
+              >
+                <DrawerMenuRadioItem value="date">
+                  Date added
+                </DrawerMenuRadioItem>
+                <DrawerMenuRadioItem value="visits">
+                  Most visited
+                </DrawerMenuRadioItem>
+                <DrawerMenuRadioItem value="alpha">
+                  Alphabetical
+                </DrawerMenuRadioItem>
+              </DrawerMenuRadioGroup>
+            </DrawerMenuGroup>
+            <DrawerMenuGroup className="mt-2">
+              <DrawerMenuGroupLabel>View as</DrawerMenuGroupLabel>
+              <DrawerMenuRadioGroup
+                onValueChange={(value) => onViewModeChange(value as ViewMode)}
+                value={viewMode}
+              >
+                <DrawerMenuRadioItem value="list">List</DrawerMenuRadioItem>
+                <DrawerMenuRadioItem value="grid-image">
+                  Grid with images
+                </DrawerMenuRadioItem>
+              </DrawerMenuRadioGroup>
+            </DrawerMenuGroup>
+          </DrawerMenu>
+        </DialogPanel>
+      </DialogPopup>
+    </Dialog>
   )
 }
 
 function DashboardNavigationContent({
   collapsed,
+  disclosures,
+  onDisclosureChange,
   onNavigate,
-  registerCommandHotkey,
+  onOpenCommand,
+  onOpenDisplay,
+  onSortChange,
+  onViewModeChange,
+  sort,
+  surface,
+  viewMode,
 }: {
   collapsed: boolean
+  disclosures: DashboardNavigationDisclosures
+  onDisclosureChange: (
+    section: DashboardNavigationSection,
+    open: boolean
+  ) => void
   onNavigate?: () => void
-  registerCommandHotkey: boolean
+  onOpenCommand?: () => void
+  onOpenDisplay?: () => void
+  onSortChange: (sort: SortOption) => void
+  onViewModeChange: (viewMode: ViewMode) => void
+  sort: SortOption
+  surface: DashboardNavigationSurface
+  viewMode: ViewMode
 }): React.ReactElement {
   return (
     <>
-      <SidebarContent>
+      <SidebarContent hideScrollbar>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <DashboardCommand
-                  onNavigate={onNavigate}
-                  registerHotkey={registerCommandHotkey}
-                />
+                {onOpenCommand ? (
+                  <DashboardCommandButton onClick={onOpenCommand} />
+                ) : (
+                  <DashboardCommand
+                    onNavigate={onNavigate}
+                    registerHotkey={false}
+                  />
+                )}
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
@@ -224,7 +433,11 @@ function DashboardNavigationContent({
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <Collapsible defaultOpen disabled={collapsed}>
+          <Collapsible
+            disabled={collapsed}
+            onOpenChange={(open) => onDisclosureChange("collections", open)}
+            open={disclosures.collections}
+          >
             <CollapsibleTrigger
               inert={collapsed}
               render={
@@ -271,7 +484,11 @@ function DashboardNavigationContent({
           </Collapsible>
         </SidebarGroup>
         <SidebarGroup>
-          <Collapsible defaultOpen disabled={collapsed}>
+          <Collapsible
+            disabled={collapsed}
+            onOpenChange={(open) => onDisclosureChange("tags", open)}
+            open={disclosures.tags}
+          >
             <CollapsibleTrigger
               inert={collapsed}
               render={
@@ -314,6 +531,56 @@ function DashboardNavigationContent({
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
+            {surface === "mobile" && onOpenDisplay ? (
+              <SidebarMenuButton onClick={onOpenDisplay} tooltip="Display">
+                <SlidersHorizontalIcon weight="duotone" />
+                <SidebarMenuButtonLabel>Display</SidebarMenuButtonLabel>
+              </SidebarMenuButton>
+            ) : (
+              <Menu>
+                <MenuTrigger render={<SidebarMenuButton tooltip="Display" />}>
+                  <SlidersHorizontalIcon weight="duotone" />
+                  <SidebarMenuButtonLabel>Display</SidebarMenuButtonLabel>
+                </MenuTrigger>
+                <MenuPopup align="end" side="right">
+                  <MenuRadioGroup
+                    onValueChange={(value) => onSortChange(value as SortOption)}
+                    value={sort}
+                  >
+                    <MenuGroupLabel>Sort by</MenuGroupLabel>
+                    <MenuRadioItem closeOnClick value="date">
+                      Date added
+                    </MenuRadioItem>
+                    <MenuRadioItem closeOnClick value="visits">
+                      Most visited
+                    </MenuRadioItem>
+                    <MenuRadioItem closeOnClick value="alpha">
+                      Alphabetical
+                    </MenuRadioItem>
+                  </MenuRadioGroup>
+                  <MenuSeparator />
+                  <MenuRadioGroup
+                    onValueChange={(value) =>
+                      onViewModeChange(value as ViewMode)
+                    }
+                    value={viewMode}
+                  >
+                    <MenuGroupLabel>View as</MenuGroupLabel>
+                    <MenuRadioItem closeOnClick value="list">
+                      List
+                    </MenuRadioItem>
+                    <MenuRadioItem closeOnClick value="grid">
+                      Grid
+                    </MenuRadioItem>
+                    <MenuRadioItem closeOnClick value="grid-image">
+                      Grid with images
+                    </MenuRadioItem>
+                  </MenuRadioGroup>
+                </MenuPopup>
+              </Menu>
+            )}
+          </SidebarMenuItem>
+          <SidebarMenuItem>
             <SidebarMenuButton onClick={onNavigate} tooltip="Trash">
               <TrashIcon weight="duotone" />
               <SidebarMenuButtonLabel>Trash</SidebarMenuButtonLabel>
@@ -323,4 +590,35 @@ function DashboardNavigationContent({
       </SidebarFooter>
     </>
   )
+}
+
+function useDashboardNavigationDisclosures(
+  surface: DashboardNavigationSurface,
+  initialDisclosures: DashboardNavigationDisclosures
+): [
+  DashboardNavigationDisclosures,
+  (section: DashboardNavigationSection, open: boolean) => void,
+] {
+  const [disclosures, setDisclosures] =
+    React.useState<DashboardNavigationDisclosures>(initialDisclosures)
+
+  const setDisclosure = React.useCallback(
+    (section: DashboardNavigationSection, open: boolean): void => {
+      const previousOpen = disclosures[section]
+
+      setDisclosures((current) => ({ ...current, [section]: open }))
+      void setDashboardNavigationPreference({
+        data: { open, section, surface },
+      }).catch(() => {
+        setDisclosures((current) =>
+          current[section] === open
+            ? { ...current, [section]: previousOpen }
+            : current
+        )
+      })
+    },
+    [disclosures, surface]
+  )
+
+  return [disclosures, setDisclosure]
 }

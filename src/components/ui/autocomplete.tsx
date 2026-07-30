@@ -229,13 +229,21 @@ export const AutocompleteValue: typeof AutocompletePrimitive.Value =
 
 export function AutocompleteList({
   className,
+  hideScrollbar = false,
   ...props
-}: AutocompletePrimitive.List.Props): React.ReactElement {
+}: AutocompletePrimitive.List.Props & {
+  hideScrollbar?: boolean
+}): React.ReactElement {
   return (
-    <ScrollArea scrollbarGutter scrollFade>
+    <ScrollArea
+      hideScrollbar={hideScrollbar}
+      scrollbarGutter={!hideScrollbar}
+      scrollFade
+    >
       <AutocompletePrimitive.List
         className={cn(
-          "not-empty:scroll-py-1 not-empty:p-1 in-data-has-overflow-y:pe-3",
+          "not-empty:scroll-py-1 not-empty:p-1",
+          !hideScrollbar && "in-data-has-overflow-y:pe-3",
           className
         )}
         data-slot="autocomplete-list"

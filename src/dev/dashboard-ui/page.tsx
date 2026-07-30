@@ -1,3 +1,5 @@
+import { LayoutGroup, useReducedMotion } from "motion/react"
+import * as m from "motion/react-m"
 import * as React from "react"
 
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -11,20 +13,26 @@ import {
   type SortOption,
   type ViewMode,
 } from "@/dev/dashboard-ui/mock-bookmarks"
+import type { DashboardNavigationPreferences } from "@/dev/dashboard-ui/navigation-preferences"
 import { DashboardSidebar } from "@/dev/dashboard-ui/sidebar"
 import { useIsMobile } from "@/hooks/use-media-query"
+import { sidebarRailTransition } from "@/lib/motion"
 
 /**
  * Disposable dashboard shell wireframe. Not linked from product navigation.
  *
  * Slice 5: View mode (List / Grid / Grid with images) switchable from the
- * controls bar. Filter is still deferred — see spec/sessions/session-02.md.
+ * sidebar. Filter is still deferred — see spec/sessions/session-02.md.
  *
  * To remove this page entirely: delete src/routes/dashboard-ui.tsx and
  * src/dev/dashboard-ui/, then run the dev server or build once so
  * src/routeTree.gen.ts regenerates without the /dashboard-ui route.
  */
-export function DashboardUiPage(): React.ReactElement {
+export function DashboardUiPage({
+  initialNavigationPreferences,
+}: {
+  initialNavigationPreferences: DashboardNavigationPreferences
+}): React.ReactElement {
   const [bookmarks, setBookmarks] =
     React.useState<MockBookmark[]>(mockBookmarks)
   const [selectedBookmarkIds, setSelectedBookmarkIds] = React.useState<
@@ -32,7 +40,9 @@ export function DashboardUiPage(): React.ReactElement {
   >(() => new Set())
   const [sort, setSort] = React.useState<SortOption>("date")
   const [viewMode, setViewMode] = React.useState<ViewMode>("list")
+  const [sidebarOpen, setSidebarOpen] = React.useState(true)
   const isMobile = useIsMobile()
+  const shouldReduceMotion = useReducedMotion()
   const effectiveViewMode = isMobile && viewMode === "grid" ? "list" : viewMode
 
   const updateBookmark = (
@@ -108,56 +118,81 @@ export function DashboardUiPage(): React.ReactElement {
     // scroll region instead of pushing the whole page taller.
     <div className="h-svh bg-background [padding-inline-start:env(safe-area-inset-left)] [padding-inline-end:env(safe-area-inset-right)] [padding-block-start:env(safe-area-inset-top)] [padding-block-end:env(safe-area-inset-bottom)] min-[800px]:p-0">
       <div className="flex h-full flex-col px-4 py-4 min-[800px]:px-6 min-[800px]:py-10">
-        <SidebarProvider
-          className="mx-auto min-h-0 w-full max-w-[896px] min-w-0 flex-1 min-[800px]:gap-6"
-          defaultOpen
-        >
-          <DashboardSidebar />
-
-          <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-background p-2 min-[800px]:rounded-2xl min-[800px]:border min-[800px]:border-border min-[800px]:bg-card">
-            <BookmarkControlsBar
+        <LayoutGroup id="dashboard-sidebar">
+          <SidebarProvider
+            className="mx-auto min-h-0 w-full max-w-[896px] min-w-0 flex-1 min-[800px]:gap-6"
+            onOpenChange={setSidebarOpen}
+            open={sidebarOpen}
+          >
+            <DashboardSidebar
+              initialDisclosures={initialNavigationPreferences.desktop}
               onSortChange={setSort}
               onViewModeChange={setViewMode}
               sort={sort}
               viewMode={viewMode}
             />
-            {/* The one scrolling region — controls bar stays put above it.
-                Same ScrollArea + fill + scrollFade + scrollbarGutter
-                pattern as SidebarContent, so both panels scroll
-                consistently and reserve real space for the thumb instead
-                of letting it overlay content. */}
-            <ScrollArea
-              className="min-h-0 flex-1"
-              fill
-              scrollbarGutter
-              scrollFade
+
+            <m.main
+              className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background p-2 min-[800px]:rounded-2xl min-[800px]:border min-[800px]:border-border min-[800px]:bg-card"
+              layout
+              layoutDependency={sidebarOpen}
+              transition={{
+                layout: shouldReduceMotion
+                  ? { duration: 0 }
+                  : sidebarRailTransition,
+              }}
             >
-              {/* p-2 matches SidebarGroup's own padding — without it,
-                  content sits flush against the scroll viewport's edge
-                  instead of getting a gutter before the scrollbar thumb,
-                  unlike the sidebar where SidebarGroup's p-2 already
-                  provides that space inside its ScrollArea. */}
-              <div className="p-2">
-                {effectiveViewMode === "list" ? (
-                  <BookmarkList
-                    {...actionHandlers}
-                    bookmarks={bookmarks}
-                    selectedBookmarkIds={selectedBookmarkIds}
-                    sort={sort}
-                  />
-                ) : (
-                  <BookmarkGrid
-                    {...actionHandlers}
-                    bookmarks={bookmarks}
-                    selectedBookmarkIds={selectedBookmarkIds}
-                    showImage={effectiveViewMode === "grid-image"}
-                    sort={sort}
-                  />
-                )}
-              </div>
-            </ScrollArea>
-          </main>
-        </SidebarProvider>
+              <m.div
+                className="flex min-h-0 min-w-0 flex-1 flex-col"
+                layout="position"
+                layoutDependency={sidebarOpen}
+                transition={{
+                  layout: shouldReduceMotion
+                    ? { duration: 0 }
+                    : sidebarRailTransition,
+                }}
+              >
+                <BookmarkControlsBar
+                  onSortChange={setSort}
+                  onViewModeChange={setViewMode}
+                  mobileNavigationDisclosures={
+                    initialNavigationPreferences.mobile
+                  }
+                  sort={sort}
+                  viewMode={viewMode}
+                />
+                {/* The one scrolling region — navigation access stays put above it.
+                The fade mask communicates overflow without reserving a
+                scrollbar gutter, so content keeps one optical edge. */}
+                <ScrollArea
+                  className="min-h-0 flex-1"
+                  fill
+                  hideScrollbar
+                  scrollFade
+                >
+                  <div className="min-[800px]:p-2">
+                    {effectiveViewMode === "list" ? (
+                      <BookmarkList
+                        {...actionHandlers}
+                        bookmarks={bookmarks}
+                        selectedBookmarkIds={selectedBookmarkIds}
+                        sort={sort}
+                      />
+                    ) : (
+                      <BookmarkGrid
+                        {...actionHandlers}
+                        bookmarks={bookmarks}
+                        selectedBookmarkIds={selectedBookmarkIds}
+                        showImage={effectiveViewMode === "grid-image"}
+                        sort={sort}
+                      />
+                    )}
+                  </div>
+                </ScrollArea>
+              </m.div>
+            </m.main>
+          </SidebarProvider>
+        </LayoutGroup>
       </div>
     </div>
   )

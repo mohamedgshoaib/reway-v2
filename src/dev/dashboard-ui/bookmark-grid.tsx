@@ -65,7 +65,7 @@ function BookmarkGridCard({
         isSelected={isSelected}
       >
         <Frame
-          className="transition-colors duration-150 ease-out-strong hover:bg-accent data-selected:bg-accent"
+          className="group/bookmark transition-colors duration-150 ease-out-strong hover:bg-accent data-selected:bg-accent"
           data-selected={isSelected || undefined}
           density="compact"
         >
@@ -87,7 +87,7 @@ function BookmarkGridCard({
       <div
         className={cn(
           stateSurfaceVariants({ axis: "both" }),
-          "flex min-h-10 flex-col gap-2 rounded-[18px] p-3 before:rounded-[17px] hover:before:bg-accent data-selected:before:bg-accent"
+          "group/bookmark flex min-h-10 flex-col gap-2 rounded-[18px] p-3 before:rounded-[17px] hover:before:bg-accent data-selected:before:bg-accent"
         )}
         data-selected={isSelected || undefined}
       >

@@ -3,7 +3,7 @@
 Write facts only. No plans, no advice, no narration.
 
 **Filename:** `session-03.md`
-**Session Status:** Ended
+**Session Status:** Open
 
 ---
 
@@ -43,6 +43,29 @@ Write facts only. No plans, no advice, no narration.
 - Browser checks passed at 320 px, 479 px, 480 px, 799 px, and 800 px with no horizontal overflow or console errors.
 - `pnpm check`, `pnpm build`, `git diff --check`, and React Doctor 100/100 passed after the mobile dashboard changes.
 - The full Vitest run passed 18 of 19 tests; the sidebar interaction test exceeded its five-second limit under parallel load and then passed 2 of 2 tests when run alone with a 15-second limit.
+- Removed sort and view controls from the dashboard header and placed them in the sidebar Display menu.
+- Kept the mobile header limited to the navigation trigger and aligned that trigger to the bookmark content edge.
+- Added a dashboard-only hidden-scrollbar mode without reserved scrollbar gutter space.
+- Removed the command popup rule that added overflow padding beside a hidden scrollbar.
+- Restored tag icons in dashboard navigation.
+- Persisted Collections and Tags disclosure choices separately for desktop and mobile with server-read HTTP-only cookies.
+- Kept Search and Display layered over the open mobile navigation drawer.
+- Added forced nested backdrops to the shared command and dialog popup APIs.
+- Used a dialog for the mobile Display surface so it does not trigger nested-drawer scaling.
+- Added a crossfade mode to `src/components/ui/animated-icon.tsx` for the sidebar logo and expand icon.
+- Added coordinated sidebar, bookmark pane, and inner-content layout motion with reduced-motion handling.
+- Loaded Motion's `domMax` feature bundle so layout animations run.
+- Added focused coverage for hidden scrollbar spacing and dashboard navigation behavior.
+- Live browser checks confirmed transform-based sidebar collapse and expansion motion.
+- Focused Vitest passed 7 tests across the sidebar and scroll-area suites.
+- TypeScript, formatting, `git diff --check`, and React Doctor 100/100 passed.
+- Completed a read-only dashboard motion-opportunity audit.
+- Reviewed the working tree and previous two commits for code slop.
+- Removed redundant hidden-scrollbar and command-hotkey prop plumbing from `src/dev/dashboard-ui/sidebar.tsx`.
+- Focused Vitest passed 8 tests across the sidebar, controls-bar, and scroll-area suites.
+- `pnpm run check` and `git diff --check` passed after the cleanup.
+- React Doctor scored the 18 changed files 100/100 with no issues.
+- The full React Doctor scan scored 63/100 with 15 existing warnings outside the changed dashboard files.
 
 ---
 
@@ -57,6 +80,11 @@ Write facts only. No plans, no advice, no narration.
 - The dashboard switches between mobile and desktop shells at 800 px.
 - Mobile exposes List and Grid with images; plain Grid remains desktop-only.
 - Mobile image Grid uses one column below 480 px and two columns from 480 px through 799 px.
+- Dashboard scrollbars stay hidden while fade masks communicate overflow.
+- Desktop and mobile Collections and Tags disclosure choices persist independently.
+- Sort and view controls live in the sidebar Display surface.
+- Mobile Search and Display open above the navigation drawer without closing it first.
+- Sidebar width, bookmark pane position and size, labels, and logo state move as one coordinated transition.
 
 ---
 
@@ -73,5 +101,3 @@ Write facts only. No plans, no advice, no narration.
 - Transcript-style recap
 - Repo-wide rules already covered in `AGENTS.md` or `CLAUDE.md`
 - Motivational or steering language
-
-Session ended.

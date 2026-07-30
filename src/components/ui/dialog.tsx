@@ -63,6 +63,7 @@ export function DialogViewport({
 }
 
 export function DialogPopup({
+  backdropProps,
   className,
   children,
   showCloseButton = true,
@@ -71,6 +72,7 @@ export function DialogPopup({
   portalProps,
   ...props
 }: DialogPrimitive.Popup.Props & {
+  backdropProps?: DialogPrimitive.Backdrop.Props
   showCloseButton?: boolean
   bottomStickOnMobile?: boolean
   closeProps?: DialogPrimitive.Close.Props
@@ -78,7 +80,7 @@ export function DialogPopup({
 }): React.ReactElement {
   return (
     <DialogPortal {...portalProps}>
-      <DialogBackdrop />
+      <DialogBackdrop {...backdropProps} />
       <DialogViewport
         className={cn(
           bottomStickOnMobile &&

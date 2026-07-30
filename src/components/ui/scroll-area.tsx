@@ -10,12 +10,14 @@ export function ScrollArea({
   children,
   scrollFade = false,
   scrollbarGutter = false,
+  hideScrollbar = false,
   fill = false,
   clampContentMinWidth = true,
   ...props
 }: ScrollAreaPrimitive.Root.Props & {
   scrollFade?: boolean
   scrollbarGutter?: boolean
+  hideScrollbar?: boolean
   fill?: boolean
   clampContentMinWidth?: boolean
 }): React.ReactElement {
@@ -30,6 +32,7 @@ export function ScrollArea({
           scrollFade &&
             "mask-t-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-y-start)))] mask-r-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-x-end)))] mask-b-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-y-end)))] mask-l-from-[calc(100%-min(var(--fade-size),var(--scroll-area-overflow-x-start)))] [--fade-size:1.5rem]",
           scrollbarGutter &&
+            !hideScrollbar &&
             "data-has-overflow-x:pb-2.5 data-has-overflow-y:pe-2.5"
         )}
         data-slot="scroll-area-viewport"
@@ -42,9 +45,13 @@ export function ScrollArea({
           {children}
         </ScrollAreaPrimitive.Content>
       </ScrollAreaPrimitive.Viewport>
-      <ScrollBar orientation="vertical" />
-      <ScrollBar orientation="horizontal" />
-      <ScrollAreaPrimitive.Corner data-slot="scroll-area-corner" />
+      {!hideScrollbar ? (
+        <>
+          <ScrollBar orientation="vertical" />
+          <ScrollBar orientation="horizontal" />
+          <ScrollAreaPrimitive.Corner data-slot="scroll-area-corner" />
+        </>
+      ) : null}
     </ScrollAreaPrimitive.Root>
   )
 }

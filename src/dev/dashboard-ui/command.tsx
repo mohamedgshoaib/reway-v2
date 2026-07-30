@@ -66,6 +66,50 @@ const commandGroups: CommandGroupData[] = [
   },
 ]
 
+const defaultCommandGroups = commandGroups.map((group) => ({
+  ...group,
+  items: group.items.slice(0, group.value === "Bookmarks" ? 6 : 3),
+}))
+
+function DashboardCommandTriggerContent(): React.ReactElement {
+  return (
+    <>
+      <MagnifyingGlassIcon weight="duotone" />
+      <SidebarMenuButtonLabel className="flex flex-1 items-center justify-between gap-2">
+        <span>Search</span>
+        <KbdGroup className="hidden min-[800px]:flex">
+          <Kbd>⌘</Kbd>
+          <Kbd>K</Kbd>
+        </KbdGroup>
+      </SidebarMenuButtonLabel>
+    </>
+  )
+}
+
+export function DashboardCommandButton({
+  onClick,
+}: {
+  onClick: () => void
+}): React.ReactElement {
+  return (
+    <SidebarMenuButton
+      aria-haspopup="dialog"
+      onClick={onClick}
+      tooltip="Search"
+    >
+      <DashboardCommandTriggerContent />
+    </SidebarMenuButton>
+  )
+}
+
+function DashboardCommandTrigger(): React.ReactElement {
+  return (
+    <CommandDialogTrigger render={<SidebarMenuButton tooltip="Search" />}>
+      <DashboardCommandTriggerContent />
+    </CommandDialogTrigger>
+  )
+}
+
 /**
  * The sidebar's search row and the search-and-add command palette it
  * opens, self-contained since CommandDialogPopup portals regardless of
@@ -76,36 +120,43 @@ const commandGroups: CommandGroupData[] = [
  */
 export function DashboardCommand({
   onNavigate,
+  onOpenChange,
+  open: controlledOpen,
   registerHotkey = true,
+  showTrigger = true,
 }: {
   onNavigate?: () => void
+  onOpenChange?: (open: boolean) => void
+  open?: boolean
   registerHotkey?: boolean
+  showTrigger?: boolean
 }): React.ReactElement {
-  const [open, setOpen] = React.useState(false)
+  const [internalOpen, setInternalOpen] = React.useState(false)
+  const [query, setQuery] = React.useState("")
+  const open = controlledOpen ?? internalOpen
+
+  const handleOpenChange = (nextOpen: boolean): void => {
+    if (controlledOpen === undefined) setInternalOpen(nextOpen)
+    onOpenChange?.(nextOpen)
+    if (!nextOpen) setQuery("")
+  }
 
   return (
-    <CommandDialog onOpenChange={setOpen} open={open}>
+    <CommandDialog onOpenChange={handleOpenChange} open={open}>
       {registerHotkey ? (
-        <CommandHotkey
-          onToggle={() => setOpen((currentOpen) => !currentOpen)}
-        />
+        <CommandHotkey onToggle={() => handleOpenChange(!open)} />
       ) : null}
-      <CommandDialogTrigger render={<SidebarMenuButton tooltip="Search" />}>
-        <MagnifyingGlassIcon weight="duotone" />
-        <SidebarMenuButtonLabel className="flex flex-1 items-center justify-between gap-2">
-          <span>Search</span>
-          <KbdGroup>
-            <Kbd>⌘</Kbd>
-            <Kbd>K</Kbd>
-          </KbdGroup>
-        </SidebarMenuButtonLabel>
-      </CommandDialogTrigger>
-      <CommandDialogPopup>
-        <Command items={commandGroups}>
+      {showTrigger ? <DashboardCommandTrigger /> : null}
+      <CommandDialogPopup backdropProps={{ forceRender: true }}>
+        <Command
+          items={query ? commandGroups : defaultCommandGroups}
+          onValueChange={setQuery}
+          value={query}
+        >
           <CommandInput placeholder="Search bookmarks and collections..." />
           <CommandPanel>
             <CommandEmpty>No results found.</CommandEmpty>
-            <CommandList>
+            <CommandList hideScrollbar>
               {(group: CommandGroupData) => (
                 <React.Fragment key={group.value}>
                   <CommandGroup items={group.items}>
@@ -115,7 +166,7 @@ export function DashboardCommand({
                         <CommandItem
                           key={item.value}
                           onClick={() => {
-                            setOpen(false)
+                            handleOpenChange(false)
                             onNavigate?.()
                           }}
                           value={item.value}
@@ -140,8 +191,8 @@ export function DashboardCommand({
               )}
             </CommandList>
           </CommandPanel>
-          <CommandFooter>
-            <div className="flex items-center gap-4">
+          <CommandFooter className="justify-center min-[800px]:justify-between">
+            <div className="hidden items-center gap-4 min-[800px]:flex">
               <div className="flex items-center gap-2">
                 <KbdGroup>
                   <Kbd>

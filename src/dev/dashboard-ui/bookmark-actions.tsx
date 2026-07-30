@@ -367,6 +367,7 @@ export function BookmarkActions({
   const trigger = (
     <Button
       aria-label={`Actions for ${bookmark.title}`}
+      className="transition-opacity duration-100 data-popup-open:opacity-100 min-[800px]:pointer-fine:opacity-0 min-[800px]:pointer-fine:group-focus-within/bookmark:opacity-100 min-[800px]:pointer-fine:group-hover/bookmark:opacity-100"
       size="icon-xs"
       variant="ghost"
     >

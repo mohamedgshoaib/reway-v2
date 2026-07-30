@@ -40,7 +40,7 @@ function BookmarkRow({
       <div
         className={cn(
           stateSurfaceVariants({ axis: "block" }),
-          "flex min-h-10 items-center gap-2 rounded-md px-2 py-2 before:rounded-[calc(var(--radius-md)-1px)] hover:before:bg-accent data-selected:before:bg-accent"
+          "group/bookmark flex min-h-10 items-center gap-2 rounded-md px-2 py-2 before:rounded-[calc(var(--radius-md)-1px)] hover:before:bg-accent data-selected:before:bg-accent"
         )}
         data-selected={isSelected || undefined}
       >
@@ -85,9 +85,9 @@ export function BookmarkList({
       <div className="flex flex-col gap-6">
         {groups.map((group) => (
           <div className="flex flex-col" key={group.label}>
-            <p className="px-2 text-xs font-medium text-muted-foreground uppercase">
+            <h2 className="px-2 text-xs font-medium text-muted-foreground uppercase">
               {group.label}
-            </p>
+            </h2>
             {group.items.map(renderBookmark)}
           </div>
         ))}
