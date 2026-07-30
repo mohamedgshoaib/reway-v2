@@ -74,7 +74,7 @@ Write facts only. No plans, no advice, no narration.
 
 ## Session End
 
-- Not yet ended
+- Session ended
 
 ---
 

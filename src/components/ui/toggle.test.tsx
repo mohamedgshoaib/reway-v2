@@ -7,6 +7,12 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 afterEach(cleanup)
 
 describe("Toggle", () => {
+  it("keeps standalone state paint full-size", () => {
+    const { getByRole } = render(<Toggle>Bold</Toggle>)
+
+    expect(getByRole("button").className).toContain("before:inset-0")
+  })
+
   it("toggles pressed state and fires onPressedChange on click", () => {
     let lastPressed: boolean | undefined
     const { getByRole } = render(
@@ -30,6 +36,30 @@ describe("Toggle", () => {
 })
 
 describe("ToggleGroup", () => {
+  it("separates state paint along the group orientation", () => {
+    const { getByText, rerender } = render(
+      <ToggleGroup>
+        <ToggleGroupItem value="bold">Bold</ToggleGroupItem>
+      </ToggleGroup>
+    )
+
+    const horizontalClasses = getByText("Bold").className.split(" ")
+    expect(horizontalClasses).toContain("before:inset-x-px")
+    expect(horizontalClasses).toContain("before:inset-y-0")
+    expect(horizontalClasses).not.toContain("before:inset-0")
+
+    rerender(
+      <ToggleGroup orientation="vertical">
+        <ToggleGroupItem value="bold">Bold</ToggleGroupItem>
+      </ToggleGroup>
+    )
+
+    const verticalClasses = getByText("Bold").className.split(" ")
+    expect(verticalClasses).toContain("before:inset-x-0")
+    expect(verticalClasses).toContain("before:inset-y-px")
+    expect(verticalClasses).not.toContain("before:inset-0")
+  })
+
   it("single-select mode: pressing an item deselects the previous one", () => {
     let value: string[] = []
     const { getByText } = render(

@@ -19,6 +19,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
+import { stateSurfaceVariants } from "@/components/ui/state-surface"
 import { Tooltip, TooltipPopup, TooltipTrigger } from "@/components/ui/tooltip"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { easeOutStrong } from "@/lib/motion"
@@ -32,7 +33,10 @@ const SIDEBAR_WIDTH_ICON: string = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT: string = "b"
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button relative isolate flex w-full items-center gap-2 overflow-hidden rounded-lg p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding] duration-200 ease-in-out-strong group-has-data-[sidebar=menu-action]/menu-item:pe-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! before:pointer-events-none before:absolute before:inset-0.5 before:-z-10 before:rounded-md before:transition-colors before:duration-150 before:ease-out-strong hover:text-sidebar-accent-foreground hover:before:bg-sidebar-accent focus-visible:ring-2 active:text-sidebar-accent-foreground active:before:bg-sidebar-accent disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[active=true]:before:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground data-[state=open]:hover:before:bg-sidebar-accent [&>span:last-child]:truncate [&>svg]:shrink-0 [&>svg:not([class*='size-'])]:size-4",
+  cn(
+    stateSurfaceVariants({ axis: "block" }),
+    "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-lg p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-[width,height,padding] duration-200 ease-in-out-strong group-has-data-[sidebar=menu-action]/menu-item:pe-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! before:rounded-[calc(var(--radius-lg)-1px)] hover:text-sidebar-accent-foreground hover:before:bg-sidebar-accent focus-visible:ring-2 active:text-sidebar-accent-foreground active:before:bg-sidebar-accent disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[active=true]:before:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground data-[state=open]:hover:before:bg-sidebar-accent [&>span:last-child]:truncate [&>svg]:shrink-0 [&>svg:not([class*='size-'])]:size-4"
+  ),
   {
     defaultVariants: {
       size: "default",
@@ -410,13 +414,22 @@ export function SidebarContent({
   className,
   ...props
 }: React.ComponentProps<"div">): React.ReactElement {
+  const { isMobile, state } = useSidebar()
+  const collapsed = state === "collapsed" && !isMobile
+
   return (
-    <ScrollArea className="min-h-0 flex-1" fill scrollbarGutter scrollFade>
+    <ScrollArea
+      className={cn(
+        "min-h-0 flex-1",
+        collapsed &&
+          "[&_[data-slot=scroll-area-corner]]:hidden [&_[data-slot=scroll-area-scrollbar]]:hidden"
+      )}
+      fill
+      scrollbarGutter={!collapsed}
+      scrollFade
+    >
       <div
-        className={cn(
-          "flex h-full flex-col gap-2 group-data-[collapsible=icon]:overflow-hidden",
-          className
-        )}
+        className={cn("flex h-full flex-col gap-2", className)}
         data-sidebar="content"
         data-slot="sidebar-content"
         {...props}
@@ -750,7 +763,8 @@ export function SidebarMenuSubButton({
 }): React.ReactElement {
   const defaultProps = {
     className: cn(
-      "relative isolate flex h-8 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-lg px-2 text-sidebar-foreground ring-sidebar-ring outline-hidden before:pointer-events-none before:absolute before:inset-0.5 before:-z-10 before:rounded-md before:transition-colors before:duration-150 before:ease-out-strong hover:text-sidebar-accent-foreground hover:before:bg-sidebar-accent focus-visible:ring-2 active:text-sidebar-accent-foreground active:before:bg-sidebar-accent disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 sm:h-7 [&>span:last-child]:truncate [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground [&>svg:not([class*='size-'])]:size-4",
+      stateSurfaceVariants({ axis: "block" }),
+      "flex h-8 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-lg px-2 text-sidebar-foreground ring-sidebar-ring outline-hidden before:rounded-[calc(var(--radius-lg)-1px)] hover:text-sidebar-accent-foreground hover:before:bg-sidebar-accent focus-visible:ring-2 active:text-sidebar-accent-foreground active:before:bg-sidebar-accent disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 sm:h-7 [&>span:last-child]:truncate [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground [&>svg:not([class*='size-'])]:size-4",
       "data-[active=true]:text-sidebar-accent-foreground data-[active=true]:before:bg-sidebar-accent",
       size === "sm" && "text-xs",
       size === "md" && "text-sm",

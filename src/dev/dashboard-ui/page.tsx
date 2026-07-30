@@ -12,6 +12,7 @@ import {
   type ViewMode,
 } from "@/dev/dashboard-ui/mock-bookmarks"
 import { DashboardSidebar } from "@/dev/dashboard-ui/sidebar"
+import { useIsMobile } from "@/hooks/use-media-query"
 
 /**
  * Disposable dashboard shell wireframe. Not linked from product navigation.
@@ -31,6 +32,8 @@ export function DashboardUiPage(): React.ReactElement {
   >(() => new Set())
   const [sort, setSort] = React.useState<SortOption>("date")
   const [viewMode, setViewMode] = React.useState<ViewMode>("list")
+  const isMobile = useIsMobile()
+  const effectiveViewMode = isMobile && viewMode === "grid" ? "list" : viewMode
 
   const updateBookmark = (
     bookmarkId: string,
@@ -103,57 +106,59 @@ export function DashboardUiPage(): React.ReactElement {
     // flexbox's default min-height:auto (which refuses to shrink a flex
     // item below its content size), letting the chain actually reach the
     // scroll region instead of pushing the whole page taller.
-    <div className="flex h-svh flex-col bg-background px-6 py-10">
-      <SidebarProvider
-        className="mx-auto min-h-0 w-full max-w-[896px] flex-1 gap-6"
-        defaultOpen
-      >
-        <DashboardSidebar />
+    <div className="h-svh bg-background [padding-inline-start:env(safe-area-inset-left)] [padding-inline-end:env(safe-area-inset-right)] [padding-block-start:env(safe-area-inset-top)] [padding-block-end:env(safe-area-inset-bottom)] min-[800px]:p-0">
+      <div className="flex h-full flex-col px-4 py-4 min-[800px]:px-6 min-[800px]:py-10">
+        <SidebarProvider
+          className="mx-auto min-h-0 w-full max-w-[896px] min-w-0 flex-1 min-[800px]:gap-6"
+          defaultOpen
+        >
+          <DashboardSidebar />
 
-        <main className="flex min-h-0 flex-1 flex-col rounded-2xl border border-border bg-card p-2">
-          <BookmarkControlsBar
-            onSortChange={setSort}
-            onViewModeChange={setViewMode}
-            sort={sort}
-            viewMode={viewMode}
-          />
-          {/* The one scrolling region — controls bar stays put above it.
-              Same ScrollArea + fill + scrollFade + scrollbarGutter
-              pattern as SidebarContent, so both panels scroll
-              consistently and reserve real space for the thumb instead
-              of letting it overlay content. */}
-          <ScrollArea
-            className="min-h-0 flex-1"
-            fill
-            scrollbarGutter
-            scrollFade
-          >
-            {/* p-2 matches SidebarGroup's own padding — without it,
-                content sits flush against the scroll viewport's edge
-                instead of getting a gutter before the scrollbar thumb,
-                unlike the sidebar where SidebarGroup's p-2 already
-                provides that space inside its ScrollArea. */}
-            <div className="p-2">
-              {viewMode === "list" ? (
-                <BookmarkList
-                  {...actionHandlers}
-                  bookmarks={bookmarks}
-                  selectedBookmarkIds={selectedBookmarkIds}
-                  sort={sort}
-                />
-              ) : (
-                <BookmarkGrid
-                  {...actionHandlers}
-                  bookmarks={bookmarks}
-                  selectedBookmarkIds={selectedBookmarkIds}
-                  showImage={viewMode === "grid-image"}
-                  sort={sort}
-                />
-              )}
-            </div>
-          </ScrollArea>
-        </main>
-      </SidebarProvider>
+          <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-background p-2 min-[800px]:rounded-2xl min-[800px]:border min-[800px]:border-border min-[800px]:bg-card">
+            <BookmarkControlsBar
+              onSortChange={setSort}
+              onViewModeChange={setViewMode}
+              sort={sort}
+              viewMode={viewMode}
+            />
+            {/* The one scrolling region — controls bar stays put above it.
+                Same ScrollArea + fill + scrollFade + scrollbarGutter
+                pattern as SidebarContent, so both panels scroll
+                consistently and reserve real space for the thumb instead
+                of letting it overlay content. */}
+            <ScrollArea
+              className="min-h-0 flex-1"
+              fill
+              scrollbarGutter
+              scrollFade
+            >
+              {/* p-2 matches SidebarGroup's own padding — without it,
+                  content sits flush against the scroll viewport's edge
+                  instead of getting a gutter before the scrollbar thumb,
+                  unlike the sidebar where SidebarGroup's p-2 already
+                  provides that space inside its ScrollArea. */}
+              <div className="p-2">
+                {effectiveViewMode === "list" ? (
+                  <BookmarkList
+                    {...actionHandlers}
+                    bookmarks={bookmarks}
+                    selectedBookmarkIds={selectedBookmarkIds}
+                    sort={sort}
+                  />
+                ) : (
+                  <BookmarkGrid
+                    {...actionHandlers}
+                    bookmarks={bookmarks}
+                    selectedBookmarkIds={selectedBookmarkIds}
+                    showImage={effectiveViewMode === "grid-image"}
+                    sort={sort}
+                  />
+                )}
+              </div>
+            </ScrollArea>
+          </main>
+        </SidebarProvider>
+      </div>
     </div>
   )
 }

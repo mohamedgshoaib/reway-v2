@@ -11,19 +11,31 @@ import {
   HouseLineIcon,
   NotebookIcon,
   PaintBrushIcon,
+  SidebarSimpleIcon,
   TagChevronIcon,
   TrashIcon,
   UserCircleIcon,
+  XIcon,
 } from "@phosphor-icons/react"
 import * as m from "motion/react-m"
-import type * as React from "react"
+import * as React from "react"
 
 import { Logo } from "@/components/logo"
+import { Button } from "@/components/ui/button"
 import {
   Collapsible,
   CollapsiblePanel,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
+import {
+  Drawer,
+  DrawerClose,
+  DrawerHeader,
+  DrawerPanel,
+  DrawerPopup,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer"
 import {
   SidebarContent,
   SidebarFooter,
@@ -85,7 +97,7 @@ export function DashboardSidebar(): React.ReactElement {
   return (
     <aside
       className={cn(
-        "group flex min-h-0 shrink-0 flex-col overflow-hidden transition-[width] duration-200 ease-in-out-strong",
+        "group hidden min-h-0 shrink-0 flex-col overflow-hidden transition-[width] duration-200 ease-in-out-strong min-[800px]:flex",
         collapsed ? "w-(--sidebar-width-icon)" : "w-(--sidebar-width)"
       )}
       data-collapsible={collapsed ? "icon" : ""}
@@ -119,15 +131,91 @@ export function DashboardSidebar(): React.ReactElement {
           </m.div>
         </div>
       </SidebarHeader>
+      <DashboardNavigationContent
+        collapsed={collapsed}
+        registerCommandHotkey={false}
+      />
+    </aside>
+  )
+}
+
+export function MobileDashboardNavigation(): React.ReactElement {
+  const [open, setOpen] = React.useState(false)
+
+  return (
+    <Drawer onOpenChange={setOpen} open={open} position="left">
+      <DrawerTrigger
+        render={
+          <Button aria-label="Open navigation" size="icon" variant="ghost" />
+        }
+      >
+        <SidebarSimpleIcon weight="duotone" />
+      </DrawerTrigger>
+      <DrawerPopup
+        className="ps-[env(safe-area-inset-left)] pb-[env(safe-area-inset-bottom)]"
+        portalProps={{ keepMounted: true }}
+        variant="inset"
+      >
+        <DrawerHeader className="relative p-4 pe-12 pt-[calc(env(safe-area-inset-top)+--spacing(4))]">
+          <DrawerTitle className="flex items-center gap-2 text-base">
+            <Logo className="size-5 text-foreground" />
+            Navigation
+          </DrawerTitle>
+          <DrawerClose
+            className="absolute end-2 top-[calc(env(safe-area-inset-top)+--spacing(2))]"
+            render={
+              <Button
+                aria-label="Close navigation"
+                size="icon"
+                variant="ghost"
+              />
+            }
+          >
+            <XIcon weight="regular" />
+          </DrawerClose>
+        </DrawerHeader>
+        <DrawerPanel
+          className="flex min-h-0 flex-1 flex-col p-0"
+          scrollable={false}
+        >
+          <DashboardNavigationContent
+            collapsed={false}
+            onNavigate={() => setOpen(false)}
+            registerCommandHotkey
+          />
+        </DrawerPanel>
+      </DrawerPopup>
+    </Drawer>
+  )
+}
+
+function DashboardNavigationContent({
+  collapsed,
+  onNavigate,
+  registerCommandHotkey,
+}: {
+  collapsed: boolean
+  onNavigate?: () => void
+  registerCommandHotkey: boolean
+}): React.ReactElement {
+  return (
+    <>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <DashboardCommand />
+                <DashboardCommand
+                  onNavigate={onNavigate}
+                  registerHotkey={registerCommandHotkey}
+                />
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton isActive tooltip="All bookmarks">
+                <SidebarMenuButton
+                  isActive
+                  onClick={onNavigate}
+                  tooltip="All bookmarks"
+                >
                   <BookmarkIcon weight="duotone" />
                   <SidebarMenuButtonLabel>All bookmarks</SidebarMenuButtonLabel>
                 </SidebarMenuButton>
@@ -136,11 +224,12 @@ export function DashboardSidebar(): React.ReactElement {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <Collapsible defaultOpen>
+          <Collapsible defaultOpen disabled={collapsed}>
             <CollapsibleTrigger
+              inert={collapsed}
               render={
                 <SidebarGroupLabel
-                  className="w-full cursor-pointer justify-between data-panel-open:*:data-[slot=collections-indicator]:rotate-180"
+                  className="w-full justify-between data-panel-open:*:data-[slot=collections-indicator]:rotate-180"
                   render={<button aria-label="Collections" type="button" />}
                 />
               }
@@ -163,7 +252,10 @@ export function DashboardSidebar(): React.ReactElement {
 
                     return (
                       <SidebarMenuItem key={collection.label}>
-                        <SidebarMenuButton tooltip={collection.label}>
+                        <SidebarMenuButton
+                          onClick={onNavigate}
+                          tooltip={collection.label}
+                        >
                           <CollectionIcon weight="duotone" />
                           <SidebarMenuButtonLabel>
                             {collection.label}
@@ -179,11 +271,12 @@ export function DashboardSidebar(): React.ReactElement {
           </Collapsible>
         </SidebarGroup>
         <SidebarGroup>
-          <Collapsible defaultOpen>
+          <Collapsible defaultOpen disabled={collapsed}>
             <CollapsibleTrigger
+              inert={collapsed}
               render={
                 <SidebarGroupLabel
-                  className="w-full cursor-pointer justify-between data-panel-open:*:data-[slot=tags-indicator]:rotate-180"
+                  className="w-full justify-between data-panel-open:*:data-[slot=tags-indicator]:rotate-180"
                   render={<button aria-label="Tags" type="button" />}
                 />
               }
@@ -200,7 +293,7 @@ export function DashboardSidebar(): React.ReactElement {
                 <SidebarMenu>
                   {tags.map((tag) => (
                     <SidebarMenuItem key={tag}>
-                      <SidebarMenuButton size="sm" tooltip={tag}>
+                      <SidebarMenuButton onClick={onNavigate} tooltip={tag}>
                         <TagChevronIcon weight="duotone" />
                         <SidebarMenuButtonLabel>{tag}</SidebarMenuButtonLabel>
                       </SidebarMenuButton>
@@ -215,19 +308,19 @@ export function DashboardSidebar(): React.ReactElement {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Settings">
+            <SidebarMenuButton onClick={onNavigate} tooltip="Settings">
               <GearIcon weight="duotone" />
               <SidebarMenuButtonLabel>Settings</SidebarMenuButtonLabel>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Trash">
+            <SidebarMenuButton onClick={onNavigate} tooltip="Trash">
               <TrashIcon weight="duotone" />
               <SidebarMenuButtonLabel>Trash</SidebarMenuButtonLabel>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
-    </aside>
+    </>
   )
 }

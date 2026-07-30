@@ -1,5 +1,6 @@
 import type * as React from "react"
 
+import { stateSurfaceVariants } from "@/components/ui/state-surface"
 import {
   BookmarkActions,
   BookmarkContextMenu,
@@ -14,6 +15,7 @@ import {
   groupByRecency,
   sortBookmarks,
 } from "@/dev/dashboard-ui/mock-bookmarks"
+import { cn } from "@/lib/utils"
 
 type BookmarkListProps = BookmarkActionHandlers & {
   bookmarks: MockBookmark[]
@@ -36,7 +38,10 @@ function BookmarkRow({
       isSelected={isSelected}
     >
       <div
-        className="relative isolate flex min-h-10 items-center gap-2 rounded-md px-2 py-2 before:pointer-events-none before:absolute before:inset-0.5 before:-z-10 before:rounded-sm before:transition-colors before:duration-150 before:ease-out-strong hover:before:bg-accent data-selected:before:bg-accent"
+        className={cn(
+          stateSurfaceVariants({ axis: "block" }),
+          "flex min-h-10 items-center gap-2 rounded-md px-2 py-2 before:rounded-[calc(var(--radius-md)-1px)] hover:before:bg-accent data-selected:before:bg-accent"
+        )}
         data-selected={isSelected || undefined}
       >
         <BookmarkFavicon domain={bookmark.domain} />

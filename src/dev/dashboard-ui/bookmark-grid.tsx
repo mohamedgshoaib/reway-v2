@@ -2,6 +2,7 @@ import type * as React from "react"
 
 import { Card } from "@/components/ui/card"
 import { Frame, FrameFooter } from "@/components/ui/frame"
+import { stateSurfaceVariants } from "@/components/ui/state-surface"
 import {
   BookmarkActions,
   BookmarkContextMenu,
@@ -13,6 +14,7 @@ import type {
   SortOption,
 } from "@/dev/dashboard-ui/mock-bookmarks"
 import { sortBookmarks } from "@/dev/dashboard-ui/mock-bookmarks"
+import { cn } from "@/lib/utils"
 
 type BookmarkGridProps = BookmarkActionHandlers & {
   bookmarks: MockBookmark[]
@@ -63,13 +65,14 @@ function BookmarkGridCard({
         isSelected={isSelected}
       >
         <Frame
-          className="data-selected:bg-accent"
+          className="transition-colors duration-150 ease-out-strong hover:bg-accent data-selected:bg-accent"
           data-selected={isSelected || undefined}
+          density="compact"
         >
           <Card className="overflow-hidden rounded-xl">
             <BookmarkImage ogImage={bookmark.ogImage} />
           </Card>
-          <FrameFooter className="px-3 py-2">{footer}</FrameFooter>
+          <FrameFooter>{footer}</FrameFooter>
         </Frame>
       </BookmarkContextMenu>
     )
@@ -82,7 +85,10 @@ function BookmarkGridCard({
       isSelected={isSelected}
     >
       <div
-        className="relative isolate flex min-h-10 flex-col gap-2 rounded-[18px] p-3 before:pointer-events-none before:absolute before:inset-0.5 before:-z-10 before:rounded-2xl before:transition-colors before:duration-150 before:ease-out-strong hover:before:bg-accent data-selected:before:bg-accent"
+        className={cn(
+          stateSurfaceVariants({ axis: "both" }),
+          "flex min-h-10 flex-col gap-2 rounded-[18px] p-3 before:rounded-[17px] hover:before:bg-accent data-selected:before:bg-accent"
+        )}
         data-selected={isSelected || undefined}
       >
         {footer}
@@ -99,7 +105,13 @@ export function BookmarkGrid({
   ...actionHandlers
 }: BookmarkGridProps): React.ReactElement {
   return (
-    <div className={showImage ? "grid grid-cols-3 gap-3" : "grid grid-cols-3"}>
+    <div
+      className={
+        showImage
+          ? "grid grid-cols-1 gap-3 min-[480px]:grid-cols-2 min-[800px]:grid-cols-3"
+          : "grid grid-cols-3"
+      }
+    >
       {sortBookmarks(bookmarks, sort).map((bookmark) => (
         <BookmarkGridCard
           {...actionHandlers}

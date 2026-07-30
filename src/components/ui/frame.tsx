@@ -2,10 +2,17 @@ import type * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+export type FrameDensity = "compact" | "default"
+
+export type FrameProps = React.ComponentProps<"div"> & {
+  density?: FrameDensity
+}
+
 export function Frame({
   className,
+  density = "default",
   ...props
-}: React.ComponentProps<"div">): React.ReactElement {
+}: FrameProps): React.ReactElement {
   return (
     <div
       className={cn(
@@ -13,6 +20,7 @@ export function Frame({
         "*:[[data-slot=frame-panel]+[data-slot=frame-panel]]:mt-1",
         className
       )}
+      data-density={density}
       data-slot="frame"
       {...props}
     />
@@ -80,7 +88,10 @@ export function FrameFooter({
 }: React.ComponentProps<"footer">): React.ReactElement {
   return (
     <footer
-      className={cn("px-5 py-4", className)}
+      className={cn(
+        "px-5 py-4 in-data-[density=compact]:py-2 in-data-[density=compact]:ps-3 in-data-[density=compact]:pe-2",
+        className
+      )}
       data-slot="frame-panel-footer"
       {...props}
     />

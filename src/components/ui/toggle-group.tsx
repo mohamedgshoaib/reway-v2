@@ -12,12 +12,16 @@ import {
 } from "@/components/ui/toggle"
 import { cn } from "@/lib/utils"
 
-export const ToggleGroupContext: React.Context<
-  VariantProps<typeof toggleVariants>
-> = React.createContext<VariantProps<typeof toggleVariants>>({
-  size: "default",
-  variant: "default",
-})
+type ToggleGroupContextValue = VariantProps<typeof toggleVariants> & {
+  orientation: "horizontal" | "vertical"
+}
+
+export const ToggleGroupContext: React.Context<ToggleGroupContextValue> =
+  React.createContext<ToggleGroupContextValue>({
+    orientation: "horizontal",
+    size: "default",
+    variant: "default",
+  })
 
 export function ToggleGroup({
   className,
@@ -48,7 +52,7 @@ export function ToggleGroup({
       orientation={orientation}
       {...props}
     >
-      <ToggleGroupContext.Provider value={{ size, variant }}>
+      <ToggleGroupContext.Provider value={{ orientation, size, variant }}>
         {children}
       </ToggleGroupContext.Provider>
     </ToggleGroupPrimitive>
@@ -67,6 +71,12 @@ export function ToggleGroupItem({
 
   const resolvedVariant = context.variant || variant
   const resolvedSize = context.size || size
+  const surfaceAxis =
+    resolvedVariant === "default"
+      ? context.orientation === "horizontal"
+        ? "inline"
+        : "block"
+      : "none"
 
   return (
     <ToggleComponent
@@ -74,6 +84,7 @@ export function ToggleGroupItem({
       data-size={resolvedSize}
       data-variant={resolvedVariant}
       size={resolvedSize}
+      surfaceAxis={surfaceAxis}
       variant={resolvedVariant}
       {...props}
     >

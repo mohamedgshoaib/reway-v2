@@ -5,18 +5,31 @@ import type React from "react"
 
 import { cn } from "@/lib/utils"
 
+const TOOLTIP_OPEN_DELAY = 300
+
 export const TooltipCreateHandle: typeof TooltipPrimitive.createHandle =
   TooltipPrimitive.createHandle
 
-export const TooltipProvider: typeof TooltipPrimitive.Provider =
-  TooltipPrimitive.Provider
+export function TooltipProvider({
+  delay = TOOLTIP_OPEN_DELAY,
+  ...props
+}: TooltipPrimitive.Provider.Props): React.ReactElement {
+  return <TooltipPrimitive.Provider delay={delay} {...props} />
+}
 
 export const Tooltip: typeof TooltipPrimitive.Root = TooltipPrimitive.Root
 
-export function TooltipTrigger(
-  props: TooltipPrimitive.Trigger.Props
-): React.ReactElement {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />
+export function TooltipTrigger({
+  delay = TOOLTIP_OPEN_DELAY,
+  ...props
+}: TooltipPrimitive.Trigger.Props): React.ReactElement {
+  return (
+    <TooltipPrimitive.Trigger
+      data-slot="tooltip-trigger"
+      delay={delay}
+      {...props}
+    />
+  )
 }
 
 export function TooltipPopup({

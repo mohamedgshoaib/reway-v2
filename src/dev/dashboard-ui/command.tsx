@@ -74,13 +74,22 @@ const commandGroups: CommandGroupData[] = [
  * is a disposable, backend-less wireframe — the footer hint communicates
  * it anyway so the capability stays discoverable.
  */
-export function DashboardCommand(): React.ReactElement {
+export function DashboardCommand({
+  onNavigate,
+  registerHotkey = true,
+}: {
+  onNavigate?: () => void
+  registerHotkey?: boolean
+}): React.ReactElement {
   const [open, setOpen] = React.useState(false)
-
-  useHotkey("Mod+K", () => setOpen((prev) => !prev))
 
   return (
     <CommandDialog onOpenChange={setOpen} open={open}>
+      {registerHotkey ? (
+        <CommandHotkey
+          onToggle={() => setOpen((currentOpen) => !currentOpen)}
+        />
+      ) : null}
       <CommandDialogTrigger render={<SidebarMenuButton tooltip="Search" />}>
         <MagnifyingGlassIcon weight="duotone" />
         <SidebarMenuButtonLabel className="flex flex-1 items-center justify-between gap-2">
@@ -105,7 +114,10 @@ export function DashboardCommand(): React.ReactElement {
                       {(item: CommandEntry) => (
                         <CommandItem
                           key={item.value}
-                          onClick={() => setOpen(false)}
+                          onClick={() => {
+                            setOpen(false)
+                            onNavigate?.()
+                          }}
                           value={item.value}
                         >
                           {group.value === "Bookmarks" ? (
@@ -154,4 +166,13 @@ export function DashboardCommand(): React.ReactElement {
       </CommandDialogPopup>
     </CommandDialog>
   )
+}
+
+function CommandHotkey({
+  onToggle,
+}: {
+  onToggle: () => void
+}): React.ReactElement | null {
+  useHotkey("Mod+K", onToggle)
+  return null
 }
