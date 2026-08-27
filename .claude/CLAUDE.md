@@ -6,17 +6,17 @@ TanStack Start changes quickly. Before writing framework-specific code, use the 
 
 <!-- END:tanstack-start-agent-rules -->
 
-# Ultracite Code Standards
+# Code standards
 
-This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
+This project uses Oxlint for linting, Oxfmt for formatting, and TypeScript for type checks.
 
-## Quick Reference
+## Quick reference
 
-- **Format code**: `pnpm dlx ultracite fix`
-- **Check for issues**: `pnpm dlx ultracite check`
-- **Diagnose setup**: `pnpm dlx ultracite doctor`
-
-Biome (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
+- **Format code**: `pnpm run format`
+- **Check formatting**: `pnpm run format:check`
+- **Lint code**: `pnpm run lint`
+- **Fix safe lint issues**: `pnpm run lint:fix`
+- **Run all static checks**: `pnpm run check`
 
 ---
 
@@ -120,11 +120,11 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 - Don't use `.only` or `.skip` in committed code
 - Keep test suites reasonably flat - avoid excessive `describe` nesting
 
-## When Biome Can't Help
+## What static checks cannot verify
 
-Biome's linter will catch most issues automatically. Focus your attention on:
+Oxlint, Oxfmt, and TypeScript do not verify:
 
-1. **Business logic correctness** - Biome can't validate your algorithms
+1. **Business logic correctness** - Test the code's behavior and edge cases
 2. **Meaningful naming** - Use descriptive names for functions, variables, and types
 3. **Architecture decisions** - Component structure, data flow, and API design
 4. **Edge cases** - Handle boundary conditions and error states
@@ -133,7 +133,7 @@ Biome's linter will catch most issues automatically. Focus your attention on:
 
 ---
 
-Most formatting and common issues are automatically fixed by Biome. Run `pnpm dlx ultracite fix` before committing to ensure compliance.
+Run `pnpm run check` before committing. If the formatting check fails, run `pnpm run format`, then rerun the check.
 
 # Session Start Sequence
 
