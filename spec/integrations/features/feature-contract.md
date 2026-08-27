@@ -70,11 +70,118 @@ This is the authoritative record of Reway's approved feature behaviour and techn
 - This is not a cross-user leak concern because users can delete only their own bookmarks.
 - The client-side DELETE handler must not treat the payload as an authorization signal.
 
+### Collections
+
+- Collections are user-managed bookmark groups. A bookmark may belong to more than one collection.
+- A collection has a required name and one icon. New collections use the Folder icon by default.
+- Collection names are trimmed, collapse repeated inner spaces, preserve case and supported punctuation, and allow Unicode including Arabic and accented characters.
+- Collection names have a 24-character limit and must be unique after case-insensitive comparison and surrounding-space removal.
+- Collection names reject line breaks and control characters.
+- The collection icon picker contains 24 icons in four single-open, collapsible groups of six:
+  - General: Folder, Bookmark, Archive, Star, Heart, Stack.
+  - Work: Briefcase, Person, Buildings, Calendar, Clipboard, X logo.
+  - Learning & Creative: Book, Notebook, Research, Paintbrush, Code, Camera.
+  - Personal: Home, Cooking, Travel, Location, Shopping, Fitness.
+- Icon search covers every group and supports plain-language aliases such as `recipe`, `job`, and `trip`.
+- General opens by default. Clearing icon search restores the group that was open before search.
+- The selected collection icon appears in the desktop sidebar, collapsed rail, mobile drawer, command search, collection pickers and menus, create and edit previews, and delete confirmation.
+- System destinations keep their fixed icons.
+- `X Bookmarks` starts with the X logo when X creates it. It remains editable and uses normal collection deletion rules. A later X save recreates a missing `X Bookmarks` collection with the X logo.
+- Session-created collections start with the Folder icon.
+
 ### Tags
 
-- Tags are flat labels assigned to bookmarks.
-- A tag supports a custom color through a color picker. Tags have no icons.
-- Tag deletion requires a confirmation dialog and removes that tag from every bookmark that uses it.
+- Tags are flat user-managed labels assigned to bookmarks.
+- Tag names follow the same normalization, character, 24-character, and uniqueness rules as collection names.
+- Every tag uses the fixed tag-chevron icon. Tags do not support custom icon selection.
+- A tag has one color identity chosen from Neutral, Red, Orange, Amber, Lime, Green, Teal, Cyan, Blue, Indigo, Violet, or Rose, or from a custom color picker.
+- New tags use the least-used palette color. Palette-order priority breaks ties.
+- The chosen hue uses a darker value in the light theme and a lighter value in the dark theme.
+- The custom picker includes a color area, hue slider, fixed HEX input, and eye dropper when supported. It does not include alpha.
+- A custom color shows the exact source swatch and a current-theme tag icon preview.
+- The colored tag-chevron icon appears wherever the tag appears, including the desktop sidebar, collapsed rail, mobile drawer, menus, filters, chips, command search, previews, and delete confirmation.
+- Tag text, row backgrounds, and selected states remain neutral.
+- Tag rows do not show bookmark counts.
+
+### Collection and Tag Management
+
+- Expanded collection and tag headers contain a disclosure trigger, a section menu, and a create button.
+- On desktop, the section menu appears when the section header receives hover or focus. It remains in a fixed trailing slot.
+- On touch surfaces, the section menu remains visible.
+- The collapsed desktop rail hides section headers, disclosure controls, create buttons, and section menus without leaving blank header space.
+- The collapsed rail shows collection icons and colored tag icons with tooltips. A quiet divider separates the two groups.
+- Mobile always uses the expanded navigation drawer.
+- An empty expanded section keeps its header and shows one muted, non-interactive row: `No collections yet` or `No tags yet`.
+- Create and edit use an anchored popover on desktop and a centered dialog over the still-open navigation drawer on mobile.
+- Create and edit share one form body with a live sidebar-row preview, required name field, and optional appearance controls.
+- The collection form shows the selected icon and a `Change icon` control. The grouped searchable icon picker expands inline.
+- The tag form always shows the 12 palette choices. Selecting `Custom` expands the custom color picker inline.
+- The editor uses a local draft. Visible stored values change only after Save.
+- Save is available only when the draft is valid and changed. Enter submits from the name field.
+- Cancel and Escape discard the draft.
+- Outside press closes a pristine editor and does not close a dirty editor.
+- A save error remains in the editor as inline feedback.
+- Successful create and edit close immediately, update every visible instance optimistically, and show a named toast.
+- A persistence failure rolls back the optimistic change and replaces the success toast with an error toast containing `Retry`.
+- Retry reopens the editor with its preserved draft. A delayed failure never reopens an editor automatically.
+- Successful edit toasts include `Undo`. Undo restores the complete prior name and appearance snapshot.
+- Create, delete, order changes, reorder drops, and failures do not offer Undo.
+- Toasts use one stable ID per managed item to replace prior feedback for that item.
+- Creating from a section header returns focus to that header's create button, updates the section, and does not change the active destination.
+- Creating from a bookmark picker keeps the user in the current workflow and returns the new item selected or applied.
+- A tag picker remains open after creation. Add-to-collection and Move-to-collection close after applying the new collection and return focus to the bookmark action.
+- Mobile management actions keep the navigation drawer open. Normal navigation still closes the drawer.
+
+### Collection and Tag Menus
+
+- A collection row keeps its bookmark count in the trailing slot while inactive.
+- On desktop pointer hover or keyboard focus, a collection row replaces its count with an ellipsis button. The active collection keeps the ellipsis visible.
+- Tag rows use the trailing slot for the ellipsis button and never show counts.
+- Touch surfaces keep row ellipsis buttons visible.
+- Row menus contain `Edit`, a separator, and `Delete`.
+- Right-click opens the same row menu on desktop.
+- Mobile row and section menus use anchored, collision-aware menus above the open navigation drawer with 44-pixel action rows.
+- Selecting Edit closes the menu before opening the centered editor dialog.
+- Selecting Delete closes the menu before opening the confirmation dialog.
+- Outside press or Escape closes only the open action menu.
+
+### Collection and Tag Ordering
+
+- Collections and tags each store an independent section order mode: Newest, Alphabetical, or Custom.
+- Collections default to Newest. Tags default to Alphabetical.
+- The section menu contains an `Order by` radio group, then `Reorder collections` or `Reorder tags`.
+- The reorder command is available only while the section uses Custom order.
+- The first switch to Custom preserves the current visible order. Later switches restore the saved custom order.
+- New items appear at the top in Newest and Custom order, and in their natural position in Alphabetical order.
+- Section order changes do not show a toast.
+- Section reorder mode applies to one section at a time.
+- The active section header becomes `Reordering collections` or `Reordering tags` with a `Done` button.
+- Reorder mode hides the create control, section menu, collection counts, and row actions, and shows one trailing drag handle per item.
+- Rows do not navigate during reorder mode. Other sections remain visible, and selecting another destination exits reorder mode.
+- Pointer, touch, and keyboard input can reorder from the handle.
+- The dragged row is opaque and appears once.
+- Each drop saves optimistically.
+- Done, Escape, collapsing the section, and closing the mobile drawer exit reorder mode without reverting completed drops.
+
+### Collection and Tag Deletion
+
+- Deleting a tag requires confirmation, permanently deletes the tag, and removes it from every bookmark. Bookmarks remain.
+- The tag confirmation shows its colored icon, name, and affected bookmark count.
+- Tag confirmation copy follows: `This tag will be removed from 14 bookmarks. This cannot be undone.`
+- Deleting a collection requires confirmation and permanently removes the collection, its icon, its order, and its memberships.
+- Bookmarks that exist only in the deleted collection move to Trash and remain recoverable for 30 days.
+- Bookmarks that also belong to another collection remain unchanged in those collections.
+- Restoring a bookmark that moved to Trash because its only collection was deleted returns it as Uncollected.
+- The collection confirmation shows its icon, name, and exclusive bookmark count.
+- Collection confirmation copy follows: `The collection cannot be restored. 8 bookmarks that exist only in this collection will move to Trash.`
+- Delete confirmation does not require typed text.
+- Pending deletion disables dismissal and the destructive button.
+- Deleting an inactive item does not change the current destination.
+- Deleting the active collection returns the content pane to All Bookmarks.
+- Deleting an active tag removes it from the OR tag filter, keeps any remaining tag filters, and returns to All Bookmarks when no tag filter remains.
+- Focus returns to the relevant section header after deletion.
+- Deletion shows a named toast. A collection deletion toast includes the number of exclusive bookmarks moved to Trash.
+- User collections and tags support management. All Bookmarks, Uncollected, Settings, Display, Trash, and other system destinations do not.
 
 ### Multi-Select & Bulk Actions
 
