@@ -7,9 +7,11 @@ import {
 } from "@phosphor-icons/react"
 import {
   type ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
+  createCoreRowModel,
+  type RowSelectionState,
+  rowSelectionFeature,
+  tableFeatures,
+  useTable,
 } from "@tanstack/react-table"
 import * as React from "react"
 
@@ -142,39 +144,37 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
 })
 
-const projectColumns: ColumnDef<Project>[] = [
+const projectTableFeatures = tableFeatures({
+  coreRowModel: createCoreRowModel(),
+  rowSelectionFeature,
+})
+
+type ProjectTableFeatures = typeof projectTableFeatures
+
+const projectColumns: ColumnDef<ProjectTableFeatures, Project>[] = [
   {
     cell: ({ row }) => {
-      const toggleHandler = row.getToggleSelectedHandler()
       return (
         <Checkbox
           aria-label="Select row"
           checked={row.getIsSelected()}
           disabled={!row.getCanSelect()}
           onCheckedChange={(value) => {
-            const syntheticEvent = {
-              target: { checked: !!value },
-            } as unknown as React.ChangeEvent<HTMLInputElement>
-            toggleHandler(syntheticEvent)
+            row.toggleSelected(Boolean(value))
           }}
         />
       )
     },
-    enableSorting: false,
     header: ({ table }) => {
       const isAllSelected = table.getIsAllPageRowsSelected()
       const isSomeSelected = table.getIsSomePageRowsSelected()
-      const toggleHandler = table.getToggleAllPageRowsSelectedHandler()
       return (
         <Checkbox
           aria-label="Select all"
           checked={isAllSelected}
           indeterminate={isSomeSelected && !isAllSelected}
           onCheckedChange={(value) => {
-            const syntheticEvent = {
-              target: { checked: !!value },
-            } as unknown as React.ChangeEvent<HTMLInputElement>
-            toggleHandler(syntheticEvent)
+            table.toggleAllPageRowsSelected(Boolean(value))
           }}
         />
       )
@@ -251,13 +251,13 @@ function TabularNumsDemo(): React.ReactElement {
 }
 
 function DataTableDemo(): React.ReactElement {
-  const [rowSelection, setRowSelection] = React.useState({})
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
 
-  const table = useReactTable({
+  const table = useTable({
     columns: projectColumns,
     data: projects,
     enableRowSelection: true,
-    getCoreRowModel: getCoreRowModel(),
+    features: projectTableFeatures,
     onRowSelectionChange: setRowSelection,
     state: {
       rowSelection,
@@ -274,12 +274,9 @@ function DataTableDemo(): React.ReactElement {
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
                 <TableHead key={header.id}>
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
+                  {header.isPlaceholder ? null : (
+                    <table.FlexRender header={header} />
+                  )}
                 </TableHead>
               ))}
             </TableRow>
@@ -291,9 +288,9 @@ function DataTableDemo(): React.ReactElement {
               data-state={row.getIsSelected() && "selected"}
               key={row.id}
             >
-              {row.getVisibleCells().map((cell) => (
+              {row.getAllCells().map((cell) => (
                 <TableCell key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  <table.FlexRender cell={cell} />
                 </TableCell>
               ))}
             </TableRow>
