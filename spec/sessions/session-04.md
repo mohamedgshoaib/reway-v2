@@ -43,11 +43,14 @@ Write facts only. No plans, no advice, no narration.
 - Added focused coverage for hierarchy, icon selection, color selection, reorder behavior, deferred overlay close, sidebar actions, and mobile Display placement.
 - Updated `spec/integrations/features/feature-contract.md` with the collection, tag, reorder, validation, dialog, and responsive behavior.
 - `pnpm run check` and the full Vitest run of 73 tests across 20 files passed at wrap-up.
-- Saved the `/dashboard-ui` and `/ui` interface review with all 12 findings handled in `spec/reviews/2026-08-30-dashboard-ui-interface-review.md`.
-- Unified collection and tag row hover and focus states with their menu actions in `src/components/ui/sidebar.tsx`.
-- Kept the dashboard current-view heading visible on mobile and screen-reader-only without layout space on desktop in `src/dev/dashboard-ui/controls-bar.tsx`.
-- Resolved all eight React Doctor warnings across the collection management and UI audit files.
-- `pnpm run check`, 78 tests across 23 files, the client and server production build, `git diff --check`, and the changed-scope React Doctor scan at 100/100 passed.
+- Reviewed `/dashboard-ui`, `/ui`, and their shared components with `better-interface` and `interface-cheatsheet`; recorded 12 findings in `spec/reviews/2026-08-30-dashboard-ui-interface-review.md` and handled all of them.
+- Added a visible and announced bookmark selection state, inline blank-title validation with focus recovery, skip links, an All Bookmarks empty state, and a current-view heading that stays visible on mobile without adding desktop layout space.
+- Added programmatic labels to `/ui` form examples, fixed nested heading levels, named destructive actions, replaced three-period placeholders, added tabular slider values, and removed copy for features outside Reway's scope.
+- Added a shared reduced-motion fallback, replaced `transition-all` with exact properties, and stopped theme changes from animating the interface.
+- Kept collection, nested collection, and tag rows active while their menu buttons receive hover or focus.
+- Resolved all eight React Doctor warnings by fixing the collection icon label and state initializer, using stable navigation keys and module-level static values, and splitting the large forms audit component.
+- The codebase has no known audit blockers. `pnpm run check`, 78 tests across 23 files, the client and server production build, `git diff --check`, and the changed-scope React Doctor scan at 100/100 passed.
+- Browser, keyboard, screen-reader, responsive, and rendered contrast checks remain unverified because browser use needs explicit permission in this workspace.
 
 ---
 
