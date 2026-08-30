@@ -73,21 +73,25 @@ This is the authoritative record of Reway's approved feature behaviour and techn
 ### Collections
 
 - Collections are user-managed bookmark groups. A bookmark may belong to more than one collection.
-- A collection has a required name and one icon. New collections use the Folder icon by default.
+- A collection has a required name, one icon, and one palette color. New collections use the Folder icon in Neutral by default.
+- Collection colors use the same Neutral, Red, Orange, Amber, Lime, Green, Teal, Cyan, Blue, Indigo, Violet, and Rose palette as tags. Custom colors are not supported.
+- New nested collections also start Neutral and do not inherit their parent's color.
 - Collection names are trimmed, collapse repeated inner spaces, preserve case and supported punctuation, and allow Unicode including Arabic and accented characters.
 - Collection names have a 24-character limit and must be globally unique within the user's library after case-insensitive comparison and surrounding-space removal.
 - Collection names reject line breaks and control characters.
-- The collection icon picker contains 24 icons in four single-open, collapsible groups of six:
+- The collection icon picker contains 24 icons in four tabbed groups of six:
   - General: Folder, Bookmark, Archive, Star, Heart, Stack.
   - Work: Briefcase, Person, Buildings, Calendar, Clipboard, X logo.
   - Learning & Creative: Book, Notebook, Research, Paintbrush, Code, Camera.
   - Personal: Home, Cooking, Travel, Location, Shopping, Fitness.
 - Icon search covers every group and supports plain-language aliases such as `recipe`, `job`, and `trip`.
-- General opens by default. Clearing icon search restores the group that was open before search.
-- The selected collection icon appears in the desktop sidebar, collapsed rail, mobile drawer, command search, collection pickers and menus, create and edit previews, and delete confirmation.
+- The icon combobox shows named choices under General, Work, Learning & Creative, and Personal. Search filters every group.
+- Selecting an icon closes the picker. The Icon field shows the selected icon, color, and name as its trigger.
+- The selected collection icon and color appear in the desktop sidebar, collapsed rail, mobile drawer, command search, collection pickers and menus, the editor's Icon field, and reorder feedback.
 - System destinations keep their fixed icons.
-- `X Bookmarks` starts with the X logo when X creates it. It remains editable and uses normal collection deletion rules. A later X save recreates a missing `X Bookmarks` collection with the X logo.
+- `X Bookmarks` starts with the X logo in Neutral when X creates it. Its icon and color remain editable, and it uses normal collection deletion rules. A later X save recreates a missing `X Bookmarks` collection with the X logo in Neutral.
 - Session-created collections start with the Folder icon.
+- Existing and imported collections without saved color data render as Neutral. Their next edit saves Neutral unless the user selects another palette color.
 
 ### Collection Hierarchy
 
@@ -123,12 +127,11 @@ The contract follows five interaction rules:
 - Tags are flat user-managed labels assigned to bookmarks.
 - Tag names follow the same normalization, character, 24-character, and uniqueness rules as collection names.
 - Every tag uses the fixed tag-chevron icon. Tags do not support custom icon selection.
-- A tag has one color identity chosen from Neutral, Red, Orange, Amber, Lime, Green, Teal, Cyan, Blue, Indigo, Violet, or Rose, or from a custom color picker.
+- A tag has one color identity chosen from Neutral, Red, Orange, Amber, Lime, Green, Teal, Cyan, Blue, Indigo, Violet, or Rose. Custom colors are not supported.
 - New tags use the least-used palette color. Palette-order priority breaks ties.
 - The chosen hue uses a darker value in the light theme and a lighter value in the dark theme.
-- The custom picker includes a color area, hue slider, fixed HEX input, and eye dropper when supported. It does not include alpha.
-- A custom color shows the exact source swatch and a current-theme tag icon preview.
-- The colored tag-chevron icon appears wherever the tag appears, including the desktop sidebar, collapsed rail, mobile drawer, menus, filters, chips, command search, previews, and delete confirmation.
+- Each palette choice uses the colored tag-chevron icon instead of an abstract color dot so the picker previews the result directly.
+- The colored tag-chevron icon appears wherever the tag appears, including the desktop sidebar, collapsed rail, mobile drawer, menus, filters, chips, command search, and previews.
 - Tag text, row backgrounds, and selected states remain neutral.
 - Tag rows do not show bookmark counts.
 
@@ -136,6 +139,7 @@ The contract follows five interaction rules:
 
 - Expanded collection and tag headers contain a disclosure trigger, a section menu, and a create button.
 - The disclosure caret sits directly after the section label. The section menu and create button occupy fixed trailing slots.
+- The section menu and create button keep separate horizontal hit areas. Neither button can take clicks from the other button's slot.
 - On desktop, the section menu appears when the section header receives hover or focus. It remains in a fixed trailing slot.
 - On touch surfaces, the section menu remains visible.
 - The collapsed desktop rail hides section headers, disclosure controls, create buttons, and section menus without leaving blank header space.
@@ -143,17 +147,19 @@ The contract follows five interaction rules:
 - The collapsed rail also shows colored tag icons with tooltips. A quiet divider separates collections and tags.
 - Mobile always uses the expanded navigation drawer. It keeps children visible and indented, and it keeps row menus available without hover.
 - An empty expanded section keeps its header and shows one muted, non-interactive row: `No collections yet` or `No tags yet`.
-- Create and edit use an anchored popover on desktop and a centered dialog over the still-open navigation drawer on mobile.
-- Create and edit share one form body with a live sidebar-row preview, required name field, and optional appearance controls.
-- The collection form shows the selected icon and a `Change icon` control. The grouped searchable icon picker expands inline.
+- Create and edit use Dialog. It stays centered on desktop and attaches to the bottom edge on mobile without adding another swipe-driven drawer. Mobile Display uses the same Dialog treatment over the open navigation drawer.
+- Create and edit share one form body with a required name field and separate Icon and Color fields.
+- The lazy-loaded Icon field uses one grouped searchable combobox. Its input shows the selected icon, color, and name. Its popup shows each icon beside its name under General, Work, Learning & Creative, or Personal. Typing filters all groups and includes plain-language aliases.
+- The collection and tag forms share one compact 12-color Radio Group. Each collection choice shows the current collection icon in that color. Each tag choice keeps the fixed tag-chevron icon. A color change updates the Icon field at once.
 - The collection form includes an optional `Parent collection` field. `Top level` is the default.
 - Only top-level collections that can accept a child appear as valid parents. The current collection, child collections, and any choice that would exceed the depth limit remain unavailable with a short reason.
 - The Collections header create button starts a top-level draft. A top-level collection row offers `New nested collection`, which opens the same form with that collection selected as the parent.
 - Editing a child can move it to another valid top-level collection or back to `Top level`.
 - Editing a top-level collection that already has children cannot assign it a parent. The editor explains that its children must move first.
-- The tag form always shows the 12 palette choices. Selecting `Custom` expands the custom color picker inline.
+- The tag form always shows the 12 icon-based palette choices.
 - The editor uses a local draft. Visible stored values change only after Save.
-- Save is available only when the draft is valid and changed. Enter submits from the name field.
+- Name fields stay neutral until a submit attempt. Moving from Name to Icon or Color never shows an error. Create and Save remain available until a request starts. An invalid submit shows the inline error and returns focus to Name. Enter submits from the name field.
+- Dialog and AlertDialog content stays mounted until the close animation finishes, so titles and form content do not change during exit.
 - Cancel and Escape discard the draft.
 - Outside press closes a pristine editor and does not close a dirty editor.
 - A save error remains in the editor as inline feedback.
@@ -174,7 +180,7 @@ The contract follows five interaction rules:
 - A collection row keeps its direct bookmark count in the trailing slot while inactive.
 - On desktop pointer hover anywhere on the row, or when the row receives keyboard focus, the collection row replaces its count with an ellipsis button. The active collection keeps the ellipsis visible.
 - Tag rows use the trailing slot for the ellipsis button and never show counts.
-- Touch surfaces keep row ellipsis buttons visible.
+- Touch surfaces keep row ellipsis buttons visible and hide collection counts so the two trailing items never overlap.
 - A top-level collection row menu contains `New nested collection`, `Edit`, a separator, and `Delete`. Child collection row menus omit `New nested collection`.
 - Tag row menus contain `Edit`, a separator, and `Delete`.
 - Right-click opens the same row menu on desktop.
@@ -203,26 +209,29 @@ The contract follows five interaction rules:
 - New items appear at the top of their sibling group in Newest and Custom order, and in their natural sibling position in Alphabetical order.
 - Section order changes do not show a toast.
 - Section reorder mode applies to one section at a time.
-- The active section header becomes `Reordering collections` or `Reordering tags` with a `Done` button.
+- The active section header becomes `Reordering collections` or `Reordering tags` with a `Done` button that stays visible without hover.
 - Reorder mode hides the create control, section menu, collection counts, and row actions, and shows one trailing drag handle per item.
 - Rows do not navigate during reorder mode. Other sections remain visible, and selecting another destination exits reorder mode.
 - Pointer, touch, and keyboard input can reorder from the handle.
 - Collection drag behavior exists only in explicit reorder mode. Normal navigation never starts a drag.
-- Dropping between collection rows reorders within the current sibling group.
-- Holding a dragged collection over the center of a valid top-level collection for 500 milliseconds reveals a named `Move into [collection]` target. Dropping there makes the source its child.
-- Dragging a child reveals a `Top level` drop target for removing its parent.
-- Child collections never accept nested drops.
-- A top-level collection that already has children cannot be dropped into another collection because that would create a third tier. Nesting targets become unavailable and explain that its children must move first; ordinary reorder gaps remain active.
+- Collection reorder uses one flat sortable list. Indentation shows parentage, but the dragged row never moves into another DOM list while dnd-kit finishes the operation.
+- Vertical movement changes order. A top-level collection stays top-level unless the pointer also moves at least 16 pixels to the right.
+- Moving a top-level leaf right past that threshold nests it under the nearest valid top-level collection before it. Moving a child left past the threshold returns it to the top level.
+- The source row leaves one fixed gap at the projected destination. The gap shifts to the child indent when the nesting threshold is crossed. The future parent gains a quiet selected state, and a short branch joins its tree guide to the gap. These cues preview the resulting structure without changing list height.
+- The first eligible top-level drag shows one out-of-flow hint: `Drag right to nest`. Crossing the nesting threshold hides it for the current drag. The first successful nest stores completion and prevents the hint from returning. The Edit form's parent field remains the visible non-gesture path.
+- A parent and its children move as one block. The list removes the descendants from collision detection during the drag, then restores them directly after their parent on drop.
+- Child collections never accept nested drops. Moving a child farther right clamps it at the existing child depth without showing an error state.
+- A top-level collection that already has children cannot move into another collection because that would create a third tier. The destination gap remains neutral because vertical reorder stays valid. A restrained red outline and prohibited badge appear only after the branch moves one full 32 pixel indent to the right at a position with a valid parent candidate.
 - This invalid nesting attempt never opens a confirmation and never flattens the source. A drag operation must not hide a destructive hierarchy change.
-- Pointer and touch input start from the drag handle with input-specific activation constraints. Keyboard input reorders siblings from the handle; keyboard reparenting uses the Edit form's `Parent collection` field.
-- The dragged row is opaque and appears once.
+- Pointer and touch input start from the drag handle with input-specific activation constraints. The handle owns the pointer start so a parent mobile drawer cannot treat the reorder drag as a dismiss swipe. Keyboard input reorders siblings from the handle; keyboard reparenting uses the Edit form's `Parent collection` field.
+- One drag overlay follows the pointer. The source row stays in the flat list as the destination gap, which prevents duplicate rows and keeps drop cleanup stable. Releasing the pointer removes the gap and overlay before the row completes its 140 millisecond settle transition.
 - Each drop saves optimistically.
 - Done, Escape, collapsing the section, and closing the mobile drawer exit reorder mode without reverting completed drops.
 
 ### Collection and Tag Deletion
 
 - Deleting a tag requires confirmation, permanently deletes the tag, and removes it from every bookmark. Bookmarks remain.
-- The tag confirmation shows its colored icon, name, and affected bookmark count.
+- The tag confirmation shows its name and affected bookmark count without a decorative tag icon.
 - Tag confirmation copy follows: `This tag will be removed from 14 bookmarks. This cannot be undone.`
 - Deleting a collection requires confirmation and permanently removes the collection, its icon, its order, and its memberships.
 - Deleting a top-level collection also permanently deletes every child collection beneath it. Children are not promoted to the top level.
@@ -230,7 +239,7 @@ The contract follows five interaction rules:
 - After Reway removes every membership in the deleted collection subtree, bookmarks with no surviving collection membership move to Trash and remain recoverable for 30 days.
 - Bookmarks that still belong to a collection outside the deleted subtree remain unchanged in those surviving collections.
 - Restoring a bookmark that moved to Trash because all its collection memberships were inside the deleted subtree returns it as Uncollected.
-- A leaf collection confirmation shows its icon, name, and exclusive bookmark count.
+- A leaf collection confirmation shows its name and exclusive bookmark count without a decorative collection icon.
 - A parent collection confirmation also shows the number of child collections that will be deleted and the number of bookmarks that will move to Trash after the full subtree is removed.
 - Leaf confirmation copy follows: `The collection cannot be restored. 8 bookmarks that exist only in this collection will move to Trash.`
 - Parent confirmation copy follows: `Media and its 3 nested collections will be permanently deleted. 18 bookmarks that exist only in these collections will move to Trash.`
@@ -285,7 +294,7 @@ The contract follows five interaction rules:
 - A parent with no direct bookmarks uses: `No bookmarks saved directly to [collection].`
 - When that empty parent has children, the empty state shows compact links to those child collections.
 - The interface removes third-tier creation actions wherever it can. Invalid parent choices remain disabled only when showing the reason helps the user understand the limit.
-- Invalid nesting targets in reorder mode show a clear unavailable state before drop.
+- Moving a parent that carries children toward another parent adds a prohibited badge and restrained red outline to the drag overlay. Rightward over-drag on a leaf or existing child clamps silently at the nearest valid depth.
 - Prevented depth violations do not produce a generic error toast.
 
 ### Most Visited Tracking
