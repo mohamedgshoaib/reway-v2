@@ -14,9 +14,9 @@ describe("bookmark collection order", () => {
   it("builds one stable order per collection", () => {
     const orders = createCollectionOrders(mockBookmarks)
 
-    expect(orders.Research).toEqual(["1", "2", "3", "4", "5", "6", "7", "8"])
-    expect(orders["Design references"]).toEqual(["1", "5", "8"])
-    expect(orders["Reading list"]).toEqual(["3"])
+    expect(orders.research).toEqual(["1", "2", "3", "4", "5", "6", "7", "8"])
+    expect(orders["design-references"]).toEqual(["1", "5", "8", "11"])
+    expect(orders["reading-list"]).toEqual(["3", "15"])
   })
 
   it("moves one bookmark without changing the input order", () => {

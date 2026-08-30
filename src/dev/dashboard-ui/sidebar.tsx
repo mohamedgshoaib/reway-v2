@@ -1,22 +1,10 @@
 import {
-  AirplaneTiltIcon,
-  BookOpenTextIcon,
   BookmarkIcon,
-  BriefcaseIcon,
-  CaretDownIcon,
-  CodesandboxLogoIcon,
-  CookingPotIcon,
   DotsSixVerticalIcon,
-  FileMagnifyingGlassIcon,
   GearIcon,
-  HouseLineIcon,
-  NotebookIcon,
-  PaintBrushIcon,
   SidebarSimpleIcon,
   SlidersHorizontalIcon,
-  TagChevronIcon,
   TrashIcon,
-  UserCircleIcon,
   XIcon,
 } from "@phosphor-icons/react"
 import { useReducedMotion } from "motion/react"
@@ -26,11 +14,6 @@ import * as React from "react"
 import { Logo } from "@/components/logo"
 import { AnimatedIcon } from "@/components/ui/animated-icon"
 import { Button } from "@/components/ui/button"
-import {
-  Collapsible,
-  CollapsiblePanel,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
 import {
   Dialog,
   DialogHeader,
@@ -69,59 +52,39 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuButtonLabel,
   SidebarMenuItem,
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar"
+import type { Collection } from "@/dev/dashboard-ui/collection-hierarchy"
+import type { CollectionDraft } from "@/dev/dashboard-ui/collection-management"
+import { CollectionSidebarSection } from "@/dev/dashboard-ui/collection-sidebar-section"
 import {
   DashboardCommand,
   DashboardCommandButton,
 } from "@/dev/dashboard-ui/command"
 import {
+  mockBookmarks,
   mockCollections,
+  mockTags,
   type SortOption,
   type ViewMode,
 } from "@/dev/dashboard-ui/mock-bookmarks"
+import type { MockBookmark } from "@/dev/dashboard-ui/mock-bookmarks"
 import {
   setDashboardNavigationPreference,
   type DashboardNavigationDisclosures,
   type DashboardNavigationSection,
   type DashboardNavigationSurface,
 } from "@/dev/dashboard-ui/navigation-preferences"
+import type { Tag, TagDraft } from "@/dev/dashboard-ui/tag-model"
+import { TagSidebarSection } from "@/dev/dashboard-ui/tag-sidebar-section"
 import { easeOutStrong } from "@/lib/motion"
 import { cn } from "@/lib/utils"
-
-const tags = [
-  "engineering",
-  "design",
-  "product",
-  "research",
-  "marketing",
-  "ai",
-  "typography",
-  "accessibility",
-  "performance",
-  "writing",
-]
-
-const collectionIcons = {
-  "Book notes": NotebookIcon,
-  "Client work": UserCircleIcon,
-  "Design references": PaintBrushIcon,
-  "Home renovation": HouseLineIcon,
-  "Job hunting": BriefcaseIcon,
-  "Reading list": BookOpenTextIcon,
-  Recipes: CookingPotIcon,
-  Research: FileMagnifyingGlassIcon,
-  "Side project": CodesandboxLogoIcon,
-  "Travel planning": AirplaneTiltIcon,
-} as const
 
 /**
  * Sidebar shell + content, mounted inside a plain, non-fixed <aside> —
@@ -133,27 +96,53 @@ const collectionIcons = {
  */
 export function DashboardSidebar({
   activeCollection = null,
+  bookmarks = mockBookmarks,
   canReorder = false,
+  collections = mockCollections,
+  tags = mockTags,
   initialDisclosures,
   isReordering = false,
   onNavigate,
+  onCreateCollection,
+  onCreateTag,
+  onDeleteCollection,
+  onDeleteTag,
+  onMoveCollection,
+  onMoveTag,
   onSelectAllBookmarks,
   onSelectCollection,
   onSortChange,
   onStartReorder,
+  onUpdateCollection,
+  onUpdateTag,
   onViewModeChange,
   sort,
   viewMode,
 }: {
   initialDisclosures: DashboardNavigationDisclosures
   activeCollection?: string | null
+  bookmarks?: readonly MockBookmark[]
   canReorder?: boolean
+  collections?: readonly Collection[]
+  tags?: readonly Tag[]
   isReordering?: boolean
   onNavigate?: () => void
+  onCreateCollection?: (draft: CollectionDraft) => void
+  onCreateTag?: (draft: TagDraft) => void
+  onDeleteCollection?: (collectionId: string) => void
+  onDeleteTag?: (tagId: string) => void
+  onMoveCollection?: (
+    sourceId: string,
+    parentId: string | null,
+    index: number
+  ) => void
+  onMoveTag?: (sourceId: string, index: number) => void
   onSelectAllBookmarks?: () => void
   onSelectCollection?: (collection: string) => void
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
+  onUpdateCollection?: (collectionId: string, draft: CollectionDraft) => void
+  onUpdateTag?: (tagId: string, draft: TagDraft) => void
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
   viewMode: ViewMode
@@ -165,7 +154,6 @@ export function DashboardSidebar({
     "desktop",
     initialDisclosures
   )
-
   return (
     <aside
       className={cn(
@@ -223,19 +211,30 @@ export function DashboardSidebar({
       </SidebarHeader>
       <DashboardNavigationContent
         activeCollection={activeCollection}
+        bookmarks={bookmarks}
         canReorder={canReorder}
         collapsed={collapsed}
+        collections={collections}
         disclosures={disclosures}
         isReordering={isReordering}
         onDisclosureChange={setDisclosure}
         onNavigate={onNavigate}
+        onCreateCollection={onCreateCollection}
+        onCreateTag={onCreateTag}
+        onDeleteCollection={onDeleteCollection}
+        onDeleteTag={onDeleteTag}
+        onMoveCollection={onMoveCollection}
+        onMoveTag={onMoveTag}
         onSelectAllBookmarks={onSelectAllBookmarks}
         onSelectCollection={onSelectCollection}
         onSortChange={onSortChange}
         onStartReorder={onStartReorder}
+        onUpdateCollection={onUpdateCollection}
+        onUpdateTag={onUpdateTag}
         onViewModeChange={onViewModeChange}
         sort={sort}
         surface="desktop"
+        tags={tags}
         viewMode={viewMode}
       />
     </aside>
@@ -244,27 +243,53 @@ export function DashboardSidebar({
 
 export function MobileDashboardNavigation({
   activeCollection = null,
+  bookmarks = mockBookmarks,
   canReorder = false,
+  collections = mockCollections,
+  tags = mockTags,
   initialDisclosures,
   isReordering = false,
   onNavigate,
+  onCreateCollection,
+  onDeleteCollection,
+  onCreateTag,
+  onDeleteTag,
+  onMoveCollection,
+  onMoveTag,
   onSelectAllBookmarks,
   onSelectCollection,
   onSortChange,
   onStartReorder,
+  onUpdateCollection,
+  onUpdateTag,
   onViewModeChange,
   sort,
   viewMode,
 }: {
   initialDisclosures: DashboardNavigationDisclosures
   activeCollection?: string | null
+  bookmarks?: readonly MockBookmark[]
   canReorder?: boolean
+  collections?: readonly Collection[]
+  tags?: readonly Tag[]
   isReordering?: boolean
   onNavigate?: () => void
+  onCreateCollection?: (draft: CollectionDraft) => void
+  onDeleteCollection?: (collectionId: string) => void
+  onCreateTag?: (draft: TagDraft) => void
+  onDeleteTag?: (tagId: string) => void
+  onMoveCollection?: (
+    sourceId: string,
+    parentId: string | null,
+    index: number
+  ) => void
+  onMoveTag?: (sourceId: string, index: number) => void
   onSelectAllBookmarks?: () => void
   onSelectCollection?: (collection: string) => void
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
+  onUpdateCollection?: (collectionId: string, draft: CollectionDraft) => void
+  onUpdateTag?: (tagId: string, draft: TagDraft) => void
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
   viewMode: ViewMode
@@ -276,7 +301,6 @@ export function MobileDashboardNavigation({
     "mobile",
     initialDisclosures
   )
-
   return (
     <Drawer onOpenChange={setOpen} open={open} position="left">
       <DrawerTrigger
@@ -320,8 +344,10 @@ export function MobileDashboardNavigation({
         >
           <DashboardNavigationContent
             activeCollection={activeCollection}
+            bookmarks={bookmarks}
             canReorder={canReorder}
             collapsed={false}
+            collections={collections}
             disclosures={disclosures}
             isReordering={isReordering}
             onDisclosureChange={setDisclosure}
@@ -329,21 +355,33 @@ export function MobileDashboardNavigation({
               onNavigate?.()
               setOpen(false)
             }}
+            onCreateCollection={onCreateCollection}
+            onCreateTag={onCreateTag}
+            onDeleteCollection={onDeleteCollection}
+            onDeleteTag={onDeleteTag}
+            onMoveCollection={onMoveCollection}
+            onMoveTag={onMoveTag}
             onOpenCommand={() => setCommandOpen(true)}
             onOpenDisplay={() => setDisplayOpen(true)}
             onSelectAllBookmarks={onSelectAllBookmarks}
             onSelectCollection={onSelectCollection}
             onSortChange={onSortChange}
             onStartReorder={onStartReorder}
+            onUpdateCollection={onUpdateCollection}
+            onUpdateTag={onUpdateTag}
             onViewModeChange={onViewModeChange}
             sort={sort}
             surface="mobile"
+            tags={tags}
             viewMode={viewMode}
           />
         </DrawerPanel>
       </DrawerPopup>
       <DashboardCommand
+        bookmarks={bookmarks}
+        collections={collections}
         onOpenChange={setCommandOpen}
+        onSelectCollection={onSelectCollection}
         open={commandOpen}
         registerHotkey
         showTrigger={false}
@@ -389,11 +427,7 @@ function MobileDisplayDialog({
 }): React.ReactElement {
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
-      <DialogPopup
-        backdropProps={{ forceRender: true }}
-        bottomStickOnMobile={false}
-        className="max-w-sm"
-      >
+      <DialogPopup backdropProps={{ forceRender: true }} className="max-w-sm">
         <DialogHeader className="px-6 pt-5 pb-3">
           <DialogTitle className="text-base">Display</DialogTitle>
         </DialogHeader>
@@ -457,11 +491,19 @@ function MobileDisplayDialog({
 
 function DashboardNavigationContent({
   activeCollection,
+  bookmarks,
   canReorder,
   collapsed,
+  collections,
   disclosures,
   isReordering,
   onDisclosureChange,
+  onCreateCollection,
+  onCreateTag,
+  onDeleteCollection,
+  onDeleteTag,
+  onMoveCollection,
+  onMoveTag,
   onNavigate,
   onOpenCommand,
   onOpenDisplay,
@@ -469,20 +511,36 @@ function DashboardNavigationContent({
   onSelectCollection,
   onSortChange,
   onStartReorder,
+  onUpdateCollection,
+  onUpdateTag,
   onViewModeChange,
   sort,
   surface,
+  tags,
   viewMode,
 }: {
   activeCollection: string | null
+  bookmarks: readonly MockBookmark[]
   canReorder: boolean
   collapsed: boolean
+  collections: readonly Collection[]
+  tags: readonly Tag[]
   disclosures: DashboardNavigationDisclosures
   isReordering: boolean
   onDisclosureChange: (
     section: DashboardNavigationSection,
     open: boolean
   ) => void
+  onCreateCollection?: (draft: CollectionDraft) => void
+  onCreateTag?: (draft: TagDraft) => void
+  onDeleteCollection?: (collectionId: string) => void
+  onDeleteTag?: (tagId: string) => void
+  onMoveCollection?: (
+    sourceId: string,
+    parentId: string | null,
+    index: number
+  ) => void
+  onMoveTag?: (sourceId: string, index: number) => void
   onNavigate?: () => void
   onOpenCommand?: () => void
   onOpenDisplay?: () => void
@@ -490,14 +548,32 @@ function DashboardNavigationContent({
   onSelectCollection?: (collection: string) => void
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
+  onUpdateCollection?: (collectionId: string, draft: CollectionDraft) => void
+  onUpdateTag?: (tagId: string, draft: TagDraft) => void
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
   surface: DashboardNavigationSurface
   viewMode: ViewMode
 }): React.ReactElement {
+  const [reorderingSection, setReorderingSection] = React.useState<
+    "collections" | "tags" | null
+  >(null)
+  const handleNavigate = (): void => {
+    setReorderingSection(null)
+    onNavigate?.()
+  }
+
   return (
     <>
-      <SidebarContent hideScrollbar>
+      <SidebarContent
+        hideScrollbar
+        onKeyDownCapture={(event) => {
+          if (event.key !== "Escape" || reorderingSection === null) return
+          event.preventDefault()
+          event.stopPropagation()
+          setReorderingSection(null)
+        }}
+      >
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -506,7 +582,10 @@ function DashboardNavigationContent({
                   <DashboardCommandButton onClick={onOpenCommand} />
                 ) : (
                   <DashboardCommand
-                    onNavigate={onNavigate}
+                    bookmarks={bookmarks}
+                    collections={collections}
+                    onNavigate={handleNavigate}
+                    onSelectCollection={onSelectCollection}
                     registerHotkey={false}
                   />
                 )}
@@ -516,7 +595,7 @@ function DashboardNavigationContent({
                   isActive={activeCollection === null}
                   onClick={() => {
                     onSelectAllBookmarks?.()
-                    onNavigate?.()
+                    handleNavigate()
                   }}
                   tooltip="All bookmarks"
                 >
@@ -527,104 +606,45 @@ function DashboardNavigationContent({
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        <SidebarGroup>
-          <Collapsible
-            disabled={collapsed}
-            onOpenChange={(open) => onDisclosureChange("collections", open)}
-            open={disclosures.collections}
-          >
-            <CollapsibleTrigger
-              inert={collapsed}
-              render={
-                <SidebarGroupLabel
-                  className="w-full justify-between data-panel-open:*:data-[slot=collections-indicator]:rotate-180"
-                  render={<button aria-label="Collections" type="button" />}
-                />
-              }
-            >
-              Collections
-              <CaretDownIcon
-                className="size-4 shrink-0 opacity-80 transition-transform duration-200"
-                data-slot="collections-indicator"
-                weight="regular"
-              />
-            </CollapsibleTrigger>
-            <CollapsiblePanel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {mockCollections.map((collection) => {
-                    const CollectionIcon =
-                      collectionIcons[
-                        collection.label as keyof typeof collectionIcons
-                      ]
-
-                    return (
-                      <SidebarMenuItem key={collection.label}>
-                        <SidebarMenuButton
-                          isActive={activeCollection === collection.label}
-                          onClick={() => {
-                            onSelectCollection?.(collection.label)
-                            onNavigate?.()
-                          }}
-                          tooltip={collection.label}
-                        >
-                          <CollectionIcon weight="duotone" />
-                          <SidebarMenuButtonLabel>
-                            {collection.label}
-                          </SidebarMenuButtonLabel>
-                        </SidebarMenuButton>
-                        <SidebarMenuBadge>{collection.count}</SidebarMenuBadge>
-                      </SidebarMenuItem>
-                    )
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsiblePanel>
-          </Collapsible>
-        </SidebarGroup>
-        <SidebarGroup>
-          <Collapsible
-            disabled={collapsed}
-            onOpenChange={(open) => onDisclosureChange("tags", open)}
-            open={disclosures.tags}
-          >
-            <CollapsibleTrigger
-              inert={collapsed}
-              render={
-                <SidebarGroupLabel
-                  className="w-full justify-between data-panel-open:*:data-[slot=tags-indicator]:rotate-180"
-                  render={<button aria-label="Tags" type="button" />}
-                />
-              }
-            >
-              Tags
-              <CaretDownIcon
-                className="size-4 shrink-0 opacity-80 transition-transform duration-200"
-                data-slot="tags-indicator"
-                weight="regular"
-              />
-            </CollapsibleTrigger>
-            <CollapsiblePanel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {tags.map((tag) => (
-                    <SidebarMenuItem key={tag}>
-                      <SidebarMenuButton onClick={onNavigate} tooltip={tag}>
-                        <TagChevronIcon weight="duotone" />
-                        <SidebarMenuButtonLabel>{tag}</SidebarMenuButtonLabel>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsiblePanel>
-          </Collapsible>
-        </SidebarGroup>
+        <CollectionSidebarSection
+          activeCollection={activeCollection}
+          bookmarks={bookmarks}
+          collapsed={collapsed}
+          collections={collections}
+          isOpen={disclosures.collections}
+          isReordering={reorderingSection === "collections"}
+          onCreateCollection={onCreateCollection}
+          onDeleteCollection={onDeleteCollection}
+          onMoveCollection={onMoveCollection}
+          onNavigate={handleNavigate}
+          onOpenChange={(open) => onDisclosureChange("collections", open)}
+          onReorderingChange={(reordering) =>
+            setReorderingSection(reordering ? "collections" : null)
+          }
+          onSelectCollection={onSelectCollection}
+          onUpdateCollection={onUpdateCollection}
+        />
+        <TagSidebarSection
+          bookmarks={bookmarks}
+          collapsed={collapsed}
+          isOpen={disclosures.tags}
+          isReordering={reorderingSection === "tags"}
+          onCreateTag={onCreateTag}
+          onDeleteTag={onDeleteTag}
+          onMoveTag={onMoveTag}
+          onNavigate={handleNavigate}
+          onOpenChange={(open) => onDisclosureChange("tags", open)}
+          onReorderingChange={(reordering) =>
+            setReorderingSection(reordering ? "tags" : null)
+          }
+          onUpdateTag={onUpdateTag}
+          tags={tags}
+        />
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={onNavigate} tooltip="Settings">
+            <SidebarMenuButton onClick={handleNavigate} tooltip="Settings">
               <GearIcon weight="duotone" />
               <SidebarMenuButtonLabel>Settings</SidebarMenuButtonLabel>
             </SidebarMenuButton>
@@ -713,7 +733,7 @@ function DashboardNavigationContent({
             )}
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={onNavigate} tooltip="Trash">
+            <SidebarMenuButton onClick={handleNavigate} tooltip="Trash">
               <TrashIcon weight="duotone" />
               <SidebarMenuButtonLabel>Trash</SidebarMenuButtonLabel>
             </SidebarMenuButton>

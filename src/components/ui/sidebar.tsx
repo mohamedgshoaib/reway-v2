@@ -478,6 +478,22 @@ export function SidebarGroupLabel({
   })
 }
 
+export function SidebarGroupActions({
+  className,
+  ...props
+}: React.ComponentProps<"div">): React.ReactElement {
+  return (
+    <div
+      className={cn(
+        "flex shrink-0 items-center [&>*]:after:min-w-0",
+        className
+      )}
+      data-slot="sidebar-group-actions"
+      {...props}
+    />
+  )
+}
+
 export function SidebarGroupAction({
   className,
   render,
@@ -486,8 +502,7 @@ export function SidebarGroupAction({
   const defaultProps = {
     className: cn(
       "absolute top-3.5 right-3 flex aspect-square w-5 items-center justify-center rounded-lg p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-transform hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:shrink-0 [&>svg:not([class*='size-'])]:size-4",
-      // Increases the hit area of the button on mobile.
-      "after:absolute after:-inset-2 md:after:hidden",
+      "after:absolute after:-inset-1",
       "group-data-[collapsible=icon]:hidden",
       className
     ),
@@ -629,12 +644,12 @@ export function SidebarMenuAction({
 }): React.ReactElement {
   const defaultProps = {
     className: cn(
-      "absolute top-1.5 right-1 flex aspect-square w-5 items-center justify-center rounded-lg p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-transform peer-hover/menu-button:text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:shrink-0 [&>svg:not([class*='size-'])]:size-4",
-      // Increases the hit area of the button on mobile.
-      "after:absolute after:-inset-2 md:after:hidden",
-      "peer-data-[size=sm]/menu-button:top-1",
-      "peer-data-[size=default]/menu-button:top-1.5",
-      "peer-data-[size=lg]/menu-button:top-2.5",
+      "absolute top-1 right-1 flex size-6 items-center justify-center rounded-md p-0 text-sidebar-foreground ring-sidebar-ring outline-hidden transition-transform peer-hover/menu-button:text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 [&>svg]:shrink-0 [&>svg:not([class*='size-'])]:size-3.5",
+      "after:absolute after:-inset-1",
+      "peer-data-[size=sm]/menu-button:top-0.5",
+      "peer-data-[size=md]/menu-button:top-0.5",
+      "peer-data-[size=default]/menu-button:top-1",
+      "peer-data-[size=lg]/menu-button:top-3",
       "group-data-[collapsible=icon]:hidden",
       showOnHover &&
         "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground data-[state=open]:opacity-100 md:opacity-0",
@@ -654,25 +669,20 @@ export function SidebarMenuAction({
 export function SidebarMenuBadge({
   className,
   ...props
-}: React.ComponentProps<typeof m.div>): React.ReactElement {
-  const { isMobile, state } = useSidebar()
-  const collapsed = state === "collapsed" && !isMobile
-
+}: React.ComponentProps<"div">): React.ReactElement {
   return (
-    <m.div
-      animate={{ opacity: collapsed ? 0 : 1 }}
+    <div
       className={cn(
-        "pointer-events-none absolute right-1 flex h-5 min-w-5 items-center justify-center rounded-lg px-1 text-xs font-medium text-sidebar-foreground tabular-nums select-none",
+        "pointer-events-none absolute top-1.5 right-1 flex h-5 min-w-5 items-center justify-center rounded-lg px-1 text-xs font-medium text-sidebar-foreground tabular-nums opacity-100 transition-opacity duration-100 select-none group-data-[collapsible=icon]:opacity-0 max-[799px]:hidden",
         "peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[active=true]/menu-button:text-sidebar-accent-foreground",
         "peer-data-[size=sm]/menu-button:top-1",
         "peer-data-[size=default]/menu-button:top-1.5",
+        "peer-data-[size=md]/menu-button:top-1",
         "peer-data-[size=lg]/menu-button:top-2.5",
         className
       )}
       data-sidebar="menu-badge"
       data-slot="sidebar-menu-badge"
-      initial={false}
-      transition={{ duration: 0.12, ease: easeOutStrong }}
       {...props}
     />
   )
@@ -751,7 +761,7 @@ export function SidebarMenuSubButton({
   const defaultProps = {
     className: cn(
       stateSurfaceVariants({ axis: "block" }),
-      "flex h-8 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-lg px-2 text-sidebar-foreground ring-sidebar-ring outline-hidden before:rounded-[calc(var(--radius-lg)-1px)] hover:text-sidebar-accent-foreground hover:before:bg-sidebar-accent focus-visible:ring-2 active:text-sidebar-accent-foreground active:before:bg-sidebar-accent disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 sm:h-7 [&>span:last-child]:truncate [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground [&>svg:not([class*='size-'])]:size-4",
+      "flex h-8 w-full min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-lg px-2 text-sidebar-foreground ring-sidebar-ring outline-hidden before:rounded-[calc(var(--radius-lg)-1px)] hover:text-sidebar-accent-foreground hover:before:bg-sidebar-accent focus-visible:ring-2 active:text-sidebar-accent-foreground active:before:bg-sidebar-accent disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 sm:h-7 [&>span:last-child]:truncate [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground [&>svg:not([class*='size-'])]:size-4",
       "data-[active=true]:text-sidebar-accent-foreground data-[active=true]:before:bg-sidebar-accent",
       size === "sm" && "text-xs",
       size === "md" && "text-sm",

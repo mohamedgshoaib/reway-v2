@@ -117,6 +117,39 @@ describe("DashboardSidebar", () => {
     expect(onStartReorder).toHaveBeenCalledOnce()
   })
 
+  it("keeps nested collections visible and gives only parents a create action", async () => {
+    const onSelectCollection = vi.fn<(collectionId: string) => void>()
+
+    render(
+      <SidebarProvider>
+        <DashboardSidebar
+          initialDisclosures={{ collections: true, tags: true }}
+          onSelectCollection={onSelectCollection}
+          onSortChange={vi.fn<(sort: SortOption) => void>()}
+          onViewModeChange={vi.fn<(viewMode: ViewMode) => void>()}
+          sort="date"
+          viewMode="list"
+        />
+      </SidebarProvider>
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Streaming platforms" }))
+    expect(onSelectCollection).toHaveBeenCalledWith("streaming-platforms")
+
+    fireEvent.click(screen.getByRole("button", { name: "Actions for Media" }))
+    expect(await screen.findByText("New nested collection")).not.toBeNull()
+
+    fireEvent.keyDown(document, { key: "Escape" })
+    await waitFor(() => {
+      expect(screen.queryByText("New nested collection")).toBeNull()
+    })
+    fireEvent.click(
+      screen.getByRole("button", { name: "Actions for Streaming platforms" })
+    )
+    expect(await screen.findByRole("menuitem", { name: "Edit" })).not.toBeNull()
+    expect(screen.queryByText("New nested collection")).toBeNull()
+  })
+
   it("disables hidden group triggers while collapsed", () => {
     const { container } = render(
       <SidebarProvider defaultOpen={false}>
@@ -241,7 +274,11 @@ describe("DashboardSidebar", () => {
     expect(
       await screen.findByRole("heading", { name: "Display" })
     ).not.toBeNull()
+    const displayPopup = document.querySelector<HTMLElement>(
+      "[data-slot=dialog-popup]"
+    )
     expect(document.querySelector("[data-slot=dialog-backdrop]")).not.toBeNull()
+    expect(displayPopup?.className).toContain("max-sm:origin-bottom")
     expect(navigationTrigger.getAttribute("aria-expanded")).toBe("true")
     expect(screen.getByRole("radio", { name: "List" })).not.toBeNull()
     expect(

@@ -1,23 +1,18 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-vi.hoisted(() => {
-  globalThis.ResizeObserver = class ResizeObserver {
-    disconnect(): void {}
-    observe(): void {}
-    unobserve(): void {}
-  }
-})
-
 import type { BookmarkActionHandlers } from "@/dev/dashboard-ui/bookmark-actions"
 import { BookmarkGrid } from "@/dev/dashboard-ui/bookmark-grid"
 import { BookmarkList } from "@/dev/dashboard-ui/bookmark-list"
 import {
   BookmarkReorderArea,
   BookmarkReorderBar,
-  bookmarkReorderSurfaceClassName,
 } from "@/dev/dashboard-ui/bookmark-reorder"
-import { mockBookmarks } from "@/dev/dashboard-ui/mock-bookmarks"
+import { bookmarkReorderSurfaceClassName } from "@/dev/dashboard-ui/bookmark-reorder-surface"
+import {
+  mockBookmarks,
+  mockCollections,
+} from "@/dev/dashboard-ui/mock-bookmarks"
 
 afterEach(cleanup)
 
@@ -63,6 +58,7 @@ describe("bookmark reorder mode", () => {
         <BookmarkList
           {...createActionHandlers()}
           bookmarks={mockBookmarks.slice(0, 2)}
+          collections={mockCollections}
           isReordering
           selectedBookmarkIds={new Set()}
           sort="custom"
@@ -96,6 +92,7 @@ describe("bookmark reorder mode", () => {
         <BookmarkGrid
           {...createActionHandlers()}
           bookmarks={mockBookmarks.slice(0, 2)}
+          collections={mockCollections}
           isReordering
           selectedBookmarkIds={new Set()}
           showImage={false}

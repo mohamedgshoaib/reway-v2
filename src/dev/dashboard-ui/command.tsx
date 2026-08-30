@@ -2,7 +2,6 @@ import {
   ArrowDownIcon,
   ArrowElbowDownLeftIcon,
   ArrowUpIcon,
-  FolderIcon,
   MagnifyingGlassIcon,
 } from "@phosphor-icons/react"
 import { useHotkey } from "@tanstack/react-hotkeys"
@@ -31,13 +30,21 @@ import {
 } from "@/components/ui/sidebar"
 import { BookmarkFavicon } from "@/dev/dashboard-ui/bookmark-favicon"
 import {
+  createCollectionIndex,
+  type Collection,
+} from "@/dev/dashboard-ui/collection-hierarchy"
+import { CollectionIcon } from "@/dev/dashboard-ui/collection-icon"
+import {
   mockBookmarks,
   mockCollections,
+  type MockBookmark,
 } from "@/dev/dashboard-ui/mock-bookmarks"
 
 interface CommandEntry {
+  collection?: Collection
   value: string
   label: string
+  collectionId?: string
   domain?: string | null
   count?: number
 }
@@ -47,29 +54,37 @@ interface CommandGroupData {
   items: CommandEntry[]
 }
 
-const commandGroups: CommandGroupData[] = [
-  {
-    items: mockBookmarks.map((bookmark) => ({
-      domain: bookmark.domain,
-      label: bookmark.title,
-      value: bookmark.id,
-    })),
-    value: "Bookmarks",
-  },
-  {
-    items: mockCollections.map((collection) => ({
-      count: collection.count,
-      label: collection.label,
-      value: collection.label,
-    })),
-    value: "Collections",
-  },
-]
+function createCommandGroups(
+  bookmarks: readonly MockBookmark[],
+  collections: readonly Collection[]
+): CommandGroupData[] {
+  const collectionIndex = createCollectionIndex(
+    collections,
+    bookmarks,
+    "custom"
+  )
 
-const defaultCommandGroups = commandGroups.map((group) => ({
-  ...group,
-  items: group.items.slice(0, group.value === "Bookmarks" ? 6 : 3),
-}))
+  return [
+    {
+      items: bookmarks.map((bookmark) => ({
+        domain: bookmark.domain,
+        label: bookmark.title,
+        value: bookmark.id,
+      })),
+      value: "Bookmarks",
+    },
+    {
+      items: collectionIndex.rows.map((row) => ({
+        collection: row.collection,
+        collectionId: row.collection.id,
+        count: row.directCount,
+        label: row.path,
+        value: row.collection.id,
+      })),
+      value: "Collections",
+    },
+  ]
+}
 
 function DashboardCommandTriggerContent(): React.ReactElement {
   return (
@@ -119,14 +134,20 @@ function DashboardCommandTrigger(): React.ReactElement {
  * it anyway so the capability stays discoverable.
  */
 export function DashboardCommand({
+  bookmarks = mockBookmarks,
+  collections = mockCollections,
   onNavigate,
   onOpenChange,
+  onSelectCollection,
   open: controlledOpen,
   registerHotkey = true,
   showTrigger = true,
 }: {
+  bookmarks?: readonly MockBookmark[]
+  collections?: readonly Collection[]
   onNavigate?: () => void
   onOpenChange?: (open: boolean) => void
+  onSelectCollection?: (collectionId: string) => void
   open?: boolean
   registerHotkey?: boolean
   showTrigger?: boolean
@@ -134,6 +155,18 @@ export function DashboardCommand({
   const [internalOpen, setInternalOpen] = React.useState(false)
   const [query, setQuery] = React.useState("")
   const open = controlledOpen ?? internalOpen
+  const commandGroups = React.useMemo(
+    () => createCommandGroups(bookmarks, collections),
+    [bookmarks, collections]
+  )
+  const defaultCommandGroups = React.useMemo(
+    () =>
+      commandGroups.map((group) => ({
+        ...group,
+        items: group.items.slice(0, group.value === "Bookmarks" ? 6 : 3),
+      })),
+    [commandGroups]
+  )
 
   const handleOpenChange = (nextOpen: boolean): void => {
     if (controlledOpen === undefined) setInternalOpen(nextOpen)
@@ -167,6 +200,9 @@ export function DashboardCommand({
                           key={item.value}
                           onClick={() => {
                             handleOpenChange(false)
+                            if (item.collectionId) {
+                              onSelectCollection?.(item.collectionId)
+                            }
                             onNavigate?.()
                           }}
                           value={item.value}
@@ -174,7 +210,11 @@ export function DashboardCommand({
                           {group.value === "Bookmarks" ? (
                             <BookmarkFavicon domain={item.domain ?? null} />
                           ) : (
-                            <FolderIcon className="size-4 shrink-0 text-muted-foreground" />
+                            <CollectionIcon
+                              className="size-4 shrink-0"
+                              color={item.collection?.color}
+                              icon={item.collection?.icon ?? "folder"}
+                            />
                           )}
                           <span className="flex-1 truncate">{item.label}</span>
                           {item.count !== undefined ? (

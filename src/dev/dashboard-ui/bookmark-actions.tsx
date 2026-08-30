@@ -85,11 +85,13 @@ import {
   MenuTrigger,
 } from "@/components/ui/menu"
 import {
-  mockCollections,
-  mockTags,
-  type MockBookmark,
-  type MockTag,
-} from "@/dev/dashboard-ui/mock-bookmarks"
+  createCollectionIndex,
+  type Collection,
+} from "@/dev/dashboard-ui/collection-hierarchy"
+import { CollectionIcon } from "@/dev/dashboard-ui/collection-icon"
+import type { MockBookmark, MockTag } from "@/dev/dashboard-ui/mock-bookmarks"
+import { TagIcon } from "@/dev/dashboard-ui/tag-icon"
+import type { Tag } from "@/dev/dashboard-ui/tag-model"
 import { useIsMobile } from "@/hooks/use-media-query"
 
 export interface BookmarkActionHandlers {
@@ -103,7 +105,9 @@ export interface BookmarkActionHandlers {
 }
 
 export type BookmarkActionsProps = BookmarkActionHandlers & {
+  availableTags: readonly Tag[]
   bookmark: MockBookmark
+  collections: readonly Collection[]
   isSelected: boolean
 }
 
@@ -113,24 +117,24 @@ function bookmarkUrl(bookmark: MockBookmark): string {
 }
 
 function TagEditor({
+  availableTags,
   tags,
   onChange,
 }: {
+  availableTags: readonly Tag[]
   tags: string[]
   onChange: (tags: string[]) => void
 }): React.ReactElement {
   const selectedTagValues = new Set(tags)
-  const selectedTags = mockTags.filter((tag) =>
-    selectedTagValues.has(tag.value)
+  const selectedTags = availableTags.filter((tag) =>
+    selectedTagValues.has(tag.id)
   )
 
   return (
     <Combobox
-      items={mockTags}
+      items={availableTags}
       multiple
-      onValueChange={(value: MockTag[]) =>
-        onChange(value.map((tag) => tag.value))
-      }
+      onValueChange={(value: MockTag[]) => onChange(value.map((tag) => tag.id))}
       value={selectedTags}
     >
       <ComboboxChips>
@@ -138,8 +142,9 @@ function TagEditor({
           {(value: MockTag[]) => (
             <>
               {value.map((tag) => (
-                <ComboboxChip aria-label={tag.label} key={tag.value}>
-                  {tag.label}
+                <ComboboxChip aria-label={tag.name} key={tag.id}>
+                  <TagIcon color={tag.color} />
+                  {tag.name}
                 </ComboboxChip>
               ))}
               <ComboboxChipsInput
@@ -154,8 +159,9 @@ function TagEditor({
         <ComboboxEmpty>No tags found.</ComboboxEmpty>
         <ComboboxList>
           {(tag: MockTag) => (
-            <ComboboxItem key={tag.value} value={tag}>
-              {tag.label}
+            <ComboboxItem key={tag.id} value={tag}>
+              <TagIcon color={tag.color} />
+              {tag.name}
             </ComboboxItem>
           )}
         </ComboboxList>
@@ -165,12 +171,17 @@ function TagEditor({
 }
 
 function CollectionDrawer({
+  collections,
   label,
   onSelect,
 }: {
+  collections: readonly Collection[]
   label: string
   onSelect: (collection: string) => void
 }): React.ReactElement {
+  const roots = createCollectionIndex(collections, [], "custom").roots
+  const actionLabel = label.startsWith("Add") ? "Add to" : "Move to"
+
   return (
     <Drawer>
       <DrawerMenuTrigger>
@@ -182,18 +193,77 @@ function CollectionDrawer({
           <DrawerMenu>
             <DrawerMenuGroup>
               <DrawerMenuGroupLabel>{label}</DrawerMenuGroupLabel>
-              {mockCollections.map((collection) => (
-                <DrawerClose
-                  key={collection.label}
-                  render={
-                    <DrawerMenuItem
-                      onClick={() => onSelect(collection.label)}
+              {roots.map((root) =>
+                root.children.length > 0 ? (
+                  <Drawer key={root.collection.id}>
+                    <DrawerMenuTrigger>
+                      <CollectionIcon
+                        color={root.collection.color}
+                        icon={root.collection.icon}
+                      />
+                      {root.collection.name}
+                    </DrawerMenuTrigger>
+                    <DrawerPopup showBar>
+                      <DrawerHeader>
+                        <DrawerTitle>{root.collection.name}</DrawerTitle>
+                      </DrawerHeader>
+                      <DrawerPanel>
+                        <DrawerMenu>
+                          <DrawerMenuGroup>
+                            <DrawerClose
+                              render={
+                                <DrawerMenuItem
+                                  onClick={() => onSelect(root.collection.id)}
+                                />
+                              }
+                            >
+                              <CollectionIcon
+                                color={root.collection.color}
+                                icon={root.collection.icon}
+                              />
+                              {actionLabel} {root.collection.name}
+                            </DrawerClose>
+                            <DrawerMenuSeparator />
+                            {root.children.map((child) => (
+                              <DrawerClose
+                                key={child.collection.id}
+                                render={
+                                  <DrawerMenuItem
+                                    onClick={() =>
+                                      onSelect(child.collection.id)
+                                    }
+                                  />
+                                }
+                              >
+                                <CollectionIcon
+                                  color={child.collection.color}
+                                  icon={child.collection.icon}
+                                />
+                                {child.collection.name}
+                              </DrawerClose>
+                            ))}
+                          </DrawerMenuGroup>
+                        </DrawerMenu>
+                      </DrawerPanel>
+                    </DrawerPopup>
+                  </Drawer>
+                ) : (
+                  <DrawerClose
+                    key={root.collection.id}
+                    render={
+                      <DrawerMenuItem
+                        onClick={() => onSelect(root.collection.id)}
+                      />
+                    }
+                  >
+                    <CollectionIcon
+                      color={root.collection.color}
+                      icon={root.collection.icon}
                     />
-                  }
-                >
-                  {collection.label}
-                </DrawerClose>
-              ))}
+                    {root.collection.name}
+                  </DrawerClose>
+                )
+              )}
             </DrawerMenuGroup>
           </DrawerMenu>
         </DrawerPanel>
@@ -202,7 +272,136 @@ function CollectionDrawer({
   )
 }
 
+function CollectionMenuItems({
+  collections,
+  label,
+  onSelect,
+}: {
+  collections: readonly Collection[]
+  label: string
+  onSelect: (collectionId: string) => void
+}): React.ReactElement {
+  const roots = createCollectionIndex(collections, [], "custom").roots
+  const actionLabel = label.startsWith("Add") ? "Add to" : "Move to"
+
+  return (
+    <>
+      {roots.map((root) =>
+        root.children.length > 0 ? (
+          <MenuSub key={root.collection.id}>
+            <MenuSubTrigger openOnHover>
+              <CollectionIcon
+                color={root.collection.color}
+                icon={root.collection.icon}
+              />
+              {root.collection.name}
+            </MenuSubTrigger>
+            <MenuSubPopup>
+              <MenuItem onClick={() => onSelect(root.collection.id)}>
+                <CollectionIcon
+                  color={root.collection.color}
+                  icon={root.collection.icon}
+                />
+                {actionLabel} {root.collection.name}
+              </MenuItem>
+              <MenuSeparator />
+              {root.children.map((child) => (
+                <MenuItem
+                  key={child.collection.id}
+                  onClick={() => onSelect(child.collection.id)}
+                >
+                  <CollectionIcon
+                    color={child.collection.color}
+                    icon={child.collection.icon}
+                  />
+                  {child.collection.name}
+                </MenuItem>
+              ))}
+            </MenuSubPopup>
+          </MenuSub>
+        ) : (
+          <MenuItem
+            key={root.collection.id}
+            onClick={() => onSelect(root.collection.id)}
+          >
+            <CollectionIcon
+              color={root.collection.color}
+              icon={root.collection.icon}
+            />
+            {root.collection.name}
+          </MenuItem>
+        )
+      )}
+    </>
+  )
+}
+
+function ContextCollectionMenuItems({
+  collections,
+  label,
+  onSelect,
+}: {
+  collections: readonly Collection[]
+  label: string
+  onSelect: (collectionId: string) => void
+}): React.ReactElement {
+  const roots = createCollectionIndex(collections, [], "custom").roots
+  const actionLabel = label.startsWith("Add") ? "Add to" : "Move to"
+
+  return (
+    <>
+      {roots.map((root) =>
+        root.children.length > 0 ? (
+          <ContextMenuSub key={root.collection.id}>
+            <ContextMenuSubTrigger openOnHover>
+              <CollectionIcon
+                color={root.collection.color}
+                icon={root.collection.icon}
+              />
+              {root.collection.name}
+            </ContextMenuSubTrigger>
+            <ContextMenuSubPopup>
+              <ContextMenuItem onClick={() => onSelect(root.collection.id)}>
+                <CollectionIcon
+                  color={root.collection.color}
+                  icon={root.collection.icon}
+                />
+                {actionLabel} {root.collection.name}
+              </ContextMenuItem>
+              <ContextMenuSeparator />
+              {root.children.map((child) => (
+                <ContextMenuItem
+                  key={child.collection.id}
+                  onClick={() => onSelect(child.collection.id)}
+                >
+                  <CollectionIcon
+                    color={child.collection.color}
+                    icon={child.collection.icon}
+                  />
+                  {child.collection.name}
+                </ContextMenuItem>
+              ))}
+            </ContextMenuSubPopup>
+          </ContextMenuSub>
+        ) : (
+          <ContextMenuItem
+            key={root.collection.id}
+            onClick={() => onSelect(root.collection.id)}
+          >
+            <CollectionIcon
+              color={root.collection.color}
+              icon={root.collection.icon}
+            />
+            {root.collection.name}
+          </ContextMenuItem>
+        )
+      )}
+    </>
+  )
+}
+
 function BookmarkActionDialogs({
+  availableTags,
   bookmark,
   deleteOpen,
   editOpen,
@@ -217,6 +416,7 @@ function BookmarkActionDialogs({
   tags,
   tagsOpen,
 }: {
+  availableTags: readonly Tag[]
   bookmark: MockBookmark
   deleteOpen: boolean
   editOpen: boolean
@@ -302,6 +502,7 @@ function BookmarkActionDialogs({
           </DialogHeader>
           <DialogPanel>
             <TagEditor
+              availableTags={availableTags}
               onChange={(nextTags) => onTagsChange(bookmark.id, nextTags)}
               tags={tags}
             />
@@ -316,7 +517,9 @@ function BookmarkActionDialogs({
 }
 
 export function BookmarkActions({
+  availableTags,
   bookmark,
+  collections,
   isSelected,
   onAddToCollection,
   onDelete,
@@ -348,6 +551,7 @@ export function BookmarkActions({
 
   const dialogs = (
     <BookmarkActionDialogs
+      availableTags={availableTags}
       bookmark={bookmark}
       deleteOpen={deleteOpen}
       editOpen={editOpen}
@@ -414,6 +618,7 @@ export function BookmarkActions({
                       </DrawerHeader>
                       <DrawerPanel>
                         <TagEditor
+                          availableTags={availableTags}
                           onChange={(nextTags) =>
                             onTagsChange(bookmark.id, nextTags)
                           }
@@ -426,12 +631,14 @@ export function BookmarkActions({
                     </DrawerPopup>
                   </Drawer>
                   <CollectionDrawer
+                    collections={collections}
                     label="Add to collection"
                     onSelect={(collection) =>
                       onAddToCollection(bookmark.id, collection)
                     }
                   />
                   <CollectionDrawer
+                    collections={collections}
                     label="Move to collection"
                     onSelect={(collection) =>
                       onMoveToCollection(bookmark.id, collection)
@@ -519,16 +726,13 @@ export function BookmarkActions({
                 Add to collection
               </MenuSubTrigger>
               <MenuSubPopup>
-                {mockCollections.map((collection) => (
-                  <MenuItem
-                    key={collection.label}
-                    onClick={() =>
-                      onAddToCollection(bookmark.id, collection.label)
-                    }
-                  >
-                    {collection.label}
-                  </MenuItem>
-                ))}
+                <CollectionMenuItems
+                  collections={collections}
+                  label="Add to collection"
+                  onSelect={(collectionId) =>
+                    onAddToCollection(bookmark.id, collectionId)
+                  }
+                />
               </MenuSubPopup>
             </MenuSub>
             <MenuSub>
@@ -537,16 +741,13 @@ export function BookmarkActions({
                 Move to collection
               </MenuSubTrigger>
               <MenuSubPopup>
-                {mockCollections.map((collection) => (
-                  <MenuItem
-                    key={collection.label}
-                    onClick={() =>
-                      onMoveToCollection(bookmark.id, collection.label)
-                    }
-                  >
-                    {collection.label}
-                  </MenuItem>
-                ))}
+                <CollectionMenuItems
+                  collections={collections}
+                  label="Move to collection"
+                  onSelect={(collectionId) =>
+                    onMoveToCollection(bookmark.id, collectionId)
+                  }
+                />
               </MenuSubPopup>
             </MenuSub>
           </MenuGroup>
@@ -577,8 +778,10 @@ export function BookmarkActions({
 }
 
 export function BookmarkContextMenu({
+  availableTags,
   bookmark,
   children,
+  collections,
   isSelected,
   onAddToCollection,
   onDelete,
@@ -645,16 +848,13 @@ export function BookmarkContextMenu({
                 Add to collection
               </ContextMenuSubTrigger>
               <ContextMenuSubPopup>
-                {mockCollections.map((collection) => (
-                  <ContextMenuItem
-                    key={collection.label}
-                    onClick={() =>
-                      onAddToCollection(bookmark.id, collection.label)
-                    }
-                  >
-                    {collection.label}
-                  </ContextMenuItem>
-                ))}
+                <ContextCollectionMenuItems
+                  collections={collections}
+                  label="Add to collection"
+                  onSelect={(collectionId) =>
+                    onAddToCollection(bookmark.id, collectionId)
+                  }
+                />
               </ContextMenuSubPopup>
             </ContextMenuSub>
             <ContextMenuSub>
@@ -663,16 +863,13 @@ export function BookmarkContextMenu({
                 Move to collection
               </ContextMenuSubTrigger>
               <ContextMenuSubPopup>
-                {mockCollections.map((collection) => (
-                  <ContextMenuItem
-                    key={collection.label}
-                    onClick={() =>
-                      onMoveToCollection(bookmark.id, collection.label)
-                    }
-                  >
-                    {collection.label}
-                  </ContextMenuItem>
-                ))}
+                <ContextCollectionMenuItems
+                  collections={collections}
+                  label="Move to collection"
+                  onSelect={(collectionId) =>
+                    onMoveToCollection(bookmark.id, collectionId)
+                  }
+                />
               </ContextMenuSubPopup>
             </ContextMenuSub>
           </ContextMenuGroup>
@@ -703,6 +900,7 @@ export function BookmarkContextMenu({
         </ContextMenuPopup>
       </ContextMenu>
       <BookmarkActionDialogs
+        availableTags={availableTags}
         bookmark={bookmark}
         deleteOpen={deleteOpen}
         editOpen={editOpen}

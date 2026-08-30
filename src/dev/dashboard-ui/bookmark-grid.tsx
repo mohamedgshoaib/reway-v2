@@ -11,22 +11,27 @@ import {
 import { BookmarkFavicon } from "@/dev/dashboard-ui/bookmark-favicon"
 import {
   BookmarkDragHandle,
-  bookmarkReorderSurfaceClassName,
   useBookmarkSortable,
 } from "@/dev/dashboard-ui/bookmark-reorder"
-import type {
-  MockBookmark,
-  SortOption,
+import { bookmarkReorderSurfaceClassName } from "@/dev/dashboard-ui/bookmark-reorder-surface"
+import type { Collection } from "@/dev/dashboard-ui/collection-hierarchy"
+import {
+  mockTags,
+  type MockBookmark,
+  type SortOption,
 } from "@/dev/dashboard-ui/mock-bookmarks"
 import { sortBookmarks } from "@/dev/dashboard-ui/mock-bookmarks"
+import type { Tag } from "@/dev/dashboard-ui/tag-model"
 import { cn } from "@/lib/utils"
 
 type BookmarkGridProps = BookmarkActionHandlers & {
   bookmarks: MockBookmark[]
+  collections: readonly Collection[]
   isReordering?: boolean
   selectedBookmarkIds: ReadonlySet<string>
   showImage: boolean
   sort: SortOption
+  tags?: readonly Tag[]
 }
 
 function BookmarkImage({
@@ -98,16 +103,20 @@ function BookmarkGridCard({
   bookmark,
   isSelected,
   showImage,
+  tags,
   ...actionHandlers
 }: BookmarkActionHandlers & {
   bookmark: MockBookmark
+  collections: readonly Collection[]
   isSelected: boolean
   showImage: boolean
+  tags: readonly Tag[]
 }): React.ReactElement {
   return (
     <li className="list-none">
       <BookmarkContextMenu
         {...actionHandlers}
+        availableTags={tags}
         bookmark={bookmark}
         isSelected={isSelected}
       >
@@ -118,6 +127,7 @@ function BookmarkGridCard({
           trailing={
             <BookmarkActions
               {...actionHandlers}
+              availableTags={tags}
               bookmark={bookmark}
               isSelected={isSelected}
             />
@@ -172,6 +182,7 @@ export function BookmarkGrid({
   selectedBookmarkIds,
   showImage,
   sort,
+  tags = mockTags,
   ...actionHandlers
 }: BookmarkGridProps): React.ReactElement {
   return (
@@ -198,6 +209,7 @@ export function BookmarkGrid({
             isSelected={selectedBookmarkIds.has(bookmark.id)}
             key={bookmark.id}
             showImage={showImage}
+            tags={tags}
           />
         )
       )}

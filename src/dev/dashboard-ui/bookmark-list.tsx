@@ -9,24 +9,29 @@ import {
 import { BookmarkFavicon } from "@/dev/dashboard-ui/bookmark-favicon"
 import {
   BookmarkDragHandle,
-  bookmarkReorderSurfaceClassName,
   useBookmarkSortable,
 } from "@/dev/dashboard-ui/bookmark-reorder"
+import { bookmarkReorderSurfaceClassName } from "@/dev/dashboard-ui/bookmark-reorder-surface"
+import type { Collection } from "@/dev/dashboard-ui/collection-hierarchy"
 import type {
   MockBookmark,
   SortOption,
 } from "@/dev/dashboard-ui/mock-bookmarks"
+import { mockTags } from "@/dev/dashboard-ui/mock-bookmarks"
 import {
   groupByRecency,
   sortBookmarks,
 } from "@/dev/dashboard-ui/mock-bookmarks"
+import type { Tag } from "@/dev/dashboard-ui/tag-model"
 import { cn } from "@/lib/utils"
 
 type BookmarkListProps = BookmarkActionHandlers & {
   bookmarks: MockBookmark[]
+  collections: readonly Collection[]
   isReordering?: boolean
   selectedBookmarkIds: ReadonlySet<string>
   sort: SortOption
+  tags?: readonly Tag[]
 }
 
 function BookmarkRowSurface({
@@ -64,15 +69,19 @@ function BookmarkRowSurface({
 function BookmarkRow({
   bookmark,
   isSelected,
+  tags,
   ...actionHandlers
 }: BookmarkActionHandlers & {
   bookmark: MockBookmark
+  collections: readonly Collection[]
   isSelected: boolean
+  tags: readonly Tag[]
 }): React.ReactElement {
   return (
     <li className="list-none">
       <BookmarkContextMenu
         {...actionHandlers}
+        availableTags={tags}
         bookmark={bookmark}
         isSelected={isSelected}
       >
@@ -82,6 +91,7 @@ function BookmarkRow({
           trailing={
             <BookmarkActions
               {...actionHandlers}
+              availableTags={tags}
               bookmark={bookmark}
               isSelected={isSelected}
             />
@@ -132,6 +142,7 @@ export function BookmarkList({
   isReordering = false,
   selectedBookmarkIds,
   sort,
+  tags = mockTags,
   ...actionHandlers
 }: BookmarkListProps): React.ReactElement {
   const renderBookmark = (bookmark: MockBookmark) => (
@@ -140,6 +151,7 @@ export function BookmarkList({
       bookmark={bookmark}
       isSelected={selectedBookmarkIds.has(bookmark.id)}
       key={bookmark.id}
+      tags={tags}
     />
   )
 

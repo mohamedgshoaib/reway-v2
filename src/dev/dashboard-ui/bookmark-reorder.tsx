@@ -8,10 +8,10 @@ import {
 } from "@dnd-kit/dom"
 import { DragDropProvider } from "@dnd-kit/react"
 import { isSortable, useSortable } from "@dnd-kit/react/sortable"
-import { DotsSixVerticalIcon } from "@phosphor-icons/react"
 import type * as React from "react"
 
 import { Button } from "@/components/ui/button"
+import { ReorderHandle } from "@/components/ui/reorder-handle"
 
 export type BookmarkReorderLayout = "grid" | "list"
 
@@ -105,16 +105,11 @@ export function BookmarkDragHandle({
   handleRef: (element: Element | null) => void
 }): React.ReactElement {
   return (
-    <Button
-      aria-label={`Move ${bookmarkTitle}`}
-      className="cursor-grab touch-none active:cursor-grabbing pointer-coarse:size-7 [:active,[data-pressed]]:scale-100"
-      data-reorder-handle
+    <ReorderHandle
+      className="pointer-coarse:size-7 [:active,[data-pressed]]:scale-100"
+      label={`Move ${bookmarkTitle}`}
       ref={handleRef}
-      size="icon-xs"
-      variant="ghost"
-    >
-      <DotsSixVerticalIcon aria-hidden="true" weight="bold" />
-    </Button>
+    />
   )
 }
 
@@ -144,12 +139,4 @@ export function BookmarkReorderBar({
       </Button>
     </div>
   )
-}
-
-export function bookmarkReorderSurfaceClassName(
-  isDragging: boolean
-): string | undefined {
-  return isDragging
-    ? "z-10 bg-background shadow-[0_0_0_1px_rgb(0_0_0/0.06),0_2px_4px_rgb(0_0_0/0.06),0_8px_20px_rgb(0_0_0/0.08)] min-[800px]:bg-card dark:shadow-[0_0_0_1px_rgb(255_255_255/0.1)]"
-    : undefined
 }
