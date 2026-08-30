@@ -43,6 +43,11 @@ Write facts only. No plans, no advice, no narration.
 - Added focused coverage for hierarchy, icon selection, color selection, reorder behavior, deferred overlay close, sidebar actions, and mobile Display placement.
 - Updated `spec/integrations/features/feature-contract.md` with the collection, tag, reorder, validation, dialog, and responsive behavior.
 - `pnpm run check` and the full Vitest run of 73 tests across 20 files passed at wrap-up.
+- Saved the `/dashboard-ui` and `/ui` interface review with all 12 findings handled in `spec/reviews/2026-08-30-dashboard-ui-interface-review.md`.
+- Unified collection and tag row hover and focus states with their menu actions in `src/components/ui/sidebar.tsx`.
+- Kept the dashboard current-view heading visible on mobile and screen-reader-only without layout space on desktop in `src/dev/dashboard-ui/controls-bar.tsx`.
+- Resolved all eight React Doctor warnings across the collection management and UI audit files.
+- `pnpm run check`, 78 tests across 23 files, the client and server production build, `git diff --check`, and the changed-scope React Doctor scan at 100/100 passed.
 
 ---
 
