@@ -3,7 +3,7 @@
 Write facts only. No plans, no advice, no narration.
 
 **Filename:** `session-03.md`
-**Session Status:** Open
+**Session Status:** Ended
 
 ---
 
@@ -105,6 +105,12 @@ Write facts only. No plans, no advice, no narration.
 ## Blockers
 
 1. None
+
+---
+
+## Session end
+
+- Session ended
 
 ---
 
