@@ -95,6 +95,12 @@ const collectionLinks: NavLink[] = [
   },
 ]
 
+const expandedNavigationLinks = [
+  ...libraryLinks.map((item) => ({ id: `library-start-${item.href}`, item })),
+  ...collectionLinks.map((item) => ({ id: `collection-${item.href}`, item })),
+  ...libraryLinks.map((item) => ({ id: `library-end-${item.href}`, item })),
+]
+
 // NavigationMenuLink renders an <a> by default, so a plain href works.
 // `h-full` (as in Base UI's reference) makes the card fill its grid cell:
 // rows stretch to their tallest cell, and without it a shorter card's hover
@@ -267,40 +273,40 @@ const audienceMenus: AudienceMenu[] = [
     ],
   },
   {
-    value: "researchers",
-    label: "For researchers",
-    hint: "Depth over volume.",
-    title: "Research",
-    description: "Full-text search across everything you have saved.",
+    value: "readers",
+    label: "For readers",
+    hint: "Return to useful links.",
+    title: "Retrieve",
+    description: "Search bookmark titles, domains, tags, and collections.",
     links: [
       {
         href: "/features/search",
-        title: "Deep search",
-        description: "Search inside pages, not just titles.",
+        title: "Fast search",
+        description: "Find a bookmark by title, domain, tag, or collection.",
       },
       {
-        href: "/features/highlights",
-        title: "Highlights",
-        description: "Keep the passage, not just the page.",
+        href: "/features/command-search",
+        title: "Command search",
+        description: "Open search from anywhere with Cmd K or Ctrl K.",
       },
     ],
   },
   {
-    value: "teams",
-    label: "For teams",
-    hint: "Shared libraries.",
-    title: "Collaborate",
-    description: "One library the whole team can search and grow.",
+    value: "organizers",
+    label: "For organizers",
+    hint: "Structure without upkeep.",
+    title: "Organize",
+    description: "Use collections and tags to keep a large library clear.",
     links: [
       {
-        href: "/features/shared-collections",
-        title: "Shared collections",
-        description: "Curate reading lists together.",
+        href: "/features/collections",
+        title: "Nested collections",
+        description: "Keep related bookmarks in a two-level structure.",
       },
       {
-        href: "/features/permissions",
-        title: "Permissions",
-        description: "Decide who can add, edit, or view.",
+        href: "/features/tags",
+        title: "Tag filters",
+        description: "Use labels across collections without moving links.",
       },
     ],
   },
@@ -469,13 +475,11 @@ function NavigationMenuScrollableDemo(): React.ReactElement {
               the documented, working fallback. */}
           <NavigationMenuContent className="max-h-(--available-height) overflow-y-auto">
             <ul className="flex list-none flex-col sm:w-[22rem]">
-              {[...libraryLinks, ...collectionLinks, ...libraryLinks].map(
-                (item, index) => (
-                  <li key={`${item.href}-${String(index)}`}>
-                    <LinkCard item={item} />
-                  </li>
-                )
-              )}
+              {expandedNavigationLinks.map(({ id, item }) => (
+                <li key={id}>
+                  <LinkCard item={item} />
+                </li>
+              ))}
             </ul>
           </NavigationMenuContent>
         </NavigationMenuItem>

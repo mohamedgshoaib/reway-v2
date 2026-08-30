@@ -150,7 +150,7 @@ export function NavigationMenuBackdrop({
   return (
     <NavigationMenuPrimitive.Backdrop
       className={cn(
-        "pointer-events-none fixed inset-0 z-40 bg-black/32 backdrop-blur-sm transition-all duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0",
+        "pointer-events-none fixed inset-0 z-40 bg-black/32 backdrop-blur-sm transition-opacity duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0",
         className
       )}
       data-slot="navigation-menu-backdrop"

@@ -48,41 +48,48 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tooltip, TooltipPopup, TooltipTrigger } from "@/components/ui/tooltip"
 import { AuditGroup, AuditSection } from "@/dev/ui-audit/section-shell"
 
-export function FormsTextSection(): React.ReactElement {
+function BasicTextControls(): React.ReactElement {
   return (
-    <AuditSection
-      description="label, input, textarea, input-group, number-field, otp-field, field, fieldset, form."
-      id="forms-text"
-      title="Forms — text"
-    >
+    <>
       <AuditGroup label="Label">
         <Label htmlFor="audit-plain-input">Plain label</Label>
       </AuditGroup>
 
       <AuditGroup label="Input — size" wrap={false}>
         <Input id="audit-plain-input" placeholder="Default" size="default" />
-        <Input placeholder="Small" size="sm" />
-        <Input placeholder="Large" size="lg" />
+        <Input aria-label="Small input" placeholder="Small" size="sm" />
+        <Input aria-label="Large input" placeholder="Large" size="lg" />
       </AuditGroup>
 
       <AuditGroup label="Input — type & state" wrap={false}>
-        <Input placeholder="you@example.com" type="email" />
-        <Input placeholder="Password" type="password" />
-        <Input placeholder="Disabled" disabled />
+        <Input aria-label="Email" placeholder="you@example.com" type="email" />
+        <Input aria-label="Password" placeholder="Password" type="password" />
+        <Input aria-label="Disabled input" placeholder="Disabled" disabled />
         <Input
+          aria-label="Invalid input"
           aria-invalid
           defaultValue="not-a-valid-value"
           placeholder="Invalid"
         />
-        <Input type="file" />
+        <Input aria-label="Choose file" type="file" />
       </AuditGroup>
 
       <AuditGroup label="Textarea — size" wrap={false}>
-        <Textarea placeholder="Default" size="default" />
-        <Textarea placeholder="Small" size="sm" />
-        <Textarea placeholder="Large" size="lg" />
+        <Textarea
+          aria-label="Default textarea"
+          placeholder="Default"
+          size="default"
+        />
+        <Textarea aria-label="Small textarea" placeholder="Small" size="sm" />
+        <Textarea aria-label="Large textarea" placeholder="Large" size="lg" />
       </AuditGroup>
+    </>
+  )
+}
 
+function BasicInputGroups(): React.ReactElement {
+  return (
+    <>
       <AuditGroup label="Input group — icon addon" wrap={false}>
         <InputGroup>
           <InputGroupInput
@@ -101,13 +108,19 @@ export function FormsTextSection(): React.ReactElement {
           <InputGroupAddon>
             <InputGroupText>https://</InputGroupText>
           </InputGroupAddon>
-          <InputGroupInput placeholder="reway.page" />
+          <InputGroupInput
+            aria-label="Website address"
+            placeholder="reway.page"
+          />
         </InputGroup>
       </AuditGroup>
 
       <AuditGroup label="Input group — interactive addon" wrap={false}>
         <InputGroup>
-          <InputGroupInput defaultValue="https://example.com" />
+          <InputGroupInput
+            aria-label="Website address"
+            defaultValue="https://example.com"
+          />
           <InputGroupAddon align="inline-end">
             <Button aria-label="Clear" size="icon-xs" variant="ghost">
               <XIcon aria-hidden="true" />
@@ -148,7 +161,11 @@ export function FormsTextSection(): React.ReactElement {
 
       <AuditGroup label="Input group — with badge" wrap={false}>
         <InputGroup>
-          <InputGroupInput placeholder="Type to search…" type="search" />
+          <InputGroupInput
+            aria-label="Search bookmarks"
+            placeholder="Type to search…"
+            type="search"
+          />
           <InputGroupAddon align="inline-end">
             <Badge variant="info">Badge</Badge>
           </InputGroupAddon>
@@ -157,13 +174,23 @@ export function FormsTextSection(): React.ReactElement {
 
       <AuditGroup label="Input group — with keyboard shortcut" wrap={false}>
         <InputGroup>
-          <InputGroupInput placeholder="Search…" type="search" />
+          <InputGroupInput
+            aria-label="Search bookmarks"
+            placeholder="Search…"
+            type="search"
+          />
           <InputGroupAddon align="inline-end">
             <Kbd>⌘K</Kbd>
           </InputGroupAddon>
         </InputGroup>
       </AuditGroup>
+    </>
+  )
+}
 
+function RichInputGroups(): React.ReactElement {
+  return (
+    <>
       <AuditGroup label="Input group — with inner label" wrap={false}>
         <InputGroup>
           <InputGroupInput
@@ -183,7 +210,12 @@ export function FormsTextSection(): React.ReactElement {
                 className="ml-auto"
                 openOnHover
                 render={
-                  <Button className="-m-1" size="icon-xs" variant="ghost" />
+                  <Button
+                    aria-label="About email notifications"
+                    className="-m-1"
+                    size="icon-xs"
+                    variant="ghost"
+                  />
                 }
               >
                 <InfoIcon aria-hidden="true" />
@@ -252,13 +284,24 @@ export function FormsTextSection(): React.ReactElement {
 
       <AuditGroup label="Input group — loading" wrap={false}>
         <InputGroup>
-          <InputGroupInput disabled placeholder="Searching…" type="search" />
+          <InputGroupInput
+            aria-label="Search bookmarks"
+            disabled
+            placeholder="Searching…"
+            type="search"
+          />
           <InputGroupAddon align="inline-end">
             <Spinner />
           </InputGroupAddon>
         </InputGroup>
       </AuditGroup>
+    </>
+  )
+}
 
+function SpecializedInputGroups(): React.ReactElement {
+  return (
+    <>
       <AuditGroup label="Input group — with number field" wrap={false}>
         <InputGroup>
           <NumberField aria-label="Enter the amount" defaultValue={10}>
@@ -275,7 +318,10 @@ export function FormsTextSection(): React.ReactElement {
 
       <AuditGroup label="Input group — with textarea" wrap={false}>
         <InputGroup>
-          <InputGroupTextarea placeholder="Ask, Search or Chat…" />
+          <InputGroupTextarea
+            aria-label="Bookmark note"
+            placeholder="Add a note…"
+          />
           <InputGroupAddon align="block-end">
             <Menu>
               <Tooltip>
@@ -284,7 +330,7 @@ export function FormsTextSection(): React.ReactElement {
                     <MenuTrigger
                       render={
                         <Button
-                          aria-label="Add files"
+                          aria-label="Add bookmark details"
                           className="rounded-full"
                           size="icon-sm"
                           variant="ghost"
@@ -295,21 +341,22 @@ export function FormsTextSection(): React.ReactElement {
                     </MenuTrigger>
                   }
                 />
-                <TooltipPopup>Add files and more</TooltipPopup>
+                <TooltipPopup>Add bookmark details</TooltipPopup>
               </Tooltip>
               <MenuPopup align="start">
-                <MenuItem>Add photos &amp; files</MenuItem>
-                <MenuItem>Create image</MenuItem>
-                <MenuItem>Thinking</MenuItem>
-                <MenuItem>Deep research</MenuItem>
+                <MenuItem>Add tags</MenuItem>
+                <MenuItem>Add to collection</MenuItem>
+                <MenuItem>Add note</MenuItem>
               </MenuPopup>
             </Menu>
-            <InputGroupText className="ml-auto">78% used</InputGroupText>
+            <InputGroupText className="ml-auto tabular-nums">
+              120 characters left
+            </InputGroupText>
             <Tooltip>
               <TooltipTrigger
                 render={
                   <Button
-                    aria-label="Send"
+                    aria-label="Save note"
                     className="rounded-full"
                     size="icon-sm"
                     variant="default"
@@ -318,28 +365,46 @@ export function FormsTextSection(): React.ReactElement {
                   </Button>
                 }
               />
-              <TooltipPopup>Send</TooltipPopup>
+              <TooltipPopup>Save note</TooltipPopup>
             </Tooltip>
           </InputGroupAddon>
         </InputGroup>
       </AuditGroup>
+    </>
+  )
+}
 
+function NumberAndOtpFields(): React.ReactElement {
+  return (
+    <>
       <AuditGroup label="Number field — sizes">
-        <NumberField defaultValue={1} max={99} min={0} size="sm">
+        <NumberField
+          aria-label="Small quantity"
+          defaultValue={1}
+          max={99}
+          min={0}
+          size="sm"
+        >
           <NumberFieldGroup>
             <NumberFieldDecrement />
             <NumberFieldInput />
             <NumberFieldIncrement />
           </NumberFieldGroup>
         </NumberField>
-        <NumberField defaultValue={1} max={99} min={0}>
+        <NumberField aria-label="Quantity" defaultValue={1} max={99} min={0}>
           <NumberFieldGroup>
             <NumberFieldDecrement />
             <NumberFieldInput />
             <NumberFieldIncrement />
           </NumberFieldGroup>
         </NumberField>
-        <NumberField defaultValue={1} max={99} min={0} size="lg">
+        <NumberField
+          aria-label="Large quantity"
+          defaultValue={1}
+          max={99}
+          min={0}
+          size="lg"
+        >
           <NumberFieldGroup>
             <NumberFieldDecrement />
             <NumberFieldInput />
@@ -349,7 +414,7 @@ export function FormsTextSection(): React.ReactElement {
       </AuditGroup>
 
       <AuditGroup label="Number field — scrub area" wrap={false}>
-        <NumberField defaultValue={50}>
+        <NumberField aria-label="Brightness" defaultValue={50}>
           <NumberFieldScrubArea label="Brightness" />
           <NumberFieldGroup>
             <NumberFieldDecrement />
@@ -361,7 +426,7 @@ export function FormsTextSection(): React.ReactElement {
 
       <AuditGroup label="OTP field" wrap={false}>
         <OTPField aria-label="Verification code" length={6}>
-          <OTPFieldInput />
+          <OTPFieldInput aria-label="Character 1 of 6" />
           <OTPFieldInput aria-label="Character 2 of 6" />
           <OTPFieldInput aria-label="Character 3 of 6" />
           <OTPFieldSeparator />
@@ -370,7 +435,13 @@ export function FormsTextSection(): React.ReactElement {
           <OTPFieldInput aria-label="Character 6 of 6" />
         </OTPField>
       </AuditGroup>
+    </>
+  )
+}
 
+function FormCompositions(): React.ReactElement {
+  return (
+    <>
       <AuditGroup label="Field — labeled, described, invalid" wrap={false}>
         <Field name="audit-collection-name">
           <FieldLabel>Collection name</FieldLabel>
@@ -414,6 +485,23 @@ export function FormsTextSection(): React.ReactElement {
           </Button>
         </Form>
       </AuditGroup>
+    </>
+  )
+}
+
+export function FormsTextSection(): React.ReactElement {
+  return (
+    <AuditSection
+      description="label, input, textarea, input-group, number-field, otp-field, field, fieldset, form."
+      id="forms-text"
+      title="Forms — text"
+    >
+      <BasicTextControls />
+      <BasicInputGroups />
+      <RichInputGroups />
+      <SpecializedInputGroups />
+      <NumberAndOtpFields />
+      <FormCompositions />
     </AuditSection>
   )
 }

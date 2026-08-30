@@ -1,5 +1,6 @@
 import type * as React from "react"
 
+import { SkipLink } from "@/components/ui/skip-link"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { AnchoredToastProvider, ToastProvider } from "@/components/ui/toast"
 import { ActionsSection } from "@/dev/ui-audit/sections/actions"
@@ -34,6 +35,7 @@ export function UiAuditPage(): React.ReactElement {
     <ToastProvider>
       <AnchoredToastProvider>
         <div className="mx-auto flex w-full max-w-6xl gap-10 px-6 py-10">
+          <SkipLink href="#ui-main-content">Skip to content</SkipLink>
           <aside className="sticky top-10 hidden h-fit w-44 shrink-0 flex-col gap-1 text-sm md:flex">
             <p className="mb-2 text-xs font-medium text-muted-foreground uppercase">
               UI audit
@@ -49,7 +51,11 @@ export function UiAuditPage(): React.ReactElement {
             ))}
           </aside>
 
-          <main className="flex min-w-0 flex-1 flex-col gap-14">
+          <main
+            className="flex min-w-0 flex-1 flex-col gap-14"
+            id="ui-main-content"
+            tabIndex={-1}
+          >
             <header className="flex items-start justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-semibold">Component audit</h1>

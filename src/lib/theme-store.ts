@@ -40,6 +40,22 @@ function applyTheme(theme: Theme): void {
   root.style.colorScheme = resolved
 }
 
+function applyThemeWithoutTransitions(theme: Theme): void {
+  if (typeof document === "undefined") return
+
+  const transitionOverride = document.createElement("style")
+  transitionOverride.textContent =
+    "*,*::before,*::after{transition:none!important}"
+  document.head.append(transitionOverride)
+
+  applyTheme(theme)
+  void document.documentElement.offsetHeight
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => transitionOverride.remove())
+  })
+}
+
 function notify(): void {
   for (const listener of listeners) listener()
 }
@@ -51,12 +67,12 @@ function onStorage(event: StorageEvent): void {
   if (next === currentTheme) return
 
   currentTheme = next
-  applyTheme(next)
+  applyThemeWithoutTransitions(next)
   notify()
 }
 
 function onSystemThemeChange(): void {
-  if (currentTheme === "system") applyTheme("system")
+  if (currentTheme === "system") applyThemeWithoutTransitions("system")
 }
 
 export function subscribeToTheme(listener: () => void): () => void {
@@ -97,7 +113,7 @@ export function setStoredTheme(theme: Theme): void {
   if (theme === currentTheme) return
 
   currentTheme = theme
-  applyTheme(theme)
+  applyThemeWithoutTransitions(theme)
 
   try {
     localStorage.setItem(STORAGE_KEY, theme)

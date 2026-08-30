@@ -416,7 +416,7 @@ export function DataLayoutSection(): React.ReactElement {
             </FrameDescription>
           </FrameHeader>
           <FramePanel>
-            <h2 className="text-sm font-semibold">Research</h2>
+            <h3 className="text-sm font-semibold">Research</h3>
             <p className="text-sm text-muted-foreground">24 bookmarks</p>
           </FramePanel>
           <FrameFooter>
@@ -434,11 +434,11 @@ export function DataLayoutSection(): React.ReactElement {
             </FrameDescription>
           </FrameHeader>
           <FramePanel>
-            <h2 className="text-sm font-semibold">Separated panel</h2>
+            <h3 className="text-sm font-semibold">Separated panel</h3>
             <p className="text-sm text-muted-foreground">Section description</p>
           </FramePanel>
           <FramePanel>
-            <h2 className="text-sm font-semibold">Separated panel</h2>
+            <h3 className="text-sm font-semibold">Separated panel</h3>
             <p className="text-sm text-muted-foreground">Section description</p>
           </FramePanel>
         </Frame>
@@ -453,7 +453,7 @@ export function DataLayoutSection(): React.ReactElement {
           <Button variant="outline">Cut</Button>
         </Group>
         <Group>
-          <Input placeholder="Enter URL…" />
+          <Input aria-label="Website address" placeholder="Enter URL…" />
           <GroupSeparator />
           <Button>Go</Button>
         </Group>

@@ -149,6 +149,14 @@ import {
 import { AuditGroup, AuditSection } from "@/dev/ui-audit/section-shell"
 import { useIsMobile } from "@/hooks/use-media-query"
 
+const drawerPositions = ["right", "left", "top", "bottom"] as const
+const drawerSnapPoints: ["300px", 1] = ["300px", 1]
+const drawerSnapPointItems = Array.from(
+  { length: 48 },
+  (_, index) => `box-${String(index)}`
+)
+const drawerMobileMenuItems = ["Home", "Profile", "Settings", "Sign out"]
+
 interface CommandEntry {
   value: string
   label: string
@@ -237,7 +245,7 @@ function AlertDialogDemo(): React.ReactElement {
             Cancel
           </AlertDialogClose>
           <AlertDialogClose render={<Button variant="destructive" />}>
-            Delete
+            Delete collection
           </AlertDialogClose>
         </AlertDialogFooter>
       </AlertDialogPopup>
@@ -301,11 +309,9 @@ function DrawerVariantDemo({
 }: {
   variant: "inset" | "straight"
 }): React.ReactElement {
-  const positions = ["right", "left", "top", "bottom"] as const
-
   return (
     <>
-      {positions.map((position) => (
+      {drawerPositions.map((position) => (
         <Drawer key={position} position={position}>
           <DrawerTrigger render={<Button variant="outline" />}>
             {position}
@@ -426,19 +432,18 @@ function DrawerNestedDemo(): React.ReactElement {
 }
 
 function DrawerSnapPointsDemo(): React.ReactElement {
-  const snapPoints = ["300px", 1] as const
   const [snapPoint, setSnapPoint] = React.useState<
-    (typeof snapPoints)[number] | null
-  >(snapPoints[0])
+    (typeof drawerSnapPoints)[number] | null
+  >(drawerSnapPoints[0])
 
   return (
     <Drawer
       onSnapPointChange={(point) =>
-        setSnapPoint(point as (typeof snapPoints)[number] | null)
+        setSnapPoint(point as (typeof drawerSnapPoints)[number] | null)
       }
       position="bottom"
       snapPoint={snapPoint}
-      snapPoints={[...snapPoints]}
+      snapPoints={drawerSnapPoints}
       snapToSequentialPoints
     >
       <DrawerTrigger render={<Button variant="outline" />}>
@@ -453,7 +458,7 @@ function DrawerSnapPointsDemo(): React.ReactElement {
         </DrawerHeader>
         <DrawerPanel>
           <div className="flex flex-col gap-2">
-            {Array.from({ length: 48 }, (_, i) => `box-${i}`).map((key) => (
+            {drawerSnapPointItems.map((key) => (
               <div
                 className="h-12 shrink-0 rounded-xl border bg-muted"
                 key={key}
@@ -467,8 +472,6 @@ function DrawerSnapPointsDemo(): React.ReactElement {
 }
 
 function DrawerMobileMenuDemo(): React.ReactElement {
-  const navItems = ["Home", "Profile", "Settings", "Sign out"]
-
   return (
     <Drawer position="left">
       <DrawerTrigger render={<Button variant="outline" />}>
@@ -480,7 +483,7 @@ function DrawerMobileMenuDemo(): React.ReactElement {
         </DrawerHeader>
         <DrawerPanel>
           <nav className="-mx-[calc(--spacing(3)-1px)] flex flex-col gap-0.5">
-            {navItems.map((item) => (
+            {drawerMobileMenuItems.map((item) => (
               <DrawerClose
                 key={item}
                 nativeButton={false}
@@ -653,10 +656,8 @@ function ResponsiveMenuDemo(): React.ReactElement {
   )
 }
 
-function ResponsiveDrawerDialogDemo(): React.ReactElement {
-  const isMobile = useIsMobile()
-
-  const formFields = (
+function ResponsiveProfileFields(): React.ReactElement {
+  return (
     <>
       <Field name="audit-responsive-name">
         <FieldLabel>Name</FieldLabel>
@@ -668,6 +669,10 @@ function ResponsiveDrawerDialogDemo(): React.ReactElement {
       </Field>
     </>
   )
+}
+
+function ResponsiveDrawerDialogDemo(): React.ReactElement {
+  const isMobile = useIsMobile()
 
   if (isMobile) {
     return (
@@ -685,7 +690,7 @@ function ResponsiveDrawerDialogDemo(): React.ReactElement {
           </DrawerHeader>
           <Form className="contents">
             <DrawerPanel className="grid gap-4" scrollable={false}>
-              {formFields}
+              <ResponsiveProfileFields />
             </DrawerPanel>
             <DrawerFooter>
               <DrawerClose render={<Button variant="ghost" />}>
@@ -710,7 +715,9 @@ function ResponsiveDrawerDialogDemo(): React.ReactElement {
           </DialogDescription>
         </DialogHeader>
         <Form className="contents">
-          <DialogPanel className="grid gap-4">{formFields}</DialogPanel>
+          <DialogPanel className="grid gap-4">
+            <ResponsiveProfileFields />
+          </DialogPanel>
           <DialogFooter>
             <DialogClose render={<Button variant="ghost" />}>
               Cancel
@@ -875,7 +882,7 @@ function CommandDemo(): React.ReactElement {
       </CommandDialogTrigger>
       <CommandDialogPopup>
         <Command items={commandGroups}>
-          <CommandInput placeholder="Search for apps and commands..." />
+          <CommandInput placeholder="Search for apps and commands…" />
           <CommandPanel>
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandList>
