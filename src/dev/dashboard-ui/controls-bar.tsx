@@ -12,10 +12,6 @@ import type { DashboardNavigationDisclosures } from "@/dev/dashboard-ui/navigati
 import { MobileDashboardNavigation } from "@/dev/dashboard-ui/sidebar"
 import type { Tag, TagDraft } from "@/dev/dashboard-ui/tag-model"
 
-/**
- * Mobile navigation access. Desktop navigation now owns its expand control,
- * so the content area has no header there.
- */
 export function BookmarkControlsBar({
   activeCollection = null,
   bookmarks = mockBookmarks,
@@ -39,6 +35,7 @@ export function BookmarkControlsBar({
   onUpdateTag,
   onViewModeChange,
   sort,
+  title,
   viewMode,
 }: {
   activeCollection?: string | null
@@ -67,35 +64,41 @@ export function BookmarkControlsBar({
   onUpdateTag?: (tagId: string, draft: TagDraft) => void
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
+  title: string
   viewMode: ViewMode
 }): React.ReactElement {
   return (
-    <div className="mb-4 flex h-9 items-center px-2 min-[800px]:hidden">
-      <MobileDashboardNavigation
-        activeCollection={activeCollection}
-        bookmarks={bookmarks}
-        canReorder={canReorder}
-        collections={collections}
-        initialDisclosures={mobileNavigationDisclosures}
-        isReordering={isReordering}
-        onNavigate={onNavigate}
-        onCreateCollection={onCreateCollection}
-        onCreateTag={onCreateTag}
-        onDeleteCollection={onDeleteCollection}
-        onDeleteTag={onDeleteTag}
-        onMoveCollection={onMoveCollection}
-        onMoveTag={onMoveTag}
-        onSelectAllBookmarks={onSelectAllBookmarks}
-        onSelectCollection={onSelectCollection}
-        onSortChange={onSortChange}
-        onStartReorder={onStartReorder}
-        onUpdateCollection={onUpdateCollection}
-        onUpdateTag={onUpdateTag}
-        onViewModeChange={onViewModeChange}
-        sort={sort}
-        tags={tags}
-        viewMode={viewMode}
-      />
+    <div className="mb-4 flex h-9 min-w-0 items-center gap-2 px-2 min-[800px]:contents">
+      <div className="min-[800px]:hidden">
+        <MobileDashboardNavigation
+          activeCollection={activeCollection}
+          bookmarks={bookmarks}
+          canReorder={canReorder}
+          collections={collections}
+          initialDisclosures={mobileNavigationDisclosures}
+          isReordering={isReordering}
+          onNavigate={onNavigate}
+          onCreateCollection={onCreateCollection}
+          onCreateTag={onCreateTag}
+          onDeleteCollection={onDeleteCollection}
+          onDeleteTag={onDeleteTag}
+          onMoveCollection={onMoveCollection}
+          onMoveTag={onMoveTag}
+          onSelectAllBookmarks={onSelectAllBookmarks}
+          onSelectCollection={onSelectCollection}
+          onSortChange={onSortChange}
+          onStartReorder={onStartReorder}
+          onUpdateCollection={onUpdateCollection}
+          onUpdateTag={onUpdateTag}
+          onViewModeChange={onViewModeChange}
+          sort={sort}
+          tags={tags}
+          viewMode={viewMode}
+        />
+      </div>
+      <h1 className="truncate text-base font-semibold text-foreground min-[800px]:sr-only">
+        {title}
+      </h1>
     </div>
   )
 }

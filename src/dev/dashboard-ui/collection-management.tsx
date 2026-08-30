@@ -89,7 +89,7 @@ function CollectionForm({
   const [icon, setIcon] = React.useState<CollectionIconName>(
     collection?.icon ?? "folder"
   )
-  const [color, setColor] = React.useState<CollectionColor>(
+  const [color, setColor] = React.useState<CollectionColor>(() =>
     getCollectionColor(collection ?? {})
   )
   const [parentId, setParentId] = React.useState(
@@ -341,7 +341,7 @@ export function CollectionDeleteDialog({
             }}
             render={<Button variant="destructive" />}
           >
-            Delete
+            Delete collection
           </AlertDialogClose>
         </AlertDialogFooter>
       </AlertDialogPopup>

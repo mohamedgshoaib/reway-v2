@@ -2,6 +2,7 @@ import { LayoutGroup, useReducedMotion } from "motion/react"
 import * as React from "react"
 
 import { SidebarProvider } from "@/components/ui/sidebar"
+import { SkipLink } from "@/components/ui/skip-link"
 import type { BookmarkActionHandlers } from "@/dev/dashboard-ui/bookmark-actions"
 import {
   createCollectionOrders,
@@ -433,6 +434,7 @@ export function DashboardUiPage({
     // item below its content size), letting the chain actually reach the
     // scroll region instead of pushing the whole page taller.
     <div className="h-svh bg-background [padding-inline-start:env(safe-area-inset-left)] [padding-inline-end:env(safe-area-inset-right)] [padding-block-start:env(safe-area-inset-top)] [padding-block-end:env(safe-area-inset-bottom)] min-[800px]:p-0">
+      <SkipLink href="#dashboard-main-content">Skip to content</SkipLink>
       <div className="flex h-full flex-col px-4 py-4 min-[800px]:px-6 min-[800px]:py-10">
         <LayoutGroup id="dashboard-sidebar">
           <SidebarProvider
@@ -495,6 +497,7 @@ export function DashboardUiPage({
                 onViewModeChange: handleViewModeChange,
                 sort,
                 tags,
+                title: activeCollectionName ?? "All bookmarks",
                 viewMode,
               }}
               effectiveViewMode={effectiveViewMode}

@@ -186,7 +186,7 @@ export function DashboardCommand({
           onValueChange={setQuery}
           value={query}
         >
-          <CommandInput placeholder="Search bookmarks and collections..." />
+          <CommandInput placeholder="Search bookmarks and collections…" />
           <CommandPanel>
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandList hideScrollbar>

@@ -23,7 +23,9 @@ describe("collection icon picker", () => {
       />
     )
 
-    const iconField = screen.getByRole("combobox", { name: "Icon" })
+    const iconField = screen.getByRole("combobox", {
+      name: "Collection icon",
+    })
     expect((iconField as HTMLInputElement).value).toBe("Folder")
     expect(iconField.className).not.toContain("cursor-pointer")
 

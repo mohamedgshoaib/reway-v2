@@ -12,6 +12,7 @@ import {
   useBookmarkSortable,
 } from "@/dev/dashboard-ui/bookmark-reorder"
 import { bookmarkReorderSurfaceClassName } from "@/dev/dashboard-ui/bookmark-reorder-surface"
+import { BookmarkSelectionIndicator } from "@/dev/dashboard-ui/bookmark-selection-indicator"
 import type { Collection } from "@/dev/dashboard-ui/collection-hierarchy"
 import type {
   MockBookmark,
@@ -61,6 +62,7 @@ function BookmarkRowSurface({
       {bookmark.metadataStatus === "pending" ? (
         <span className="shrink-0 text-xs text-muted-foreground">Pending</span>
       ) : null}
+      {isSelected ? <BookmarkSelectionIndicator /> : null}
       {trailing}
     </div>
   )

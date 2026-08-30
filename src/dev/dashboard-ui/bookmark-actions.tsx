@@ -149,7 +149,7 @@ function TagEditor({
               ))}
               <ComboboxChipsInput
                 aria-label="Search tags"
-                placeholder={value.length > 0 ? undefined : "Search tags..."}
+                placeholder={value.length > 0 ? undefined : "Search tags…"}
               />
             </>
           )}
@@ -431,9 +431,22 @@ function BookmarkActionDialogs({
   tags: string[]
   tagsOpen: boolean
 }): React.ReactElement {
+  const editTitleErrorId = `bookmark-title-error-${bookmark.id}`
+  const editTitleRef = React.useRef<HTMLInputElement>(null)
+  const [editTitleError, setEditTitleError] = React.useState<string | null>(
+    null
+  )
+
   const saveEdit = () => {
     const title = editTitle.trim()
-    if (title) onTitleChange(bookmark.id, title)
+    if (!title) {
+      setEditTitleError("Enter a title.")
+      editTitleRef.current?.focus()
+      return
+    }
+
+    onTitleChange(bookmark.id, title)
+    setEditTitleError(null)
     setEditOpen(false)
   }
 
@@ -456,12 +469,18 @@ function BookmarkActionDialogs({
               render={<Button variant="destructive" />}
               onClick={() => onDelete(bookmark.id)}
             >
-              Delete
+              Delete bookmark
             </AlertDialogClose>
           </AlertDialogFooter>
         </AlertDialogPopup>
       </AlertDialog>
-      <Dialog onOpenChange={setEditOpen} open={editOpen}>
+      <Dialog
+        onOpenChange={(open) => {
+          setEditOpen(open)
+          if (!open) setEditTitleError(null)
+        }}
+        open={editOpen}
+      >
         <DialogPopup className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Edit bookmark</DialogTitle>
@@ -480,10 +499,29 @@ function BookmarkActionDialogs({
               >
                 Title
                 <Input
+                  aria-describedby={
+                    editTitleError ? editTitleErrorId : undefined
+                  }
+                  aria-invalid={editTitleError ? true : undefined}
                   id={`bookmark-title-${bookmark.id}`}
-                  onChange={(event) => setEditTitle(event.target.value)}
+                  name="title"
+                  onChange={(event) => {
+                    setEditTitle(event.target.value)
+                    if (editTitleError && event.target.value.trim()) {
+                      setEditTitleError(null)
+                    }
+                  }}
+                  ref={editTitleRef}
                   value={editTitle}
                 />
+                {editTitleError ? (
+                  <span
+                    className="text-sm font-normal text-destructive-foreground"
+                    id={editTitleErrorId}
+                  >
+                    {editTitleError}
+                  </span>
+                ) : null}
               </label>
             </DialogPanel>
             <DialogFooter>
@@ -570,7 +608,7 @@ export function BookmarkActions({
 
   const trigger = (
     <Button
-      aria-label={`Actions for ${bookmark.title}`}
+      aria-label={`Actions for ${bookmark.title}${isSelected ? ", selected" : ""}`}
       className="transition-opacity duration-100 data-popup-open:opacity-100 min-[800px]:pointer-fine:opacity-0 min-[800px]:pointer-fine:group-focus-within/bookmark:opacity-100 min-[800px]:pointer-fine:group-hover/bookmark:opacity-100"
       size="icon-xs"
       variant="ghost"

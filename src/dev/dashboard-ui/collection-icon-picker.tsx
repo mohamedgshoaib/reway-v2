@@ -70,10 +70,10 @@ export function CollectionIconPicker({
       value={selectedOption}
     >
       <ComboboxInput
-        aria-label="Icon"
+        aria-label="Collection icon"
         autoComplete="off"
         id="collection-icon"
-        placeholder="Search icons..."
+        placeholder="Search icons…"
         startAddon={
           <CollectionIcon
             className="size-4.5"

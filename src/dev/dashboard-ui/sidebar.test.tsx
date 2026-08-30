@@ -150,6 +150,35 @@ describe("DashboardSidebar", () => {
     expect(screen.queryByText("New nested collection")).toBeNull()
   })
 
+  it("keeps collection and tag rows active across their menu actions", () => {
+    render(
+      <SidebarProvider>
+        <DashboardSidebar
+          initialDisclosures={{ collections: true, tags: true }}
+          onSortChange={vi.fn<(sort: SortOption) => void>()}
+          onViewModeChange={vi.fn<(viewMode: ViewMode) => void>()}
+          sort="date"
+          viewMode="list"
+        />
+      </SidebarProvider>
+    )
+
+    const mediaRow = screen.getByRole("button", { name: "Media" })
+    const nestedRow = screen.getByRole("button", {
+      name: "Streaming platforms",
+    })
+    const tagRow = screen.getByRole("button", { name: "Design" })
+
+    for (const row of [mediaRow, nestedRow, tagRow]) {
+      expect(row.className).toContain(
+        "group-hover/menu-item:before:bg-sidebar-accent"
+      )
+      expect(row.className).toContain(
+        "group-focus-within/menu-item:before:bg-sidebar-accent"
+      )
+    }
+  })
+
   it("disables hidden group triggers while collapsed", () => {
     const { container } = render(
       <SidebarProvider defaultOpen={false}>

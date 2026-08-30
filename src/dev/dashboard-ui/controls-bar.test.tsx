@@ -16,6 +16,7 @@ describe("BookmarkControlsBar", () => {
           onSortChange={vi.fn<(sort: SortOption) => void>()}
           onViewModeChange={vi.fn<(viewMode: ViewMode) => void>()}
           sort="date"
+          title="Research"
           viewMode="list"
         />
       </SidebarProvider>
@@ -28,5 +29,11 @@ describe("BookmarkControlsBar", () => {
     expect(
       screen.getByRole("button", { name: "Open navigation" })
     ).not.toBeNull()
+    const heading = screen.getByRole("heading", {
+      level: 1,
+      name: "Research",
+    })
+    expect(heading.className).toContain("min-[800px]:sr-only")
+    expect(heading.parentElement?.className).toContain("min-[800px]:contents")
   })
 })

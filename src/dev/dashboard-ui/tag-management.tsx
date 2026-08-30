@@ -225,7 +225,7 @@ export function TagDeleteDialog({
             }}
             render={<Button variant="destructive" />}
           >
-            Delete
+            Delete tag
           </AlertDialogClose>
         </AlertDialogFooter>
       </AlertDialogPopup>

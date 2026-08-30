@@ -94,6 +94,7 @@ export function DashboardMainPanel({
   return (
     <m.main
       className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background p-2 min-[800px]:rounded-2xl min-[800px]:border min-[800px]:border-border min-[800px]:bg-card"
+      id="dashboard-main-content"
       layout
       layoutDependency={sidebarOpen}
       onKeyDownCapture={(event) => {
@@ -108,6 +109,7 @@ export function DashboardMainPanel({
       transition={{
         layout: shouldReduceMotion ? { duration: 0 } : sidebarRailTransition,
       }}
+      tabIndex={-1}
     >
       <m.div
         className="flex min-h-0 min-w-0 flex-1 flex-col"
@@ -126,15 +128,22 @@ export function DashboardMainPanel({
         ) : null}
         <ScrollArea className="min-h-0 flex-1" fill hideScrollbar scrollFade>
           <div className="min-[800px]:p-2">
-            {visibleBookmarks.length === 0 && activeCollectionName ? (
+            {visibleBookmarks.length === 0 ? (
               <Empty>
                 <EmptyHeader>
-                  <EmptyTitle>No bookmarks here</EmptyTitle>
+                  <EmptyTitle>
+                    {activeCollectionName
+                      ? "No bookmarks here"
+                      : "No bookmarks yet"}
+                  </EmptyTitle>
                   <EmptyDescription>
-                    No bookmarks saved directly to {activeCollectionName}.
+                    {activeCollectionName
+                      ? `No bookmarks saved directly to ${activeCollectionName}.`
+                      : "Save a tab from the extension to add your first bookmark."}
                   </EmptyDescription>
                 </EmptyHeader>
-                {activeCollectionNode?.children.length ? (
+                {activeCollectionName &&
+                activeCollectionNode?.children.length ? (
                   <EmptyContent>
                     <div className="flex flex-wrap justify-center gap-2">
                       {activeCollectionNode.children.map((child) => (

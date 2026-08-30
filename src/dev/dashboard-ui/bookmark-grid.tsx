@@ -14,6 +14,7 @@ import {
   useBookmarkSortable,
 } from "@/dev/dashboard-ui/bookmark-reorder"
 import { bookmarkReorderSurfaceClassName } from "@/dev/dashboard-ui/bookmark-reorder-surface"
+import { BookmarkSelectionIndicator } from "@/dev/dashboard-ui/bookmark-selection-indicator"
 import type { Collection } from "@/dev/dashboard-ui/collection-hierarchy"
 import {
   mockTags,
@@ -63,6 +64,7 @@ function BookmarkGridCardSurface({
       <span className="min-w-0 flex-1 truncate text-sm text-foreground">
         {bookmark.title}
       </span>
+      {isSelected ? <BookmarkSelectionIndicator /> : null}
       {trailing}
     </div>
   )

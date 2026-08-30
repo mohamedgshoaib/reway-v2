@@ -35,7 +35,7 @@ const SIDEBAR_KEYBOARD_SHORTCUT: string = "b"
 const sidebarMenuButtonVariants = cva(
   cn(
     stateSurfaceVariants({ axis: "block" }),
-    "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-lg p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-colors duration-150 group-has-data-[sidebar=menu-action]/menu-item:pe-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! before:rounded-[calc(var(--radius-lg)-1px)] hover:text-sidebar-accent-foreground hover:before:bg-sidebar-accent focus-visible:ring-2 active:text-sidebar-accent-foreground active:before:bg-sidebar-accent disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[active=true]:before:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground data-[state=open]:hover:before:bg-sidebar-accent [&>span:last-child]:truncate [&>svg]:shrink-0 [&>svg:not([class*='size-'])]:size-4"
+    "peer/menu-button flex w-full items-center gap-2 overflow-hidden rounded-lg p-2 text-left text-sm ring-sidebar-ring outline-hidden transition-colors duration-150 group-focus-within/menu-item:text-sidebar-accent-foreground group-hover/menu-item:text-sidebar-accent-foreground group-has-data-[sidebar=menu-action]/menu-item:pe-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! before:rounded-[calc(var(--radius-lg)-1px)] group-focus-within/menu-item:before:bg-sidebar-accent group-hover/menu-item:before:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:before:bg-sidebar-accent focus-visible:ring-2 active:text-sidebar-accent-foreground active:before:bg-sidebar-accent disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground data-[active=true]:before:bg-sidebar-accent data-[state=open]:hover:text-sidebar-accent-foreground data-[state=open]:hover:before:bg-sidebar-accent [&>span:last-child]:truncate [&>svg]:shrink-0 [&>svg:not([class*='size-'])]:size-4"
   ),
   {
     defaultVariants: {
@@ -318,7 +318,7 @@ export function SidebarRail({
     <button
       aria-label="Toggle Sidebar"
       className={cn(
-        "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-in-out-strong group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border sm:flex",
+        "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-[translate,background-color] ease-in-out-strong group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border sm:flex",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",
         "[[data-side=left][data-state=collapsed]_&]:cursor-e-resize [[data-side=right][data-state=collapsed]_&]:cursor-w-resize",
         "group-data-[collapsible=offcanvas]:translate-x-0 group-data-[collapsible=offcanvas]:after:left-full hover:group-data-[collapsible=offcanvas]:bg-sidebar",
@@ -761,7 +761,7 @@ export function SidebarMenuSubButton({
   const defaultProps = {
     className: cn(
       stateSurfaceVariants({ axis: "block" }),
-      "flex h-8 w-full min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-lg px-2 text-sidebar-foreground ring-sidebar-ring outline-hidden before:rounded-[calc(var(--radius-lg)-1px)] hover:text-sidebar-accent-foreground hover:before:bg-sidebar-accent focus-visible:ring-2 active:text-sidebar-accent-foreground active:before:bg-sidebar-accent disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 sm:h-7 [&>span:last-child]:truncate [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground [&>svg:not([class*='size-'])]:size-4",
+      "flex h-8 w-full min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-lg px-2 text-sidebar-foreground ring-sidebar-ring outline-hidden group-focus-within/menu-item:text-sidebar-accent-foreground group-hover/menu-item:text-sidebar-accent-foreground before:rounded-[calc(var(--radius-lg)-1px)] group-focus-within/menu-item:before:bg-sidebar-accent group-hover/menu-item:before:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:before:bg-sidebar-accent focus-visible:ring-2 active:text-sidebar-accent-foreground active:before:bg-sidebar-accent disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 sm:h-7 [&>span:last-child]:truncate [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground [&>svg:not([class*='size-'])]:size-4",
       "data-[active=true]:text-sidebar-accent-foreground data-[active=true]:before:bg-sidebar-accent",
       size === "sm" && "text-xs",
       size === "md" && "text-sm",
