@@ -2,19 +2,24 @@ import type * as React from "react"
 
 import { Card } from "@/components/ui/card"
 import { Frame, FrameFooter } from "@/components/ui/frame"
+import { Label } from "@/components/ui/label"
 import { stateSurfaceVariants } from "@/components/ui/state-surface"
 import {
   BookmarkActions,
   BookmarkContextMenu,
   type BookmarkActionHandlers,
 } from "@/dev/dashboard-ui/bookmark-actions"
-import { BookmarkFavicon } from "@/dev/dashboard-ui/bookmark-favicon"
 import {
   BookmarkDragHandle,
   useBookmarkSortable,
 } from "@/dev/dashboard-ui/bookmark-reorder"
 import { bookmarkReorderSurfaceClassName } from "@/dev/dashboard-ui/bookmark-reorder-surface"
-import { BookmarkSelectionIndicator } from "@/dev/dashboard-ui/bookmark-selection-indicator"
+import {
+  BookmarkLeadingControl,
+  BookmarkLeadingFavicon,
+  type BookmarkSelectionChangeHandler,
+} from "@/dev/dashboard-ui/bookmark-selection-control"
+import { getBookmarkUrl } from "@/dev/dashboard-ui/bookmark-url"
 import type { Collection } from "@/dev/dashboard-ui/collection-hierarchy"
 import {
   mockTags,
@@ -29,10 +34,18 @@ type BookmarkGridProps = BookmarkActionHandlers & {
   bookmarks: MockBookmark[]
   collections: readonly Collection[]
   isReordering?: boolean
+  onDirectSelectionChange?: BookmarkSelectionChangeHandler
   selectedBookmarkIds: ReadonlySet<string>
+  selectionMode?: boolean
   showImage: boolean
   sort: SortOption
   tags?: readonly Tag[]
+}
+
+const preventShiftTextSelection: React.MouseEventHandler<HTMLLabelElement> = (
+  event
+) => {
+  if (event.shiftKey) event.preventDefault()
 }
 
 function BookmarkImage({
@@ -49,28 +62,50 @@ function BookmarkGridCardSurface({
   bookmark,
   isDragging = false,
   isSelected,
+  onSelectionChange,
+  selectionMode,
   showImage,
   trailing,
+  visibleIds,
 }: {
   bookmark: MockBookmark
   isDragging?: boolean
   isSelected: boolean
+  onSelectionChange?: BookmarkSelectionChangeHandler
+  selectionMode: boolean
   showImage: boolean
   trailing: React.ReactNode
+  visibleIds: readonly string[]
 }): React.ReactElement {
+  const leading =
+    selectionMode && onSelectionChange ? (
+      <BookmarkLeadingControl
+        bookmark={bookmark}
+        checked={isSelected}
+        onSelectionChange={onSelectionChange}
+        visibleIds={visibleIds}
+      />
+    ) : (
+      <BookmarkLeadingFavicon
+        bookmark={bookmark}
+        className="pointer-events-none relative z-10"
+      />
+    )
+  const title = (
+    <span className="pointer-events-none relative z-10 min-w-0 flex-1 truncate text-sm text-foreground">
+      {bookmark.title}
+    </span>
+  )
   const footer = (
     <div className="flex min-w-0 flex-1 items-center gap-2">
-      <BookmarkFavicon domain={bookmark.domain} />
-      <span className="min-w-0 flex-1 truncate text-sm text-foreground">
-        {bookmark.title}
-      </span>
-      {isSelected ? <BookmarkSelectionIndicator /> : null}
-      {trailing}
+      {leading}
+      {title}
+      <span className="pointer-events-auto relative z-20">{trailing}</span>
     </div>
   )
 
   if (showImage) {
-    return (
+    const frame = (
       <Frame
         className={cn(
           "group/bookmark transition-colors duration-150 ease-out-strong hover:bg-accent data-selected:bg-accent",
@@ -79,23 +114,63 @@ function BookmarkGridCardSurface({
         data-selected={isSelected || undefined}
         density="compact"
       >
-        <Card className="overflow-hidden rounded-xl">
+        {!selectionMode ? (
+          <a
+            aria-label={bookmark.title}
+            className="absolute inset-0 z-0 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+            href={getBookmarkUrl(bookmark)}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            <span className="sr-only">{bookmark.title}</span>
+          </a>
+        ) : null}
+        <Card className="pointer-events-none relative z-10 overflow-hidden rounded-xl">
           <BookmarkImage ogImage={bookmark.ogImage} />
         </Card>
-        <FrameFooter>{footer}</FrameFooter>
+        <FrameFooter className="pointer-events-none relative z-10">
+          {footer}
+        </FrameFooter>
       </Frame>
+    )
+
+    return selectionMode ? (
+      <Label
+        className="block cursor-pointer select-none"
+        onMouseDown={preventShiftTextSelection}
+      >
+        {frame}
+      </Label>
+    ) : (
+      frame
     )
   }
 
-  return (
-    <div
-      className={cn(
-        stateSurfaceVariants({ axis: "both" }),
-        "group/bookmark flex min-h-10 flex-col gap-2 rounded-[18px] p-3 before:rounded-[17px] hover:before:bg-accent data-selected:before:bg-accent",
-        bookmarkReorderSurfaceClassName(isDragging)
-      )}
+  const className = cn(
+    stateSurfaceVariants({ axis: "both" }),
+    "group/bookmark flex min-h-10 flex-col gap-2 rounded-[18px] p-3 before:rounded-[17px] hover:before:bg-accent data-selected:before:bg-accent",
+    bookmarkReorderSurfaceClassName(isDragging)
+  )
+
+  return selectionMode ? (
+    <Label
+      className={cn(className, "cursor-pointer select-none")}
       data-selected={isSelected || undefined}
+      onMouseDown={preventShiftTextSelection}
     >
+      {footer}
+    </Label>
+  ) : (
+    <div className={className} data-selected={isSelected || undefined}>
+      <a
+        aria-label={bookmark.title}
+        className="absolute inset-0 z-0 rounded-[18px] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+        href={getBookmarkUrl(bookmark)}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <span className="sr-only">{bookmark.title}</span>
+      </a>
       {footer}
     </div>
   )
@@ -104,16 +179,45 @@ function BookmarkGridCardSurface({
 function BookmarkGridCard({
   bookmark,
   isSelected,
+  onSelectionChange,
+  selectionMode,
   showImage,
   tags,
+  visibleIds,
   ...actionHandlers
 }: BookmarkActionHandlers & {
   bookmark: MockBookmark
   collections: readonly Collection[]
   isSelected: boolean
+  onSelectionChange: BookmarkSelectionChangeHandler
+  selectionMode: boolean
   showImage: boolean
   tags: readonly Tag[]
+  visibleIds: readonly string[]
 }): React.ReactElement {
+  const surface = (
+    <BookmarkGridCardSurface
+      bookmark={bookmark}
+      isSelected={isSelected}
+      onSelectionChange={onSelectionChange}
+      selectionMode={selectionMode}
+      showImage={showImage}
+      trailing={
+        selectionMode ? null : (
+          <BookmarkActions
+            {...actionHandlers}
+            availableTags={tags}
+            bookmark={bookmark}
+            isSelected={isSelected}
+          />
+        )
+      }
+      visibleIds={visibleIds}
+    />
+  )
+
+  if (selectionMode) return <li className="list-none">{surface}</li>
+
   return (
     <li className="list-none">
       <BookmarkContextMenu
@@ -122,19 +226,7 @@ function BookmarkGridCard({
         bookmark={bookmark}
         isSelected={isSelected}
       >
-        <BookmarkGridCardSurface
-          bookmark={bookmark}
-          isSelected={isSelected}
-          showImage={showImage}
-          trailing={
-            <BookmarkActions
-              {...actionHandlers}
-              availableTags={tags}
-              bookmark={bookmark}
-              isSelected={isSelected}
-            />
-          }
-        />
+        {surface}
       </BookmarkContextMenu>
     </li>
   )
@@ -166,6 +258,7 @@ function SortableBookmarkGridCard({
         bookmark={bookmark}
         isDragging={isDragging}
         isSelected={false}
+        selectionMode={false}
         showImage={showImage}
         trailing={
           <BookmarkDragHandle
@@ -173,6 +266,7 @@ function SortableBookmarkGridCard({
             handleRef={handleRef}
           />
         }
+        visibleIds={[]}
       />
     </li>
   )
@@ -181,12 +275,21 @@ function SortableBookmarkGridCard({
 export function BookmarkGrid({
   bookmarks,
   isReordering = false,
+  onDirectSelectionChange,
   selectedBookmarkIds,
+  selectionMode = false,
   showImage,
   sort,
   tags = mockTags,
   ...actionHandlers
 }: BookmarkGridProps): React.ReactElement {
+  const orderedBookmarks = sortBookmarks(bookmarks, sort)
+  const visibleIds = orderedBookmarks.map((bookmark) => bookmark.id)
+  const handleSelectionChange: BookmarkSelectionChangeHandler =
+    onDirectSelectionChange ??
+    ((bookmarkId, checked) =>
+      actionHandlers.onSelectChange(bookmarkId, checked))
+
   return (
     <ul
       aria-label="Bookmarks"
@@ -196,7 +299,7 @@ export function BookmarkGrid({
           : "grid grid-cols-3"
       }
     >
-      {sortBookmarks(bookmarks, sort).map((bookmark, index) =>
+      {orderedBookmarks.map((bookmark, index) =>
         isReordering ? (
           <SortableBookmarkGridCard
             bookmark={bookmark}
@@ -210,8 +313,11 @@ export function BookmarkGrid({
             bookmark={bookmark}
             isSelected={selectedBookmarkIds.has(bookmark.id)}
             key={bookmark.id}
+            onSelectionChange={handleSelectionChange}
+            selectionMode={selectionMode}
             showImage={showImage}
             tags={tags}
+            visibleIds={visibleIds}
           />
         )
       )}

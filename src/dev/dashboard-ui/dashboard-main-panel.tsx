@@ -17,11 +17,11 @@ import {
   BookmarkReorderArea,
   BookmarkReorderBar,
 } from "@/dev/dashboard-ui/bookmark-reorder"
-import type {
-  Collection,
-  CollectionNode,
-} from "@/dev/dashboard-ui/collection-hierarchy"
+import type { BookmarkSelectionChangeHandler } from "@/dev/dashboard-ui/bookmark-selection-control"
+import { BookmarkSelectionBars } from "@/dev/dashboard-ui/bookmark-selection-controls"
+import type { Collection } from "@/dev/dashboard-ui/collection-hierarchy"
 import { BookmarkControlsBar } from "@/dev/dashboard-ui/controls-bar"
+import type { DashboardDestinationEmptyState } from "@/dev/dashboard-ui/dashboard-destination"
 import type {
   MockBookmark,
   SortOption,
@@ -33,16 +33,21 @@ import { sidebarRailTransition } from "@/lib/motion"
 export function DashboardMainPanel({
   actionHandlers,
   activeCollectionName,
-  activeCollectionNode,
   collections,
   controlsProps,
+  emptyState,
   effectiveViewMode,
   isDraggingRef,
   isReordering,
+  onDirectSelectionChange,
   onExitReorder,
+  onExitSelection,
   onMove,
   onSelectCollection,
   selectedBookmarkIds,
+  selectionAnnouncement,
+  selectionBarsProps,
+  selectionMode,
   shouldReduceMotion,
   sidebarOpen,
   sort,
@@ -51,16 +56,21 @@ export function DashboardMainPanel({
 }: {
   actionHandlers: BookmarkActionHandlers
   activeCollectionName: string | null
-  activeCollectionNode?: CollectionNode
   collections: readonly Collection[]
   controlsProps: React.ComponentProps<typeof BookmarkControlsBar>
+  emptyState: DashboardDestinationEmptyState
   effectiveViewMode: ViewMode
   isDraggingRef: React.RefObject<boolean>
   isReordering: boolean
+  onDirectSelectionChange: BookmarkSelectionChangeHandler
   onExitReorder: (restoreFocus: boolean) => void
+  onExitSelection: () => void
   onMove: (fromIndex: number, toIndex: number) => void
   onSelectCollection: (collectionId: string) => void
-  selectedBookmarkIds: Set<string>
+  selectedBookmarkIds: ReadonlySet<string>
+  selectionAnnouncement: string
+  selectionBarsProps: React.ComponentProps<typeof BookmarkSelectionBars>
+  selectionMode: boolean
   shouldReduceMotion: boolean | null
   sidebarOpen: boolean
   sort: SortOption
@@ -74,7 +84,9 @@ export function DashboardMainPanel({
         bookmarks={visibleBookmarks}
         collections={collections}
         isReordering={isReordering}
+        onDirectSelectionChange={onDirectSelectionChange}
         selectedBookmarkIds={selectedBookmarkIds}
+        selectionMode={selectionMode}
         sort={sort}
         tags={tags}
       />
@@ -84,7 +96,9 @@ export function DashboardMainPanel({
         bookmarks={visibleBookmarks}
         collections={collections}
         isReordering={isReordering}
+        onDirectSelectionChange={onDirectSelectionChange}
         selectedBookmarkIds={selectedBookmarkIds}
+        selectionMode={selectionMode}
         showImage={effectiveViewMode === "grid-image"}
         sort={sort}
         tags={tags}
@@ -93,14 +107,21 @@ export function DashboardMainPanel({
 
   return (
     <m.main
-      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background p-2 min-[800px]:rounded-2xl min-[800px]:border min-[800px]:border-border min-[800px]:bg-card"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background p-2 min-[800px]:rounded-2xl min-[800px]:border min-[800px]:border-border min-[800px]:bg-card"
       id="dashboard-main-content"
       layout
       layoutDependency={sidebarOpen}
       onKeyDownCapture={(event) => {
-        if (event.key !== "Escape" || !isReordering || isDraggingRef.current) {
+        if (event.key !== "Escape") return
+
+        if (selectionMode) {
+          event.preventDefault()
+          event.stopPropagation()
+          onExitSelection()
           return
         }
+
+        if (!isReordering || isDraggingRef.current) return
 
         event.preventDefault()
         event.stopPropagation()
@@ -119,7 +140,14 @@ export function DashboardMainPanel({
           layout: shouldReduceMotion ? { duration: 0 } : sidebarRailTransition,
         }}
       >
-        <BookmarkControlsBar {...controlsProps} />
+        {selectionMode ? (
+          <BookmarkSelectionBars {...selectionBarsProps} />
+        ) : (
+          <BookmarkControlsBar {...controlsProps} />
+        )}
+        <output aria-live="polite" className="sr-only">
+          {selectionAnnouncement}
+        </output>
         {isReordering && activeCollectionName ? (
           <BookmarkReorderBar
             collection={activeCollectionName}
@@ -127,35 +155,30 @@ export function DashboardMainPanel({
           />
         ) : null}
         <ScrollArea className="min-h-0 flex-1" fill hideScrollbar scrollFade>
-          <div className="min-[800px]:p-2">
+          <div
+            className={
+              selectionMode
+                ? "pb-24 min-[800px]:p-2 min-[800px]:pb-2"
+                : "min-[800px]:p-2"
+            }
+          >
             {visibleBookmarks.length === 0 ? (
               <Empty>
                 <EmptyHeader>
-                  <EmptyTitle>
-                    {activeCollectionName
-                      ? "No bookmarks here"
-                      : "No bookmarks yet"}
-                  </EmptyTitle>
-                  <EmptyDescription>
-                    {activeCollectionName
-                      ? `No bookmarks saved directly to ${activeCollectionName}.`
-                      : "Save a tab from the extension to add your first bookmark."}
-                  </EmptyDescription>
+                  <EmptyTitle>{emptyState.title}</EmptyTitle>
+                  <EmptyDescription>{emptyState.description}</EmptyDescription>
                 </EmptyHeader>
-                {activeCollectionName &&
-                activeCollectionNode?.children.length ? (
+                {emptyState.childCollections.length > 0 ? (
                   <EmptyContent>
                     <div className="flex flex-wrap justify-center gap-2">
-                      {activeCollectionNode.children.map((child) => (
+                      {emptyState.childCollections.map((child) => (
                         <Button
-                          key={child.collection.id}
-                          onClick={() =>
-                            onSelectCollection(child.collection.id)
-                          }
+                          key={child.id}
+                          onClick={() => onSelectCollection(child.id)}
                           size="sm"
                           variant="outline"
                         >
-                          {child.collection.name}
+                          {child.name}
                         </Button>
                       ))}
                     </div>

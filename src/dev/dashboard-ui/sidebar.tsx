@@ -96,6 +96,7 @@ import { cn } from "@/lib/utils"
  */
 export function DashboardSidebar({
   activeCollection = null,
+  allBookmarksActive = activeCollection === null,
   bookmarks = mockBookmarks,
   canReorder = false,
   collections = mockCollections,
@@ -121,6 +122,7 @@ export function DashboardSidebar({
 }: {
   initialDisclosures: DashboardNavigationDisclosures
   activeCollection?: string | null
+  allBookmarksActive?: boolean
   bookmarks?: readonly MockBookmark[]
   canReorder?: boolean
   collections?: readonly Collection[]
@@ -211,6 +213,7 @@ export function DashboardSidebar({
       </SidebarHeader>
       <DashboardNavigationContent
         activeCollection={activeCollection}
+        allBookmarksActive={allBookmarksActive}
         bookmarks={bookmarks}
         canReorder={canReorder}
         collapsed={collapsed}
@@ -243,6 +246,7 @@ export function DashboardSidebar({
 
 export function MobileDashboardNavigation({
   activeCollection = null,
+  allBookmarksActive = activeCollection === null,
   bookmarks = mockBookmarks,
   canReorder = false,
   collections = mockCollections,
@@ -268,6 +272,7 @@ export function MobileDashboardNavigation({
 }: {
   initialDisclosures: DashboardNavigationDisclosures
   activeCollection?: string | null
+  allBookmarksActive?: boolean
   bookmarks?: readonly MockBookmark[]
   canReorder?: boolean
   collections?: readonly Collection[]
@@ -344,6 +349,7 @@ export function MobileDashboardNavigation({
         >
           <DashboardNavigationContent
             activeCollection={activeCollection}
+            allBookmarksActive={allBookmarksActive}
             bookmarks={bookmarks}
             canReorder={canReorder}
             collapsed={false}
@@ -491,6 +497,7 @@ function MobileDisplayDialog({
 
 function DashboardNavigationContent({
   activeCollection,
+  allBookmarksActive,
   bookmarks,
   canReorder,
   collapsed,
@@ -520,6 +527,7 @@ function DashboardNavigationContent({
   viewMode,
 }: {
   activeCollection: string | null
+  allBookmarksActive: boolean
   bookmarks: readonly MockBookmark[]
   canReorder: boolean
   collapsed: boolean
@@ -592,7 +600,7 @@ function DashboardNavigationContent({
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={activeCollection === null}
+                  isActive={allBookmarksActive}
                   onClick={() => {
                     onSelectAllBookmarks?.()
                     handleNavigate()

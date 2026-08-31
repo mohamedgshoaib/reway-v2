@@ -14,6 +14,7 @@ import type { Tag, TagDraft } from "@/dev/dashboard-ui/tag-model"
 
 export function BookmarkControlsBar({
   activeCollection = null,
+  allBookmarksActive = activeCollection === null,
   bookmarks = mockBookmarks,
   canReorder = false,
   collections = mockCollections,
@@ -39,6 +40,7 @@ export function BookmarkControlsBar({
   viewMode,
 }: {
   activeCollection?: string | null
+  allBookmarksActive?: boolean
   bookmarks?: readonly MockBookmark[]
   canReorder?: boolean
   collections?: readonly Collection[]
@@ -72,6 +74,7 @@ export function BookmarkControlsBar({
       <div className="min-[800px]:hidden">
         <MobileDashboardNavigation
           activeCollection={activeCollection}
+          allBookmarksActive={allBookmarksActive}
           bookmarks={bookmarks}
           canReorder={canReorder}
           collections={collections}

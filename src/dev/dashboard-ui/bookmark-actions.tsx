@@ -84,6 +84,7 @@ import {
   MenuSubTrigger,
   MenuTrigger,
 } from "@/components/ui/menu"
+import { getBookmarkUrl } from "@/dev/dashboard-ui/bookmark-url"
 import {
   createCollectionIndex,
   type Collection,
@@ -109,11 +110,6 @@ export type BookmarkActionsProps = BookmarkActionHandlers & {
   bookmark: MockBookmark
   collections: readonly Collection[]
   isSelected: boolean
-}
-
-function bookmarkUrl(bookmark: MockBookmark): string {
-  if (bookmark.title.startsWith("http")) return bookmark.title
-  return `https://${bookmark.domain ?? "reway.page"}`
 }
 
 function TagEditor({
@@ -580,11 +576,11 @@ export function BookmarkActions({
   }
 
   const openBookmark = () => {
-    window.open(bookmarkUrl(bookmark), "_blank", "noopener,noreferrer")
+    window.open(getBookmarkUrl(bookmark), "_blank", "noopener,noreferrer")
   }
 
   const copyLink = () => {
-    void navigator.clipboard?.writeText(bookmarkUrl(bookmark))
+    void navigator.clipboard?.writeText(getBookmarkUrl(bookmark))
   }
 
   const dialogs = (
@@ -610,6 +606,7 @@ export function BookmarkActions({
     <Button
       aria-label={`Actions for ${bookmark.title}${isSelected ? ", selected" : ""}`}
       className="transition-opacity duration-100 data-popup-open:opacity-100 min-[800px]:pointer-fine:opacity-0 min-[800px]:pointer-fine:group-focus-within/bookmark:opacity-100 min-[800px]:pointer-fine:group-hover/bookmark:opacity-100"
+      data-bookmark-actions={bookmark.id}
       size="icon-xs"
       variant="ghost"
     >
@@ -841,11 +838,11 @@ export function BookmarkContextMenu({
   if (isMobile) return <>{children}</>
 
   const openBookmark = () => {
-    window.open(bookmarkUrl(bookmark), "_blank", "noopener,noreferrer")
+    window.open(getBookmarkUrl(bookmark), "_blank", "noopener,noreferrer")
   }
 
   const copyLink = () => {
-    void navigator.clipboard?.writeText(bookmarkUrl(bookmark))
+    void navigator.clipboard?.writeText(getBookmarkUrl(bookmark))
   }
 
   return (

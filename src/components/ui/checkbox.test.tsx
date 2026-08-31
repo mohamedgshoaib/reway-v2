@@ -53,4 +53,12 @@ describe("Checkbox", () => {
 
     expect(lastChecked).toBe(true)
   })
+
+  it("can remove motion and sound feedback for frequent selection", () => {
+    const { container } = render(<Checkbox checked sound={false} static />)
+    const root = container.querySelector('[data-slot="checkbox"]')
+
+    expect(root?.className).not.toContain("scale-97")
+    expect(container.querySelector("svg")).not.toBeNull()
+  })
 })

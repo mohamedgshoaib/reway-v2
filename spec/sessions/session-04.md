@@ -51,6 +51,23 @@ Write facts only. No plans, no advice, no narration.
 - Resolved all eight React Doctor warnings by fixing the collection icon label and state initializer, using stable navigation keys and module-level static values, and splitting the large forms audit component.
 - The codebase has no known audit blockers. `pnpm run check`, 78 tests across 23 files, the client and server production build, `git diff --check`, and the changed-scope React Doctor scan at 100/100 passed.
 - Browser, keyboard, screen-reader, responsive, and rendered contrast checks remain unverified because browser use needs explicit permission in this workspace.
+- Added the locked UI-only build plan at `spec/dashboard-ui/implementation-order.md` without changing dashboard source code.
+- Ordered the mock work into ten phases, starting with one dashboard destination module and real bookmark selection with bulk actions.
+- Locked menu-entry selection, selection-mode checkboxes, range selection, destination-scoped selection, responsive bulk controls, and bulk mutation recovery behavior.
+- Added shared rules for targets, feedback, modes, motion, surface details, accessibility, focus, rapid input, and honest mock progress.
+- Locked the mobile multi-tag flow, Uncollected, Trash, management feedback, settings, import, deferred quick save, and final review order.
+- Verified the plan has no unresolved choice markers, AI-style wording markers, trailing whitespace, or lines over 100 characters; `git diff --check` reported no issues.
+- Implemented the shared dashboard destination model and all five destination kinds in `src/dev/dashboard-ui/dashboard-destination.ts`.
+- Implemented destination-scoped bookmark selection, range selection, Select all, and optimistic bulk Add, Move, Remove, and Delete.
+- Kept selection entry in each bookmark menu and removed normal-mode hover checkboxes and the persistent panel Select button.
+- Made the full bookmark row or card open its link in normal mode and blocked Shift-click text selection in selection mode.
+- Replaced the mobile multi-action bar with one 48 pixel Actions button and an accessible bottom action sheet.
+- Added pending, success, rollback, retry, duplicate-submit protection, focus return, and stable bulk result messages.
+- Split dashboard behavior into `src/dev/dashboard-ui/dashboard-ui-controller.ts` and reduced `src/dev/dashboard-ui/page.tsx` to the shell.
+- Twelve focused selection tests, TypeScript, `git diff --check`, and changed-scope React Doctor at 100/100 passed.
+- `pnpm run check` and the production build passed after the Phase 1 work.
+- Closed Phase 1 after the user waived its full Vitest gate.
+- Browser checks remain unverified after Phase 1.
 
 ---
 
@@ -62,6 +79,11 @@ Write facts only. No plans, no advice, no narration.
 - Collection and tag destructive actions use Alert Dialogs.
 - Mobile dashboard navigation remains a left drawer; Display remains a Dialog and attaches to the bottom on mobile.
 - Reorder modes use an explicit Done action and one shared drag handle that blocks parent drawer swipe handling.
+- Dashboard work remains UI-only until the complete mock passes the locked implementation plan; backend, Supabase, authentication implementation, and extension work stay deferred.
+- Dashboard destinations use one shared model for All Bookmarks, collection, OR-tag, Uncollected, and Trash views before selection work begins.
+- Bookmark selection uses one explicit mode with menu entry, destination-scoped IDs, fixed-geometry controls, and no overlap with reorder mode.
+- Mobile selection uses one bottom Actions button that opens the bulk action sheet.
+- Phase 1 does not require a full Vitest run; the user waived that gate.
 
 ---
 

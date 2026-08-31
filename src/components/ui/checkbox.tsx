@@ -9,26 +9,36 @@ import type React from "react"
 import { AnimatedIcon } from "@/components/ui/animated-icon"
 import { cn } from "@/lib/utils"
 
+export interface CheckboxProps extends CheckboxPrimitive.Root.Props {
+  sound?: boolean
+  static?: boolean
+}
+
 export function Checkbox({
   className,
   onCheckedChange,
+  sound = true,
+  static: staticFeedback = false,
   ...props
-}: CheckboxPrimitive.Root.Props): React.ReactElement {
+}: CheckboxProps): React.ReactElement {
   const playChecked = useSound(minimal.checkbox)
   const playUnchecked = useSound(minimal.deselect)
 
   return (
     <CheckboxPrimitive.Root
       className={cn(
-        "relative inline-flex size-4.5 shrink-0 items-center justify-center rounded-[.25rem] border border-input bg-background shadow-xs/5 ring-ring transition-[scale,box-shadow] duration-150 ease-out-strong outline-none not-dark:bg-clip-padding before:pointer-events-none before:absolute before:inset-0 before:rounded-[3px] not-data-disabled:not-data-checked:not-aria-invalid:before:shadow-[0_1px_--theme(--color-black/4%)] focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-background aria-invalid:border-destructive/36 focus-visible:aria-invalid:border-destructive/64 focus-visible:aria-invalid:ring-destructive/48 data-disabled:cursor-not-allowed data-disabled:opacity-64 sm:size-4 dark:not-data-checked:bg-input/32 dark:not-data-disabled:not-data-checked:not-aria-invalid:before:shadow-[0_-1px_--theme(--color-white/6%)] dark:aria-invalid:ring-destructive/24 [:active,[data-pressed]]:scale-97 [[data-disabled],[data-checked],[aria-invalid]]:shadow-none",
+        "relative inline-flex size-4.5 shrink-0 items-center justify-center rounded-[.25rem] border border-input bg-background shadow-xs/5 ring-ring transition-[scale,box-shadow] duration-150 ease-out-strong outline-none not-dark:bg-clip-padding before:pointer-events-none before:absolute before:inset-0 before:rounded-[3px] not-data-disabled:not-data-checked:not-aria-invalid:before:shadow-[0_1px_--theme(--color-black/4%)] focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-background aria-invalid:border-destructive/36 focus-visible:aria-invalid:border-destructive/64 focus-visible:aria-invalid:ring-destructive/48 data-disabled:cursor-not-allowed data-disabled:opacity-64 sm:size-4 dark:not-data-checked:bg-input/32 dark:not-data-disabled:not-data-checked:not-aria-invalid:before:shadow-[0_-1px_--theme(--color-white/6%)] dark:aria-invalid:ring-destructive/24 [[data-disabled],[data-checked],[aria-invalid]]:shadow-none",
+        !staticFeedback && "[:active,[data-pressed]]:scale-97",
         className
       )}
       data-slot="checkbox"
       onCheckedChange={(checked, eventDetails) => {
-        if (checked) {
-          playChecked()
-        } else {
-          playUnchecked()
+        if (sound) {
+          if (checked) {
+            playChecked()
+          } else {
+            playUnchecked()
+          }
         }
         onCheckedChange?.(checked, eventDetails)
       }}
@@ -42,10 +52,8 @@ export function Checkbox({
           state: CheckboxPrimitive.Indicator.State
         ) => (
           <span {...props}>
-            <AnimatedIcon
-              transitionKey={state.indeterminate ? "indeterminate" : "checked"}
-            >
-              {state.indeterminate ? (
+            {staticFeedback ? (
+              state.indeterminate ? (
                 <MinusIcon
                   aria-hidden="true"
                   className="size-3.5 sm:size-3"
@@ -57,8 +65,28 @@ export function Checkbox({
                   className="size-3.5 sm:size-3"
                   weight="regular"
                 />
-              )}
-            </AnimatedIcon>
+              )
+            ) : (
+              <AnimatedIcon
+                transitionKey={
+                  state.indeterminate ? "indeterminate" : "checked"
+                }
+              >
+                {state.indeterminate ? (
+                  <MinusIcon
+                    aria-hidden="true"
+                    className="size-3.5 sm:size-3"
+                    weight="regular"
+                  />
+                ) : (
+                  <CheckIcon
+                    aria-hidden="true"
+                    className="size-3.5 sm:size-3"
+                    weight="regular"
+                  />
+                )}
+              </AnimatedIcon>
+            )}
           </span>
         )}
       />
