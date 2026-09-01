@@ -59,10 +59,11 @@ As of 2026-08-31, the mock has a strong UI base:
   action sheet.
 - OR-based tag filtering with active sidebar rows, removable filter controls,
   Clear, mobile result confirmation, and selection reset.
+- A working Uncollected destination with desktop and mobile navigation, system
+  sorts, selection rules, and membership-driven updates.
 
 The following parts are incomplete:
 
-- Uncollected has no destination.
 - Trash and Settings are visible but do not open working views.
 - Command search says a pasted URL can be saved, but the mock does not add it.
 - Several approved optimistic, failure, retry, undo, and toast states remain
@@ -82,7 +83,13 @@ unverified until the user gives explicit browser permission.
   `pnpm run check`, the full 114-test suite, the production build,
   `git diff --check`, and full-project React Doctor at 100/100 passed.
 - Browser checks remain unverified after Phase 2.
-- Phase 3 has not started.
+- Phase 3 is complete. Five focused Uncollected destination and flow tests,
+  `pnpm run check`, the full 119-test suite, the production build,
+  `git diff --check`, and full-project React Doctor at 100/100 passed.
+- The full suite needed four workers to avoid CPU-contention timeouts in two
+  existing dashboard tests. Both tests also passed in focused runs.
+- Browser checks remain unverified after Phase 3.
+- Phase 4 has not started.
 
 ## What counts as a complete mock
 
@@ -462,7 +469,7 @@ Make sidebar tags operate as filters rather than inert rows.
 - The mobile result count uses tabular numerals and one polite announcement after
   a toggle. Rapid toggles replace the pending announcement instead of queuing it.
 
-## Phase 3: Uncollected
+## Phase 3: Uncollected [complete]
 
 Add Uncollected as a working system destination.
 

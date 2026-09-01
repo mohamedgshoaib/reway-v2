@@ -86,6 +86,22 @@ Write facts only. No plans, no advice, no narration.
   files passed after Phase 2.
 - Browser, touch, keyboard, screen-reader, responsive, and rendered contrast
   checks remain unverified after Phase 2.
+- Added Uncollected as a working system destination in desktop and mobile
+  navigation.
+- Kept Uncollected on system sorts with no custom order, bookmark reorder, or
+  Remove from collection action.
+- Reused the shared destination state for the Uncollected heading, filtering,
+  active navigation state, empty state, selection scope, and sort rules.
+- Verified that collection removal sends bookmarks with no remaining membership
+  to Uncollected while collection counts and tag filters stay current.
+- Added five focused Uncollected destination and flow tests.
+- `pnpm run check`, the client and server production build, `git diff --check`,
+  and full-project React Doctor at 100/100 across 92 files passed after Phase 3.
+- The full Vitest run passed with 119 tests across 29 files using four workers.
+  Two existing dashboard tests timed out under the default 12-worker run and
+  passed in focused runs and the four-worker full run.
+- Browser, touch, keyboard, screen-reader, responsive, and rendered contrast
+  checks remain unverified after Phase 3.
 
 ---
 
@@ -105,6 +121,8 @@ Write facts only. No plans, no advice, no narration.
 - Tag filters use OR behavior and share the dashboard destination state.
 - Active filter controls stay visually compact. The shared Badge owns their
   44 by 44 pixel touch target without making the visible control that tall.
+- Uncollected is a system destination beside All Bookmarks, not a managed user
+  collection.
 
 ---
 

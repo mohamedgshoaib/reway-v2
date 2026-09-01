@@ -164,6 +164,26 @@ describe("dashboard destination", () => {
     expect(view.canReorder).toBe(false)
   })
 
+  it("describes an empty Uncollected destination", () => {
+    const view = deriveDashboardDestination({
+      bookmarks: bookmarks.filter(
+        (item) =>
+          (item.collections?.length ?? 0) > 0 || item.trashedAt !== undefined
+      ),
+      collections,
+      destination: { kind: "uncollected" },
+      tags,
+    })
+
+    expect(view.bookmarks).toEqual([])
+    expect(view.emptyState).toEqual({
+      childCollections: [],
+      description: "Bookmarks without a collection appear here.",
+      title: "No uncollected bookmarks",
+    })
+    expect(view.sortOptions).toEqual(["date", "visits", "alpha"])
+  })
+
   it("keeps Trash out of every normal destination", () => {
     const trashView = derive({ kind: "trash" })
 

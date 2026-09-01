@@ -8,7 +8,10 @@ import {
 } from "@testing-library/react"
 import { afterEach, describe, expect, it } from "vitest"
 
-import { DashboardUiPage } from "@/dev/dashboard-ui/page"
+import {
+  DashboardUiPage,
+  type BookmarkBulkMutationFixture,
+} from "@/dev/dashboard-ui/page"
 
 const navigationPreferences = {
   desktop: { collections: true, tags: true },
@@ -17,12 +20,15 @@ const navigationPreferences = {
 
 afterEach(cleanup)
 
-function renderPage(): {
+function renderPage(bulkMutationFixture?: BookmarkBulkMutationFixture): {
   desktopSidebar: HTMLElement
   main: HTMLElement
 } {
   const view = render(
-    <DashboardUiPage initialNavigationPreferences={navigationPreferences} />
+    <DashboardUiPage
+      bulkMutationFixture={bulkMutationFixture}
+      initialNavigationPreferences={navigationPreferences}
+    />
   )
   const desktopSidebar = view.container.querySelector<HTMLElement>("aside")
   const main = view.container.querySelector<HTMLElement>("main")
@@ -177,5 +183,113 @@ describe("dashboard tag filtering flow", () => {
     expect(
       sidebar.queryByRole("button", { name: "Filter by Design" })
     ).toBeNull()
+  })
+})
+
+describe("dashboard Uncollected flow", () => {
+  it("opens as a system destination with system sorts and no reorder", async () => {
+    const { desktopSidebar, main } = renderPage()
+    const sidebar = within(desktopSidebar)
+    const uncollected = sidebar.getByRole("button", { name: "Uncollected" })
+
+    fireEvent.click(uncollected)
+
+    expect(uncollected.getAttribute("data-active")).toBe("true")
+    expect(
+      within(main).getByRole("heading", { name: "Uncollected" })
+    ).not.toBeNull()
+    expect(
+      within(main).getByRole("link", { name: "Next.js Dev Tools" })
+    ).not.toBeNull()
+    expect(within(main).queryByRole("link", { name: "Claude" })).toBeNull()
+
+    fireEvent.click(sidebar.getByRole("button", { name: "Display" }))
+
+    expect(
+      await screen.findByRole("menuitemradio", { name: "Date added" })
+    ).not.toBeNull()
+    expect(
+      screen.queryByRole("menuitemradio", { name: "Custom order" })
+    ).toBeNull()
+    expect(screen.queryByRole("menuitem", { name: "Reorder items" })).toBeNull()
+  })
+
+  it("does not offer collection removal in selection mode", () => {
+    const { desktopSidebar } = renderPage()
+    const sidebar = within(desktopSidebar)
+
+    fireEvent.click(sidebar.getByRole("button", { name: "Uncollected" }))
+    enterSelectionFromBookmarkMenu("Next.js Dev Tools")
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Open actions for 1 selected bookmark",
+      })
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "Remove from this collection" })
+    ).toBeNull()
+    expect(screen.getAllByText("Add").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Move").length).toBeGreaterThan(0)
+  })
+
+  it("closes mobile navigation after opening Uncollected", async () => {
+    const { main } = renderPage()
+    const navigationTrigger = screen.getByRole("button", {
+      name: "Open navigation",
+    })
+
+    fireEvent.click(navigationTrigger)
+    const navigationTitle = await screen.findByText("Navigation")
+    const drawer = navigationTitle.closest<HTMLElement>(
+      "[data-slot=drawer-popup]"
+    )
+    if (!drawer) throw new Error("Mobile navigation drawer did not render.")
+
+    fireEvent.click(within(drawer).getByRole("button", { name: "Uncollected" }))
+
+    await waitFor(() => {
+      expect(navigationTrigger.getAttribute("aria-expanded")).toBe("false")
+    })
+    expect(
+      within(main).getByRole("heading", { name: "Uncollected" })
+    ).not.toBeNull()
+  })
+
+  it("receives collection removals and keeps counts and tags current", async () => {
+    const { desktopSidebar, main } = renderPage(async () => undefined)
+    const sidebar = within(desktopSidebar)
+    const research = sidebar.getByRole("button", { name: "Research" })
+    const researchItem = research.closest<HTMLElement>(
+      "[data-slot=sidebar-menu-item]"
+    )
+    if (!researchItem) throw new Error("Research row did not render.")
+
+    expect(within(researchItem).getByText("8")).not.toBeNull()
+    enterSelectionFromBookmarkMenu("Claude")
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Open actions for 1 selected bookmark",
+      })
+    )
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remove from this collection" })
+    )
+
+    await waitFor(() => {
+      expect(within(main).queryByRole("link", { name: "Claude" })).toBeNull()
+    })
+    expect(within(researchItem).getByText("7")).not.toBeNull()
+
+    fireEvent.click(sidebar.getByRole("button", { name: "Uncollected" }))
+    expect(within(main).getByRole("link", { name: "Claude" })).not.toBeNull()
+
+    fireEvent.click(
+      sidebar.getByRole("button", { name: "Filter by Engineering" })
+    )
+    expect(
+      within(main).getByRole("heading", { name: "Engineering" })
+    ).not.toBeNull()
+    expect(within(main).getByRole("link", { name: "Claude" })).not.toBeNull()
   })
 })

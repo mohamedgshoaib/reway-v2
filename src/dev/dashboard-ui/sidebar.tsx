@@ -1,6 +1,7 @@
 import {
   BookmarkIcon,
   DotsSixVerticalIcon,
+  FolderSimpleDashedIcon,
   GearIcon,
   SidebarSimpleIcon,
   SlidersHorizontalIcon,
@@ -123,6 +124,7 @@ export function DashboardSidebar({
   onMoveTag,
   onSelectAllBookmarks,
   onSelectCollection,
+  onSelectUncollected,
   onSortChange,
   onStartReorder,
   onTagActiveChange,
@@ -131,6 +133,7 @@ export function DashboardSidebar({
   onViewModeChange,
   sort,
   tagFilterResultCount = bookmarks.length,
+  uncollectedActive = false,
   viewMode,
 }: {
   activeTagIds?: ReadonlySet<string>
@@ -155,6 +158,7 @@ export function DashboardSidebar({
   onMoveTag?: (sourceId: string, index: number) => void
   onSelectAllBookmarks?: () => void
   onSelectCollection?: (collection: string) => void
+  onSelectUncollected?: () => void
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
   onTagActiveChange?: (tagId: string, active: boolean) => void
@@ -163,6 +167,7 @@ export function DashboardSidebar({
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
   tagFilterResultCount?: number
+  uncollectedActive?: boolean
   viewMode: ViewMode
 }): React.ReactElement {
   const { state, toggleSidebar } = useSidebar()
@@ -247,6 +252,7 @@ export function DashboardSidebar({
         onMoveTag={onMoveTag}
         onSelectAllBookmarks={onSelectAllBookmarks}
         onSelectCollection={onSelectCollection}
+        onSelectUncollected={onSelectUncollected}
         onSortChange={onSortChange}
         onStartReorder={onStartReorder}
         onTagActiveChange={onTagActiveChange}
@@ -257,6 +263,7 @@ export function DashboardSidebar({
         surface="desktop"
         tagFilterResultCount={tagFilterResultCount}
         tags={tags}
+        uncollectedActive={uncollectedActive}
         viewMode={viewMode}
       />
     </aside>
@@ -282,6 +289,7 @@ export function MobileDashboardNavigation({
   onMoveTag,
   onSelectAllBookmarks,
   onSelectCollection,
+  onSelectUncollected,
   onSortChange,
   onStartReorder,
   onTagActiveChange,
@@ -290,6 +298,7 @@ export function MobileDashboardNavigation({
   onViewModeChange,
   sort,
   tagFilterResultCount = bookmarks.length,
+  uncollectedActive = false,
   viewMode,
 }: {
   activeTagIds?: ReadonlySet<string>
@@ -314,6 +323,7 @@ export function MobileDashboardNavigation({
   onMoveTag?: (sourceId: string, index: number) => void
   onSelectAllBookmarks?: () => void
   onSelectCollection?: (collection: string) => void
+  onSelectUncollected?: () => void
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
   onTagActiveChange?: (tagId: string, active: boolean) => void
@@ -322,6 +332,7 @@ export function MobileDashboardNavigation({
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
   tagFilterResultCount?: number
+  uncollectedActive?: boolean
   viewMode: ViewMode
 }): React.ReactElement {
   const [open, setOpen] = React.useState(false)
@@ -399,6 +410,7 @@ export function MobileDashboardNavigation({
             onOpenDisplay={() => setDisplayOpen(true)}
             onSelectAllBookmarks={onSelectAllBookmarks}
             onSelectCollection={onSelectCollection}
+            onSelectUncollected={onSelectUncollected}
             onSortChange={onSortChange}
             onStartReorder={onStartReorder}
             onTagActiveChange={onTagActiveChange}
@@ -414,6 +426,7 @@ export function MobileDashboardNavigation({
             surface="mobile"
             tagFilterResultCount={tagFilterResultCount}
             tags={tags}
+            uncollectedActive={uncollectedActive}
             viewMode={viewMode}
           />
         </DrawerPanel>
@@ -552,6 +565,7 @@ function DashboardNavigationContent({
   onOpenDisplay,
   onSelectAllBookmarks,
   onSelectCollection,
+  onSelectUncollected,
   onSortChange,
   onStartReorder,
   onTagActiveChange,
@@ -563,6 +577,7 @@ function DashboardNavigationContent({
   surface,
   tagFilterResultCount,
   tags,
+  uncollectedActive,
   viewMode,
 }: {
   activeTagIds: ReadonlySet<string>
@@ -594,6 +609,7 @@ function DashboardNavigationContent({
   onOpenDisplay?: () => void
   onSelectAllBookmarks?: () => void
   onSelectCollection?: (collection: string) => void
+  onSelectUncollected?: () => void
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
   onTagActiveChange?: (tagId: string, active: boolean) => void
@@ -604,6 +620,7 @@ function DashboardNavigationContent({
   sort: SortOption
   surface: DashboardNavigationSurface
   tagFilterResultCount: number
+  uncollectedActive: boolean
   viewMode: ViewMode
 }): React.ReactElement {
   const [reorderingSection, setReorderingSection] = React.useState<
@@ -652,6 +669,19 @@ function DashboardNavigationContent({
                 >
                   <BookmarkIcon weight="duotone" />
                   <SidebarMenuButtonLabel>All bookmarks</SidebarMenuButtonLabel>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={uncollectedActive}
+                  onClick={() => {
+                    onSelectUncollected?.()
+                    handleNavigate()
+                  }}
+                  tooltip="Uncollected"
+                >
+                  <FolderSimpleDashedIcon weight="duotone" />
+                  <SidebarMenuButtonLabel>Uncollected</SidebarMenuButtonLabel>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

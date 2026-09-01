@@ -650,6 +650,9 @@ export function useDashboardUiController({
   const handleSelectCollection = (collectionId: string): void =>
     navigateToDestination({ collectionId, kind: "collection" })
 
+  const handleSelectUncollected = (): void =>
+    navigateToDestination({ kind: "uncollected" })
+
   const handleTagActiveChange = (tagId: string, active: boolean): void => {
     const nextDestination = setDashboardTagActive(destination, tagId, active)
     if (
@@ -760,6 +763,7 @@ export function useDashboardUiController({
         onMoveTag: handleMoveTag,
         onSelectAllBookmarks: handleSelectAllBookmarks,
         onSelectCollection: handleSelectCollection,
+        onSelectUncollected: handleSelectUncollected,
         onSortChange: handleSortChange,
         onStartReorder: handleStartReorder,
         onTagActiveChange: handleTagActiveChange,
@@ -770,6 +774,7 @@ export function useDashboardUiController({
         tagFilterResultCount: destinationView.bookmarks.length,
         tags,
         title: destinationView.heading,
+        uncollectedActive: destinationView.sidebar.uncollected,
         viewMode,
       },
       effectiveViewMode,
@@ -825,6 +830,7 @@ export function useDashboardUiController({
       onMoveTag: handleMoveTag,
       onSelectAllBookmarks: handleSelectAllBookmarks,
       onSelectCollection: handleSelectCollection,
+      onSelectUncollected: handleSelectUncollected,
       onSortChange: handleSortChange,
       onStartReorder: handleStartReorder,
       onTagActiveChange: handleTagActiveChange,
@@ -834,6 +840,7 @@ export function useDashboardUiController({
       sort,
       tagFilterResultCount: destinationView.bookmarks.length,
       tags,
+      uncollectedActive: destinationView.sidebar.uncollected,
       viewMode,
     },
   }
