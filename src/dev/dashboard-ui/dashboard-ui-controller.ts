@@ -28,6 +28,7 @@ import {
   deriveDashboardDestination,
   getDashboardDestinationKey,
   getDashboardDestinationNavigation,
+  setDashboardTagActive,
   type DashboardDestination,
 } from "@/dev/dashboard-ui/dashboard-destination"
 import type { DashboardMainPanel } from "@/dev/dashboard-ui/dashboard-main-panel"
@@ -338,6 +339,7 @@ export function useDashboardUiController({
     createBookmarkSelectionState
   )
   const [selectionAnnouncement, setSelectionAnnouncement] = React.useState("")
+  const [tagFilterAnnouncement, setTagFilterAnnouncement] = React.useState("")
   const [isReordering, setIsReordering] = React.useState(false)
   const [sort, setSort] = React.useState<SortOption>("date")
   const [viewMode, setViewMode] = React.useState<ViewMode>("list")
@@ -387,7 +389,7 @@ export function useDashboardUiController({
   const {
     tags,
     onCreateTag: handleCreateTag,
-    onDeleteTag: handleDeleteTag,
+    onDeleteTag: deleteTag,
     onMoveTag: handleMoveTag,
     onUpdateTag: handleUpdateTag,
   } = useTagWireframeState(setBookmarks)
@@ -428,6 +430,9 @@ export function useDashboardUiController({
     [bookmarks, collections, destination, tags]
   )
   const activeCollectionId = destinationView.sidebar.collectionId
+  const activeTags = tags.filter((tag) =>
+    destinationView.sidebar.tagIds.has(tag.id)
+  )
   const scopedBookmarks = destinationView.bookmarks
   const visibleBookmarks = React.useMemo(() => {
     if (!(activeCollectionId && sort === "custom")) return scopedBookmarks
@@ -626,6 +631,7 @@ export function useDashboardUiController({
     cancelPendingBulkMutation()
     setDestination(nextDestination)
     if (navigation.clearSelection) {
+      selectionEntryBookmarkIdRef.current = null
       dispatchSelection({
         destinationKey: getDashboardDestinationKey(nextDestination),
         type: "destination-changed",
@@ -643,6 +649,55 @@ export function useDashboardUiController({
 
   const handleSelectCollection = (collectionId: string): void =>
     navigateToDestination({ collectionId, kind: "collection" })
+
+  const handleTagActiveChange = (tagId: string, active: boolean): void => {
+    const nextDestination = setDashboardTagActive(destination, tagId, active)
+    if (
+      getDashboardDestinationKey(nextDestination) ===
+      getDashboardDestinationKey(destination)
+    ) {
+      return
+    }
+
+    if (isMobile) {
+      const tagName = tags.find((tag) => tag.id === tagId)?.name ?? "Tag"
+      const nextResultCount = deriveDashboardDestination({
+        bookmarks,
+        collections,
+        destination: nextDestination,
+        tags,
+      }).bookmarks.length
+      setTagFilterAnnouncement(
+        `${tagName} filter ${active ? "added" : "removed"}. ${bookmarkCountLabel(nextResultCount)} shown.`
+      )
+    }
+
+    navigateToDestination(nextDestination)
+  }
+
+  const handleClearTagFilters = (): void => {
+    if (destination.kind !== "tags") return
+
+    if (isMobile) {
+      const allBookmarkCount = deriveDashboardDestination({
+        bookmarks,
+        collections,
+        destination: { kind: "all" },
+        tags,
+      }).bookmarks.length
+      setTagFilterAnnouncement(
+        `Tag filters cleared. ${bookmarkCountLabel(allBookmarkCount)} shown.`
+      )
+    }
+
+    navigateToDestination({ kind: "all" })
+  }
+
+  const handleDeleteTag = (tagId: string): void => {
+    const wasActive = destinationView.sidebar.tagIds.has(tagId)
+    deleteTag(tagId)
+    if (wasActive) handleTagActiveChange(tagId, false)
+  }
 
   const handleSortChange = (nextSort: SortOption): void => {
     if (!isReordering) {
@@ -686,9 +741,11 @@ export function useDashboardUiController({
     mainPanelProps: {
       actionHandlers,
       activeCollectionName,
+      activeTags,
       collections,
       controlsProps: {
         activeCollection: activeCollectionId,
+        activeTagIds: destinationView.sidebar.tagIds,
         allBookmarksActive: destinationView.sidebar.allBookmarks,
         bookmarks,
         canReorder,
@@ -705,10 +762,12 @@ export function useDashboardUiController({
         onSelectCollection: handleSelectCollection,
         onSortChange: handleSortChange,
         onStartReorder: handleStartReorder,
+        onTagActiveChange: handleTagActiveChange,
         onUpdateCollection: handleUpdateCollection,
         onUpdateTag: handleUpdateTag,
         onViewModeChange: handleViewModeChange,
         sort,
+        tagFilterResultCount: destinationView.bookmarks.length,
         tags,
         title: destinationView.heading,
         viewMode,
@@ -721,6 +780,8 @@ export function useDashboardUiController({
       onExitReorder: exitReorderMode,
       onExitSelection: exitSelectionMode,
       onMove: handleMove,
+      onClearTagFilters: handleClearTagFilters,
+      onRemoveTagFilter: (tagId) => handleTagActiveChange(tagId, false),
       onSelectCollection: handleSelectCollection,
       selectedBookmarkIds: selectionView.selectedIds,
       selectionAnnouncement,
@@ -741,6 +802,7 @@ export function useDashboardUiController({
       shouldReduceMotion,
       sidebarOpen,
       sort,
+      tagFilterAnnouncement,
       tags,
       visibleBookmarks,
     },
@@ -748,6 +810,7 @@ export function useDashboardUiController({
     sidebarOpen,
     sidebarProps: {
       activeCollection: activeCollectionId,
+      activeTagIds: destinationView.sidebar.tagIds,
       allBookmarksActive: destinationView.sidebar.allBookmarks,
       bookmarks,
       canReorder,
@@ -764,10 +827,12 @@ export function useDashboardUiController({
       onSelectCollection: handleSelectCollection,
       onSortChange: handleSortChange,
       onStartReorder: handleStartReorder,
+      onTagActiveChange: handleTagActiveChange,
       onUpdateCollection: handleUpdateCollection,
       onUpdateTag: handleUpdateTag,
       onViewModeChange: handleViewModeChange,
       sort,
+      tagFilterResultCount: destinationView.bookmarks.length,
       tags,
       viewMode,
     },

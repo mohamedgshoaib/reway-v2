@@ -52,19 +52,27 @@ import { TagReorderList } from "@/dev/dashboard-ui/tag-reorder"
 import { cn } from "@/lib/utils"
 
 function TagRow({
+  active,
   onDelete,
   onEdit,
-  onNavigate,
+  onTagActiveChange,
   tag,
 }: {
+  active: boolean
   onDelete: () => void
   onEdit: () => void
-  onNavigate?: () => void
+  onTagActiveChange: (active: boolean) => void
   tag: Tag
 }): React.ReactElement {
   return (
     <SidebarMenuItem>
-      <SidebarMenuButton onClick={onNavigate} tooltip={tag.name}>
+      <SidebarMenuButton
+        aria-label={`Filter by ${tag.name}`}
+        aria-pressed={active}
+        isActive={active}
+        onClick={() => onTagActiveChange(!active)}
+        tooltip={tag.name}
+      >
         <TagIcon color={tag.color} />
         <SidebarMenuButtonLabel>{tag.name}</SidebarMenuButtonLabel>
       </SidebarMenuButton>
@@ -96,6 +104,7 @@ function TagRow({
 }
 
 export function TagSidebarSection({
+  activeTagIds,
   bookmarks,
   collapsed,
   isOpen,
@@ -103,12 +112,13 @@ export function TagSidebarSection({
   onCreateTag,
   onDeleteTag,
   onMoveTag,
-  onNavigate,
   onOpenChange,
   onReorderingChange,
+  onTagActiveChange,
   onUpdateTag,
   tags,
 }: {
+  activeTagIds: ReadonlySet<string>
   bookmarks: readonly MockBookmark[]
   collapsed: boolean
   isOpen: boolean
@@ -116,9 +126,9 @@ export function TagSidebarSection({
   onCreateTag?: (draft: TagDraft) => void
   onDeleteTag?: (tagId: string) => void
   onMoveTag?: (sourceId: string, index: number) => void
-  onNavigate?: () => void
   onOpenChange: (open: boolean) => void
   onReorderingChange?: (reordering: boolean) => void
+  onTagActiveChange: (tagId: string, active: boolean) => void
   onUpdateTag?: (tagId: string, draft: TagDraft) => void
   tags: readonly Tag[]
 }): React.ReactElement {
@@ -244,10 +254,13 @@ export function TagSidebarSection({
                 <SidebarMenu>
                   {orderedTags.map((tag) => (
                     <TagRow
+                      active={activeTagIds.has(tag.id)}
                       key={tag.id}
                       onDelete={() => setDeletingId(tag.id)}
                       onEdit={() => setEditor({ mode: "edit", tagId: tag.id })}
-                      onNavigate={onNavigate}
+                      onTagActiveChange={(active) =>
+                        onTagActiveChange(tag.id, active)
+                      }
                       tag={tag}
                     />
                   ))}

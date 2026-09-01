@@ -5,13 +5,13 @@ import { useHotkey } from "@tanstack/react-hotkeys"
 import { ScriptOnce } from "@tanstack/react-router"
 import { useSound } from "@web-kits/audio/react"
 import {
-  createContext,
   useCallback,
   useMemo,
   useSyncExternalStore,
   type ReactNode,
 } from "react"
 
+import { ThemeProviderContext } from "@/components/providers/theme-provider-context"
 import {
   getResolvedTheme,
   getServerThemeSnapshot,
@@ -20,18 +20,8 @@ import {
   setStoredTheme,
   subscribeToTheme,
   themeInitScript,
-  type Theme,
 } from "@/lib/theme-store"
-
-type ThemeProviderState = {
-  theme: Theme
-  setTheme: (theme: Theme) => void
-  toggleTheme: () => void
-}
-
-export const ThemeProviderContext = createContext<
-  ThemeProviderState | undefined
->(undefined)
+import type { Theme } from "@/lib/theme-store"
 
 export function ThemeScript(): React.ReactElement {
   return <ScriptOnce>{themeInitScript}</ScriptOnce>
@@ -74,5 +64,3 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   return <ThemeProviderContext value={value}>{children}</ThemeProviderContext>
 }
-
-export type { Theme }

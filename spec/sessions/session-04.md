@@ -68,6 +68,24 @@ Write facts only. No plans, no advice, no narration.
 - `pnpm run check` and the production build passed after the Phase 1 work.
 - Closed Phase 1 after the user waived its full Vitest gate.
 - Browser checks remain unverified after Phase 1.
+- Implemented OR-based tag filtering from the sidebar through the shared
+  dashboard destination state.
+- Added active tag rows, removable main-panel filter controls, Clear, final-tag
+  fallback to All Bookmarks, and active-tag deletion fallback.
+- Cleared bookmark selection when the active tag set changes.
+- Kept mobile tag toggles inside the open navigation drawer and added a Show
+  action with the current result count and focus return.
+- Kept active filter controls 28 pixels tall while the shared Badge provides a
+  44 by 44 pixel touch target with non-overlapping wrap gaps.
+- Added deterministic mock tag memberships and focused destination and tag-filter
+  tests.
+- Removed unused packages and code, hardened pnpm install policy, split the theme
+  context, split large dashboard components, and combined repeated array passes.
+- `pnpm run check`, 114 tests across 29 files, the client and server production
+  build, `git diff --check`, and full-project React Doctor at 100/100 across 92
+  files passed after Phase 2.
+- Browser, touch, keyboard, screen-reader, responsive, and rendered contrast
+  checks remain unverified after Phase 2.
 
 ---
 
@@ -84,6 +102,9 @@ Write facts only. No plans, no advice, no narration.
 - Bookmark selection uses one explicit mode with menu entry, destination-scoped IDs, fixed-geometry controls, and no overlap with reorder mode.
 - Mobile selection uses one bottom Actions button that opens the bulk action sheet.
 - Phase 1 does not require a full Vitest run; the user waived that gate.
+- Tag filters use OR behavior and share the dashboard destination state.
+- Active filter controls stay visually compact. The shared Badge owns their
+  44 by 44 pixel touch target without making the visible control that tall.
 
 ---
 

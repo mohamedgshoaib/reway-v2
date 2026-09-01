@@ -57,10 +57,11 @@ As of 2026-08-31, the mock has a strong UI base:
   and optimistic bulk actions.
 - A desktop selection bar and one thumb-reachable mobile Actions button with an
   action sheet.
+- OR-based tag filtering with active sidebar rows, removable filter controls,
+  Clear, mobile result confirmation, and selection reset.
 
 The following parts are incomplete:
 
-- Tag rows do not filter the bookmark view.
 - Uncollected has no destination.
 - Trash and Settings are visible but do not open working views.
 - Command search says a pasted URL can be saved, but the mock does not add it.
@@ -77,7 +78,11 @@ unverified until the user gives explicit browser permission.
 - Phase 1 is complete. Twelve focused selection tests, `pnpm run check`, the
   production build, `git diff --check`, and React Doctor at 100/100 passed.
 - The user waived the full Vitest gate for Phase 1.
-- Phase 2 has not started.
+- Phase 2 is complete. Twelve focused destination and tag-filter tests,
+  `pnpm run check`, the full 114-test suite, the production build,
+  `git diff --check`, and full-project React Doctor at 100/100 passed.
+- Browser checks remain unverified after Phase 2.
+- Phase 3 has not started.
 
 ## What counts as a complete mock
 
@@ -427,7 +432,7 @@ Complexity:
   is the number of selected IDs. Do not run one full bookmark scan per selected
   item.
 
-## Phase 2: tag filtering
+## Phase 2: tag filtering [complete]
 
 Make sidebar tags operate as filters rather than inert rows.
 
@@ -438,6 +443,9 @@ Make sidebar tags operate as filters rather than inert rows.
   icon.
 - The main panel shows a compact active-filter summary with removable tags and a
   Clear action.
+- Active-filter controls stay 28 pixels tall. The shared Badge extends each touch
+  target to 44 by 44 pixels without making the visible control that tall, and
+  wrapped targets do not overlap.
 - Removing the final tag returns to All Bookmarks.
 - Deleting an active tag removes it from the filter and follows the same fallback.
 - Selection clears when the active tag set changes.

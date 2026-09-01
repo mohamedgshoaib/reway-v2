@@ -4,6 +4,7 @@ import type { Collection } from "@/dev/dashboard-ui/collection-hierarchy"
 import {
   deriveDashboardDestination,
   getDashboardDestinationNavigation,
+  setDashboardTagActive,
 } from "@/dev/dashboard-ui/dashboard-destination"
 import type { MockBookmark } from "@/dev/dashboard-ui/mock-bookmarks"
 import type { Tag } from "@/dev/dashboard-ui/tag-model"
@@ -119,6 +120,36 @@ describe("dashboard destination", () => {
     ])
     expect(view.heading).toBe("2 tags")
     expect(view.sidebar.tagIds).toEqual(new Set(["research", "design"]))
+  })
+
+  it("updates the tag destination and returns to All bookmarks after the last removal", () => {
+    const firstTag = setDashboardTagActive({ kind: "all" }, "design", true)
+    const secondTag = setDashboardTagActive(firstTag, "research", true)
+
+    expect(firstTag).toEqual({ kind: "tags", tagIds: ["design"] })
+    expect(secondTag).toEqual({
+      kind: "tags",
+      tagIds: ["design", "research"],
+    })
+    expect(setDashboardTagActive(secondTag, "design", false)).toEqual({
+      kind: "tags",
+      tagIds: ["research"],
+    })
+    expect(
+      setDashboardTagActive(
+        { kind: "tags", tagIds: ["design"] },
+        "design",
+        false
+      )
+    ).toEqual({ kind: "all" })
+  })
+
+  it("keeps a non-tag destination unchanged when an inactive tag is removed", () => {
+    const destination = { collectionId: "parent", kind: "collection" } as const
+
+    expect(setDashboardTagActive(destination, "design", false)).toBe(
+      destination
+    )
   })
 
   it("shows only non-trashed bookmarks without a collection", () => {

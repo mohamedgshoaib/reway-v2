@@ -167,7 +167,7 @@ describe("DashboardSidebar", () => {
     const nestedRow = screen.getByRole("button", {
       name: "Streaming platforms",
     })
-    const tagRow = screen.getByRole("button", { name: "Design" })
+    const tagRow = screen.getByRole("button", { name: "Filter by Design" })
 
     for (const row of [mediaRow, nestedRow, tagRow]) {
       expect(row.className).toContain(

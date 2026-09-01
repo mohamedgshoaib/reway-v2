@@ -13,6 +13,7 @@ import { MobileDashboardNavigation } from "@/dev/dashboard-ui/sidebar"
 import type { Tag, TagDraft } from "@/dev/dashboard-ui/tag-model"
 
 export function BookmarkControlsBar({
+  activeTagIds,
   activeCollection = null,
   allBookmarksActive = activeCollection === null,
   bookmarks = mockBookmarks,
@@ -32,13 +33,16 @@ export function BookmarkControlsBar({
   onSelectCollection,
   onSortChange,
   onStartReorder,
+  onTagActiveChange,
   onUpdateCollection,
   onUpdateTag,
   onViewModeChange,
   sort,
+  tagFilterResultCount,
   title,
   viewMode,
 }: {
+  activeTagIds?: ReadonlySet<string>
   activeCollection?: string | null
   allBookmarksActive?: boolean
   bookmarks?: readonly MockBookmark[]
@@ -62,10 +66,12 @@ export function BookmarkControlsBar({
   onSelectCollection?: (collection: string) => void
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
+  onTagActiveChange?: (tagId: string, active: boolean) => void
   onUpdateCollection?: (collectionId: string, draft: CollectionDraft) => void
   onUpdateTag?: (tagId: string, draft: TagDraft) => void
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
+  tagFilterResultCount?: number
   title: string
   viewMode: ViewMode
 }): React.ReactElement {
@@ -73,6 +79,7 @@ export function BookmarkControlsBar({
     <div className="mb-4 flex h-9 min-w-0 items-center gap-2 px-2 min-[800px]:contents">
       <div className="min-[800px]:hidden">
         <MobileDashboardNavigation
+          activeTagIds={activeTagIds}
           activeCollection={activeCollection}
           allBookmarksActive={allBookmarksActive}
           bookmarks={bookmarks}
@@ -91,10 +98,12 @@ export function BookmarkControlsBar({
           onSelectCollection={onSelectCollection}
           onSortChange={onSortChange}
           onStartReorder={onStartReorder}
+          onTagActiveChange={onTagActiveChange}
           onUpdateCollection={onUpdateCollection}
           onUpdateTag={onUpdateTag}
           onViewModeChange={onViewModeChange}
           sort={sort}
+          tagFilterResultCount={tagFilterResultCount}
           tags={tags}
           viewMode={viewMode}
         />

@@ -86,6 +86,16 @@ import { TagSidebarSection } from "@/dev/dashboard-ui/tag-sidebar-section"
 import { easeOutStrong } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
+const EMPTY_TAG_IDS: ReadonlySet<string> = new Set()
+
+function getShowTagResultsLabel(
+  activeTagCount: number,
+  resultCount: number
+): string {
+  if (activeTagCount === 0) return "Show all bookmarks"
+  return `Show ${resultCount} ${resultCount === 1 ? "bookmark" : "bookmarks"}`
+}
+
 /**
  * Sidebar shell + content, mounted inside a plain, non-fixed <aside> —
  * unlike the real Sidebar primitive's fixed-to-viewport usage. Manually
@@ -95,6 +105,7 @@ import { cn } from "@/lib/utils"
  * spec/sessions/session-02.md for why.
  */
 export function DashboardSidebar({
+  activeTagIds = EMPTY_TAG_IDS,
   activeCollection = null,
   allBookmarksActive = activeCollection === null,
   bookmarks = mockBookmarks,
@@ -114,12 +125,15 @@ export function DashboardSidebar({
   onSelectCollection,
   onSortChange,
   onStartReorder,
+  onTagActiveChange,
   onUpdateCollection,
   onUpdateTag,
   onViewModeChange,
   sort,
+  tagFilterResultCount = bookmarks.length,
   viewMode,
 }: {
+  activeTagIds?: ReadonlySet<string>
   initialDisclosures: DashboardNavigationDisclosures
   activeCollection?: string | null
   allBookmarksActive?: boolean
@@ -143,10 +157,12 @@ export function DashboardSidebar({
   onSelectCollection?: (collection: string) => void
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
+  onTagActiveChange?: (tagId: string, active: boolean) => void
   onUpdateCollection?: (collectionId: string, draft: CollectionDraft) => void
   onUpdateTag?: (tagId: string, draft: TagDraft) => void
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
+  tagFilterResultCount?: number
   viewMode: ViewMode
 }): React.ReactElement {
   const { state, toggleSidebar } = useSidebar()
@@ -212,6 +228,7 @@ export function DashboardSidebar({
         </div>
       </SidebarHeader>
       <DashboardNavigationContent
+        activeTagIds={activeTagIds}
         activeCollection={activeCollection}
         allBookmarksActive={allBookmarksActive}
         bookmarks={bookmarks}
@@ -232,11 +249,13 @@ export function DashboardSidebar({
         onSelectCollection={onSelectCollection}
         onSortChange={onSortChange}
         onStartReorder={onStartReorder}
+        onTagActiveChange={onTagActiveChange}
         onUpdateCollection={onUpdateCollection}
         onUpdateTag={onUpdateTag}
         onViewModeChange={onViewModeChange}
         sort={sort}
         surface="desktop"
+        tagFilterResultCount={tagFilterResultCount}
         tags={tags}
         viewMode={viewMode}
       />
@@ -245,6 +264,7 @@ export function DashboardSidebar({
 }
 
 export function MobileDashboardNavigation({
+  activeTagIds = EMPTY_TAG_IDS,
   activeCollection = null,
   allBookmarksActive = activeCollection === null,
   bookmarks = mockBookmarks,
@@ -264,12 +284,15 @@ export function MobileDashboardNavigation({
   onSelectCollection,
   onSortChange,
   onStartReorder,
+  onTagActiveChange,
   onUpdateCollection,
   onUpdateTag,
   onViewModeChange,
   sort,
+  tagFilterResultCount = bookmarks.length,
   viewMode,
 }: {
+  activeTagIds?: ReadonlySet<string>
   initialDisclosures: DashboardNavigationDisclosures
   activeCollection?: string | null
   allBookmarksActive?: boolean
@@ -293,15 +316,18 @@ export function MobileDashboardNavigation({
   onSelectCollection?: (collection: string) => void
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
+  onTagActiveChange?: (tagId: string, active: boolean) => void
   onUpdateCollection?: (collectionId: string, draft: CollectionDraft) => void
   onUpdateTag?: (tagId: string, draft: TagDraft) => void
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
+  tagFilterResultCount?: number
   viewMode: ViewMode
 }): React.ReactElement {
   const [open, setOpen] = React.useState(false)
   const [commandOpen, setCommandOpen] = React.useState(false)
   const [displayOpen, setDisplayOpen] = React.useState(false)
+  const navigationTriggerRef = React.useRef<HTMLButtonElement>(null)
   const [disclosures, setDisclosure] = useDashboardNavigationDisclosures(
     "mobile",
     initialDisclosures
@@ -313,6 +339,7 @@ export function MobileDashboardNavigation({
           <Button
             aria-label="Open navigation"
             className="-ms-2 pointer-coarse:hover:bg-transparent pointer-coarse:data-pressed:bg-transparent"
+            ref={navigationTriggerRef}
             size="icon"
             variant="ghost"
           />
@@ -348,6 +375,7 @@ export function MobileDashboardNavigation({
           scrollable={false}
         >
           <DashboardNavigationContent
+            activeTagIds={activeTagIds}
             activeCollection={activeCollection}
             allBookmarksActive={allBookmarksActive}
             bookmarks={bookmarks}
@@ -373,11 +401,18 @@ export function MobileDashboardNavigation({
             onSelectCollection={onSelectCollection}
             onSortChange={onSortChange}
             onStartReorder={onStartReorder}
+            onTagActiveChange={onTagActiveChange}
+            onShowTagResults={() => {
+              if (activeTagIds.size === 0) onSelectAllBookmarks?.()
+              setOpen(false)
+              requestAnimationFrame(() => navigationTriggerRef.current?.focus())
+            }}
             onUpdateCollection={onUpdateCollection}
             onUpdateTag={onUpdateTag}
             onViewModeChange={onViewModeChange}
             sort={sort}
             surface="mobile"
+            tagFilterResultCount={tagFilterResultCount}
             tags={tags}
             viewMode={viewMode}
           />
@@ -496,6 +531,7 @@ function MobileDisplayDialog({
 }
 
 function DashboardNavigationContent({
+  activeTagIds,
   activeCollection,
   allBookmarksActive,
   bookmarks,
@@ -518,14 +554,18 @@ function DashboardNavigationContent({
   onSelectCollection,
   onSortChange,
   onStartReorder,
+  onTagActiveChange,
+  onShowTagResults,
   onUpdateCollection,
   onUpdateTag,
   onViewModeChange,
   sort,
   surface,
+  tagFilterResultCount,
   tags,
   viewMode,
 }: {
+  activeTagIds: ReadonlySet<string>
   activeCollection: string | null
   allBookmarksActive: boolean
   bookmarks: readonly MockBookmark[]
@@ -556,11 +596,14 @@ function DashboardNavigationContent({
   onSelectCollection?: (collection: string) => void
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
+  onTagActiveChange?: (tagId: string, active: boolean) => void
+  onShowTagResults?: () => void
   onUpdateCollection?: (collectionId: string, draft: CollectionDraft) => void
   onUpdateTag?: (tagId: string, draft: TagDraft) => void
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
   surface: DashboardNavigationSurface
+  tagFilterResultCount: number
   viewMode: ViewMode
 }): React.ReactElement {
   const [reorderingSection, setReorderingSection] = React.useState<
@@ -633,6 +676,7 @@ function DashboardNavigationContent({
           onUpdateCollection={onUpdateCollection}
         />
         <TagSidebarSection
+          activeTagIds={activeTagIds}
           bookmarks={bookmarks}
           collapsed={collapsed}
           isOpen={disclosures.tags}
@@ -640,15 +684,24 @@ function DashboardNavigationContent({
           onCreateTag={onCreateTag}
           onDeleteTag={onDeleteTag}
           onMoveTag={onMoveTag}
-          onNavigate={handleNavigate}
           onOpenChange={(open) => onDisclosureChange("tags", open)}
           onReorderingChange={(reordering) =>
             setReorderingSection(reordering ? "tags" : null)
+          }
+          onTagActiveChange={(tagId, active) =>
+            onTagActiveChange?.(tagId, active)
           }
           onUpdateTag={onUpdateTag}
           tags={tags}
         />
       </SidebarContent>
+      {surface === "mobile" ? (
+        <div className="border-t border-sidebar-border px-2 pt-2">
+          <Button className="w-full" onClick={onShowTagResults} size="lg">
+            {getShowTagResultsLabel(activeTagIds.size, tagFilterResultCount)}
+          </Button>
+        </div>
+      ) : null}
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>

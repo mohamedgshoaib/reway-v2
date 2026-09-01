@@ -219,6 +219,7 @@ export const mockBookmarks: MockBookmark[] = [
     createdAt: daysAgo(0, 2),
     collections: ["research", "design-references"],
     metadataStatus: "enriched",
+    tags: ["design", "product"],
     visitCount: 3,
   },
   {
@@ -229,6 +230,7 @@ export const mockBookmarks: MockBookmark[] = [
     createdAt: daysAgo(0, 5),
     collections: ["research"],
     metadataStatus: "enriched",
+    tags: ["engineering", "ai", "research"],
     visitCount: 42,
   },
   {
@@ -239,6 +241,7 @@ export const mockBookmarks: MockBookmark[] = [
     createdAt: daysAgo(1),
     collections: ["research", "reading-list"],
     metadataStatus: "enriched",
+    tags: ["research", "ai"],
     visitCount: 18,
   },
   {
@@ -249,6 +252,7 @@ export const mockBookmarks: MockBookmark[] = [
     createdAt: daysAgo(1, 6),
     collections: ["research"],
     metadataStatus: "enriched",
+    tags: ["ai", "product"],
     visitCount: 5,
   },
   {
@@ -259,6 +263,7 @@ export const mockBookmarks: MockBookmark[] = [
     createdAt: daysAgo(2),
     collections: ["research", "design-references"],
     metadataStatus: "enriched",
+    tags: ["design", "accessibility"],
     visitCount: 1,
   },
   {
@@ -269,6 +274,7 @@ export const mockBookmarks: MockBookmark[] = [
     createdAt: daysAgo(3),
     collections: ["research"],
     metadataStatus: "enriched",
+    tags: ["ai", "product"],
     visitCount: 67,
   },
   {
@@ -279,6 +285,7 @@ export const mockBookmarks: MockBookmark[] = [
     createdAt: daysAgo(4),
     collections: ["research"],
     metadataStatus: "pending",
+    tags: ["research", "writing"],
     visitCount: 0,
   },
   {
@@ -289,6 +296,7 @@ export const mockBookmarks: MockBookmark[] = [
     createdAt: daysAgo(5),
     collections: ["research", "design-references"],
     metadataStatus: "enriched",
+    tags: ["design", "marketing"],
     visitCount: 9,
   },
   {
@@ -298,6 +306,7 @@ export const mockBookmarks: MockBookmark[] = [
     ogImage: "https://picsum.photos/seed/nextjs/400/240",
     createdAt: daysAgo(45),
     metadataStatus: "enriched",
+    tags: ["engineering", "performance"],
     visitCount: 24,
   },
   {
@@ -309,6 +318,7 @@ export const mockBookmarks: MockBookmark[] = [
     ogImage: null,
     createdAt: daysAgo(60),
     metadataStatus: "enriched",
+    tags: ["writing"],
     visitCount: 2,
   },
   {
@@ -318,6 +328,7 @@ export const mockBookmarks: MockBookmark[] = [
     ogImage: "https://picsum.photos/seed/figma/400/240",
     createdAt: daysAgo(6),
     metadataStatus: "enriched",
+    tags: ["design"],
     visitCount: 31,
     collections: ["client-work", "design-references"],
   },
@@ -328,6 +339,7 @@ export const mockBookmarks: MockBookmark[] = [
     ogImage: "https://picsum.photos/seed/linear/400/240",
     createdAt: daysAgo(7),
     metadataStatus: "enriched",
+    tags: ["engineering", "product"],
     visitCount: 15,
     collections: ["client-work"],
   },
@@ -338,6 +350,7 @@ export const mockBookmarks: MockBookmark[] = [
     ogImage: "https://picsum.photos/seed/notion/400/240",
     createdAt: daysAgo(9),
     metadataStatus: "enriched",
+    tags: ["research", "writing"],
     visitCount: 22,
     collections: ["book-notes"],
   },
@@ -348,6 +361,7 @@ export const mockBookmarks: MockBookmark[] = [
     ogImage: "https://picsum.photos/seed/vercel/400/240",
     createdAt: daysAgo(12),
     metadataStatus: "enriched",
+    tags: ["engineering"],
     visitCount: 8,
   },
   {
@@ -357,6 +371,7 @@ export const mockBookmarks: MockBookmark[] = [
     ogImage: "https://picsum.photos/seed/baseui/400/240",
     createdAt: daysAgo(15),
     metadataStatus: "enriched",
+    tags: ["engineering", "accessibility"],
     visitCount: 40,
     collections: ["reading-list"],
   },
@@ -367,6 +382,7 @@ export const mockBookmarks: MockBookmark[] = [
     ogImage: "https://picsum.photos/seed/tailwind/400/240",
     createdAt: daysAgo(18),
     metadataStatus: "enriched",
+    tags: ["engineering", "design"],
     visitCount: 28,
   },
   {
@@ -376,6 +392,7 @@ export const mockBookmarks: MockBookmark[] = [
     ogImage: "https://picsum.photos/seed/tanstack/400/240",
     createdAt: daysAgo(22),
     metadataStatus: "enriched",
+    tags: ["engineering", "performance"],
     visitCount: 19,
   },
   {
@@ -385,6 +402,7 @@ export const mockBookmarks: MockBookmark[] = [
     ogImage: "https://picsum.photos/seed/supabase/400/240",
     createdAt: daysAgo(28),
     metadataStatus: "enriched",
+    tags: ["engineering"],
     visitCount: 12,
   },
   {
@@ -394,6 +412,7 @@ export const mockBookmarks: MockBookmark[] = [
     ogImage: "https://picsum.photos/seed/phosphor/400/240",
     createdAt: daysAgo(35),
     metadataStatus: "enriched",
+    tags: ["design"],
     visitCount: 6,
   },
   {
@@ -403,6 +422,7 @@ export const mockBookmarks: MockBookmark[] = [
     ogImage: "https://picsum.photos/seed/radix/400/240",
     createdAt: daysAgo(50),
     metadataStatus: "enriched",
+    tags: ["design"],
     visitCount: 4,
   },
 ]

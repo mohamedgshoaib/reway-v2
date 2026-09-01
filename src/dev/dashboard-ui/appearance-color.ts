@@ -40,21 +40,6 @@ export const appearanceTextClasses: Record<AppearancePaletteColor, string> = {
   violet: "text-violet-700 dark:text-violet-400",
 }
 
-export const appearanceSwatchClasses: Record<AppearancePaletteColor, string> = {
-  amber: "bg-amber-500",
-  blue: "bg-blue-500",
-  cyan: "bg-cyan-500",
-  green: "bg-green-500",
-  indigo: "bg-indigo-500",
-  lime: "bg-lime-500",
-  neutral: "bg-neutral-500",
-  orange: "bg-orange-500",
-  red: "bg-red-500",
-  rose: "bg-rose-500",
-  teal: "bg-teal-500",
-  violet: "bg-violet-500",
-}
-
 export function resolveAppearanceColor(
   color: AppearanceColor | undefined
 ): AppearanceColor {

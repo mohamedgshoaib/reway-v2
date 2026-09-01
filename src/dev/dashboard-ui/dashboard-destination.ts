@@ -62,6 +62,25 @@ export function getDashboardDestinationKey(
   return destination.kind
 }
 
+export function setDashboardTagActive(
+  destination: DashboardDestination,
+  tagId: string,
+  active: boolean
+): DashboardDestination {
+  if (destination.kind !== "tags" && !active) return destination
+
+  const activeTagIds = new Set(
+    destination.kind === "tags" ? destination.tagIds : []
+  )
+
+  if (active) activeTagIds.add(tagId)
+  else activeTagIds.delete(tagId)
+
+  return activeTagIds.size === 0
+    ? { kind: "all" }
+    : { kind: "tags", tagIds: [...activeTagIds] }
+}
+
 function getSortOptions(
   destination: DashboardDestination
 ): readonly SortOption[] {
@@ -97,9 +116,10 @@ function getTagHeading(
   activeTagIds: ReadonlySet<string>,
   tags: readonly Tag[]
 ): string {
-  const activeTagNames = tags
-    .filter((tag) => activeTagIds.has(tag.id))
-    .map((tag) => tag.name)
+  const activeTagNames: string[] = []
+  for (const tag of tags) {
+    if (activeTagIds.has(tag.id)) activeTagNames.push(tag.name)
+  }
 
   if (activeTagNames.length === 1) return activeTagNames[0]
   if (activeTagIds.size > 0) return `${activeTagIds.size} tags`

@@ -56,22 +56,3 @@ export function AuditGroup({
     </div>
   )
 }
-
-export function AuditBox({
-  children,
-  className,
-}: {
-  children: React.ReactNode
-  className?: string
-}): React.ReactElement {
-  return (
-    <div
-      className={
-        "flex items-center justify-center rounded-md border border-dashed p-6" +
-        (className ? ` ${className}` : "")
-      }
-    >
-      {children}
-    </div>
-  )
-}

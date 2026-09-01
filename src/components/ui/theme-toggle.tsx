@@ -2,8 +2,8 @@
 
 import { MonitorIcon, MoonIcon, SunIcon } from "@phosphor-icons/react"
 
-import { type Theme } from "@/components/providers/theme-provider"
 import { useTheme } from "@/hooks/use-theme"
+import type { Theme } from "@/lib/theme-store"
 import { cn } from "@/lib/utils"
 
 const options: ReadonlyArray<{

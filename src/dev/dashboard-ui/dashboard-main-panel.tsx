@@ -27,12 +27,14 @@ import type {
   SortOption,
   ViewMode,
 } from "@/dev/dashboard-ui/mock-bookmarks"
+import { TagFilterSummary } from "@/dev/dashboard-ui/tag-filter-summary"
 import type { Tag } from "@/dev/dashboard-ui/tag-model"
 import { sidebarRailTransition } from "@/lib/motion"
 
 export function DashboardMainPanel({
   actionHandlers,
   activeCollectionName,
+  activeTags,
   collections,
   controlsProps,
   emptyState,
@@ -43,9 +45,12 @@ export function DashboardMainPanel({
   onExitReorder,
   onExitSelection,
   onMove,
+  onClearTagFilters,
+  onRemoveTagFilter,
   onSelectCollection,
   selectedBookmarkIds,
   selectionAnnouncement,
+  tagFilterAnnouncement,
   selectionBarsProps,
   selectionMode,
   shouldReduceMotion,
@@ -56,6 +61,7 @@ export function DashboardMainPanel({
 }: {
   actionHandlers: BookmarkActionHandlers
   activeCollectionName: string | null
+  activeTags: readonly Tag[]
   collections: readonly Collection[]
   controlsProps: React.ComponentProps<typeof BookmarkControlsBar>
   emptyState: DashboardDestinationEmptyState
@@ -66,9 +72,12 @@ export function DashboardMainPanel({
   onExitReorder: (restoreFocus: boolean) => void
   onExitSelection: () => void
   onMove: (fromIndex: number, toIndex: number) => void
+  onClearTagFilters: () => void
+  onRemoveTagFilter: (tagId: string) => void
   onSelectCollection: (collectionId: string) => void
   selectedBookmarkIds: ReadonlySet<string>
   selectionAnnouncement: string
+  tagFilterAnnouncement: string
   selectionBarsProps: React.ComponentProps<typeof BookmarkSelectionBars>
   selectionMode: boolean
   shouldReduceMotion: boolean | null
@@ -148,6 +157,12 @@ export function DashboardMainPanel({
         <output aria-live="polite" className="sr-only">
           {selectionAnnouncement}
         </output>
+        <output className="sr-only">{tagFilterAnnouncement}</output>
+        <TagFilterSummary
+          onClear={onClearTagFilters}
+          onRemove={onRemoveTagFilter}
+          tags={activeTags}
+        />
         {isReordering && activeCollectionName ? (
           <BookmarkReorderBar
             collection={activeCollectionName}

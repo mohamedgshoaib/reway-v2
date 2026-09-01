@@ -121,9 +121,11 @@ export function normalizeCollectionName(name: string): string {
 export function flattenImportedCollectionPath(
   path: readonly string[]
 ): FlattenedCollectionImportPath {
-  const sourcePath = path
-    .map(normalizeCollectionName)
-    .filter((segment) => segment.length > 0)
+  const sourcePath: string[] = []
+  for (const segment of path) {
+    const normalizedSegment = normalizeCollectionName(segment)
+    if (normalizedSegment.length > 0) sourcePath.push(normalizedSegment)
+  }
 
   return {
     flattenedSegments: sourcePath.slice(2),

@@ -79,6 +79,8 @@ type RunBulkAction = (
   trigger: HTMLElement | null
 ) => Promise<boolean>
 
+const DELETE_ACTION = { kind: "delete" } as const
+
 function DestinationContent({
   collection,
   label,
@@ -381,6 +383,316 @@ function BulkCollectionPicker({
   )
 }
 
+function DesktopSelectionBar({
+  allVisibleSelected,
+  bulkDisabled,
+  collections,
+  destinationAvailability,
+  isPending,
+  mutation,
+  onClose,
+  onOpenDelete,
+  onRunAction,
+  onToggleAll,
+  removeAction,
+  selectedCount,
+  showRangeHint,
+  showRemoveProgress,
+}: {
+  allVisibleSelected: boolean
+  bulkDisabled: boolean
+  collections: readonly Collection[]
+  destinationAvailability: ReadonlyMap<
+    string,
+    BookmarkBulkDestinationAvailability
+  >
+  isPending: boolean
+  mutation: BookmarkSelectionMutation
+  onClose: () => void
+  onOpenDelete: (returnFocusTarget: HTMLElement | null) => void
+  onRunAction: RunBulkAction
+  onToggleAll: () => void
+  removeAction: Extract<BookmarkBulkAction, { kind: "remove" }> | null
+  selectedCount: number
+  showRangeHint: boolean
+  showRemoveProgress: boolean
+}): React.ReactElement {
+  return (
+    <div className="mb-4 flex h-9 min-w-0 items-center gap-2 px-2 min-[800px]:mb-2">
+      <Button
+        aria-label="Close selection mode"
+        onClick={onClose}
+        size="icon-sm"
+        variant="ghost"
+      >
+        <XIcon aria-hidden="true" />
+      </Button>
+      <span className="shrink-0 text-sm font-medium tabular-nums">
+        {selectedCount} selected
+      </span>
+      {showRangeHint ? (
+        <span className="hidden items-center gap-1 text-xs text-muted-foreground min-[800px]:inline-flex">
+          Shift-click to select a range
+          <Button
+            aria-label="Dismiss range selection hint"
+            onClick={markBookmarkRangeHintSeen}
+            size="icon-xs"
+            variant="ghost"
+          >
+            <XIcon aria-hidden="true" />
+          </Button>
+        </span>
+      ) : null}
+      <div className="ms-auto hidden min-w-0 items-center gap-1 min-[800px]:flex">
+        <Button
+          disabled={isPending}
+          onClick={onToggleAll}
+          size="sm"
+          variant="ghost"
+        >
+          <CheckSquareOffsetIcon aria-hidden="true" />
+          {allVisibleSelected ? "Clear all" : "Select all"}
+        </Button>
+        <BulkCollectionPicker
+          actionKind="add"
+          availability={destinationAvailability}
+          collections={collections}
+          disabled={bulkDisabled}
+          label="Add"
+          mutation={mutation}
+          onRunAction={onRunAction}
+        />
+        <BulkCollectionPicker
+          actionKind="move"
+          availability={destinationAvailability}
+          collections={collections}
+          disabled={bulkDisabled}
+          label="Move"
+          mutation={mutation}
+          onRunAction={onRunAction}
+        />
+        {removeAction ? (
+          <Button
+            disabled={bulkDisabled}
+            onClick={(event) =>
+              void onRunAction(removeAction, event.currentTarget)
+            }
+            size="sm"
+            variant="ghost"
+          >
+            {showRemoveProgress ? (
+              <Spinner aria-hidden="true" className="size-4" />
+            ) : (
+              <MinusIcon aria-hidden="true" />
+            )}
+            Remove
+          </Button>
+        ) : null}
+        <Separator className="mx-1 h-5" orientation="vertical" />
+        <Button
+          disabled={bulkDisabled}
+          onClick={(event) => onOpenDelete(event.currentTarget)}
+          size="sm"
+          variant="destructive-outline"
+        >
+          <TrashIcon aria-hidden="true" />
+          Delete
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function MobileSelectionActions({
+  allVisibleSelected,
+  bulkDisabled,
+  collections,
+  destinationAvailability,
+  isPending,
+  mutation,
+  onOpenChange,
+  onOpenDelete,
+  onRunAction,
+  onToggleAll,
+  open,
+  removeAction,
+  selectedBookmarkLabel,
+  showRemoveProgress,
+  triggerRef,
+}: {
+  allVisibleSelected: boolean
+  bulkDisabled: boolean
+  collections: readonly Collection[]
+  destinationAvailability: ReadonlyMap<
+    string,
+    BookmarkBulkDestinationAvailability
+  >
+  isPending: boolean
+  mutation: BookmarkSelectionMutation
+  onOpenChange: (open: boolean) => void
+  onOpenDelete: (returnFocusTarget: HTMLElement | null) => void
+  onRunAction: RunBulkAction
+  onToggleAll: () => void
+  open: boolean
+  removeAction: Extract<BookmarkBulkAction, { kind: "remove" }> | null
+  selectedBookmarkLabel: string
+  showRemoveProgress: boolean
+  triggerRef: React.RefObject<HTMLButtonElement | null>
+}): React.ReactElement {
+  const runMobileAction: RunBulkAction = (action) => {
+    onOpenChange(false)
+    return onRunAction(action, triggerRef.current)
+  }
+
+  return (
+    <div className="absolute inset-x-0 bottom-0 z-20 px-4 pt-3 pb-[max(--spacing(3),env(safe-area-inset-bottom))] min-[800px]:hidden">
+      <Drawer onOpenChange={onOpenChange} open={open}>
+        <DrawerTrigger
+          render={
+            <Button
+              aria-label={`Open actions for ${selectedBookmarkLabel}`}
+              className="h-12 w-full shadow-sm"
+              ref={triggerRef}
+              size="lg"
+            />
+          }
+        >
+          Actions
+          <CaretUpIcon aria-hidden="true" />
+        </DrawerTrigger>
+        <DrawerPopup showBar showCloseButton>
+          <DrawerHeader>
+            <DrawerTitle>Bookmark actions</DrawerTitle>
+            <DrawerDescription>{selectedBookmarkLabel}</DrawerDescription>
+          </DrawerHeader>
+          <DrawerPanel>
+            <DrawerMenu aria-label="Bookmark actions">
+              <DrawerMenuGroup>
+                <DrawerMenuGroupLabel>Selection</DrawerMenuGroupLabel>
+                <DrawerMenuItem
+                  className="min-h-11"
+                  disabled={isPending}
+                  onClick={onToggleAll}
+                >
+                  <CheckSquareOffsetIcon aria-hidden="true" />
+                  {allVisibleSelected ? "Clear all" : "Select all"}
+                </DrawerMenuItem>
+              </DrawerMenuGroup>
+              <DrawerMenuSeparator />
+              <DrawerMenuGroup>
+                <DrawerMenuGroupLabel>Organize</DrawerMenuGroupLabel>
+                <BulkCollectionPicker
+                  actionKind="add"
+                  availability={destinationAvailability}
+                  collections={collections}
+                  disabled={bulkDisabled}
+                  label="Add"
+                  mobileMenuItem
+                  mutation={mutation}
+                  onRunAction={runMobileAction}
+                />
+                <BulkCollectionPicker
+                  actionKind="move"
+                  availability={destinationAvailability}
+                  collections={collections}
+                  disabled={bulkDisabled}
+                  label="Move"
+                  mobileMenuItem
+                  mutation={mutation}
+                  onRunAction={runMobileAction}
+                />
+                {removeAction ? (
+                  <DrawerMenuItem
+                    className="min-h-11"
+                    disabled={bulkDisabled}
+                    onClick={() => void runMobileAction(removeAction, null)}
+                  >
+                    {showRemoveProgress ? (
+                      <Spinner aria-hidden="true" className="size-4" />
+                    ) : (
+                      <MinusIcon aria-hidden="true" />
+                    )}
+                    Remove from this collection
+                  </DrawerMenuItem>
+                ) : null}
+              </DrawerMenuGroup>
+              <DrawerMenuSeparator />
+              <DrawerMenuGroup>
+                <DrawerMenuItem
+                  className="min-h-11"
+                  disabled={bulkDisabled}
+                  onClick={() => {
+                    onOpenChange(false)
+                    onOpenDelete(triggerRef.current)
+                  }}
+                  variant="destructive"
+                >
+                  <TrashIcon aria-hidden="true" />
+                  Delete
+                </DrawerMenuItem>
+              </DrawerMenuGroup>
+            </DrawerMenu>
+          </DrawerPanel>
+        </DrawerPopup>
+      </Drawer>
+    </div>
+  )
+}
+
+function SelectionDeleteDialog({
+  deleteButtonRef,
+  isPending,
+  onOpenChange,
+  onRunDelete,
+  open,
+  selectedCount,
+  showDeleteProgress,
+}: {
+  deleteButtonRef: React.RefObject<HTMLButtonElement | null>
+  isPending: boolean
+  onOpenChange: (open: boolean) => void
+  onRunDelete: () => Promise<void>
+  open: boolean
+  selectedCount: number
+  showDeleteProgress: boolean
+}): React.ReactElement {
+  return (
+    <AlertDialog onOpenChange={onOpenChange} open={open}>
+      <AlertDialogPopup>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete selected bookmarks?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {selectedCount} selected{" "}
+            {selectedCount === 1 ? "bookmark" : "bookmarks"} will move to Trash.
+            You can restore them for 30 days.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogClose
+            disabled={isPending}
+            render={<Button variant="ghost" />}
+          >
+            Cancel
+          </AlertDialogClose>
+          <Button
+            disabled={isPending}
+            onClick={() => void onRunDelete()}
+            ref={deleteButtonRef}
+            variant="destructive"
+          >
+            {showDeleteProgress ? (
+              <Spinner aria-hidden="true" className="size-4" />
+            ) : (
+              <TrashIcon aria-hidden="true" />
+            )}
+            Delete {selectedCount === 1 ? "bookmark" : "bookmarks"}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogPopup>
+    </AlertDialog>
+  )
+}
+
 export function BookmarkSelectionBars({
   activeCollectionId,
   allVisibleSelected,
@@ -431,7 +743,6 @@ export function BookmarkSelectionBars({
     mutation.showProgress &&
     mutation.action.kind === "delete"
   const bulkDisabled = selectedCount === 0 || isPending
-  const deleteAction = { kind: "delete" } as const
   const removeAction = activeCollectionId
     ? ({ collectionId: activeCollectionId, kind: "remove" } as const)
     : null
@@ -445,7 +756,7 @@ export function BookmarkSelectionBars({
   const selectedBookmarkLabel = `${selectedCount} selected ${selectedCount === 1 ? "bookmark" : "bookmarks"}`
 
   const runDelete = async (): Promise<void> => {
-    const succeeded = await onRunAction(deleteAction, deleteButtonRef.current)
+    const succeeded = await onRunAction(DELETE_ACTION, deleteButtonRef.current)
     if (succeeded) setDeleteOpen(false)
   }
 
@@ -454,191 +765,44 @@ export function BookmarkSelectionBars({
     setDeleteOpen(true)
   }
 
-  const openMobileDeleteDialog = (): void => {
-    setMobileActionsOpen(false)
-    openDeleteDialog(mobileActionsTriggerRef.current)
-  }
-
-  const runMobileAction: RunBulkAction = (action) => {
-    setMobileActionsOpen(false)
-    return onRunAction(action, mobileActionsTriggerRef.current)
-  }
-
-  const removeButton = removeAction ? (
-    <Button
-      disabled={bulkDisabled}
-      onClick={(event) => void onRunAction(removeAction, event.currentTarget)}
-      size="sm"
-      variant="ghost"
-    >
-      {showRemoveProgress ? (
-        <Spinner aria-hidden="true" className="size-4" />
-      ) : (
-        <MinusIcon aria-hidden="true" />
-      )}
-      Remove
-    </Button>
-  ) : null
-
   return (
     <>
-      <div className="mb-4 flex h-9 min-w-0 items-center gap-2 px-2 min-[800px]:mb-2">
-        <Button
-          aria-label="Close selection mode"
-          onClick={onClose}
-          size="icon-sm"
-          variant="ghost"
-        >
-          <XIcon aria-hidden="true" />
-        </Button>
-        <span className="shrink-0 text-sm font-medium tabular-nums">
-          {selectedCount} selected
-        </span>
-        {showRangeHint ? (
-          <span className="hidden items-center gap-1 text-xs text-muted-foreground min-[800px]:inline-flex">
-            Shift-click to select a range
-            <Button
-              aria-label="Dismiss range selection hint"
-              onClick={markBookmarkRangeHintSeen}
-              size="icon-xs"
-              variant="ghost"
-            >
-              <XIcon aria-hidden="true" />
-            </Button>
-          </span>
-        ) : null}
-        <div className="ms-auto hidden min-w-0 items-center gap-1 min-[800px]:flex">
-          <Button
-            disabled={isPending}
-            onClick={onToggleAll}
-            size="sm"
-            variant="ghost"
-          >
-            <CheckSquareOffsetIcon aria-hidden="true" />
-            {allVisibleSelected ? "Clear all" : "Select all"}
-          </Button>
-          <BulkCollectionPicker
-            actionKind="add"
-            availability={destinationAvailability}
-            collections={collections}
-            disabled={bulkDisabled}
-            label="Add"
-            mutation={mutation}
-            onRunAction={onRunAction}
-          />
-          <BulkCollectionPicker
-            actionKind="move"
-            availability={destinationAvailability}
-            collections={collections}
-            disabled={bulkDisabled}
-            label="Move"
-            mutation={mutation}
-            onRunAction={onRunAction}
-          />
-          {removeButton}
-          <Separator className="mx-1 h-5" orientation="vertical" />
-          <Button
-            disabled={bulkDisabled}
-            onClick={(event) => openDeleteDialog(event.currentTarget)}
-            size="sm"
-            variant="destructive-outline"
-          >
-            <TrashIcon aria-hidden="true" />
-            Delete
-          </Button>
-        </div>
-      </div>
-
-      <div className="absolute inset-x-0 bottom-0 z-20 px-4 pt-3 pb-[max(--spacing(3),env(safe-area-inset-bottom))] min-[800px]:hidden">
-        <Drawer onOpenChange={setMobileActionsOpen} open={mobileActionsOpen}>
-          <DrawerTrigger
-            render={
-              <Button
-                aria-label={`Open actions for ${selectedBookmarkLabel}`}
-                className="h-12 w-full shadow-sm"
-                ref={mobileActionsTriggerRef}
-                size="lg"
-              />
-            }
-          >
-            Actions
-            <CaretUpIcon aria-hidden="true" />
-          </DrawerTrigger>
-          <DrawerPopup showBar showCloseButton>
-            <DrawerHeader>
-              <DrawerTitle>Bookmark actions</DrawerTitle>
-              <DrawerDescription>{selectedBookmarkLabel}</DrawerDescription>
-            </DrawerHeader>
-            <DrawerPanel>
-              <DrawerMenu aria-label="Bookmark actions">
-                <DrawerMenuGroup>
-                  <DrawerMenuGroupLabel>Selection</DrawerMenuGroupLabel>
-                  <DrawerMenuItem
-                    className="min-h-11"
-                    disabled={isPending}
-                    onClick={onToggleAll}
-                  >
-                    <CheckSquareOffsetIcon aria-hidden="true" />
-                    {allVisibleSelected ? "Clear all" : "Select all"}
-                  </DrawerMenuItem>
-                </DrawerMenuGroup>
-                <DrawerMenuSeparator />
-                <DrawerMenuGroup>
-                  <DrawerMenuGroupLabel>Organize</DrawerMenuGroupLabel>
-                  <BulkCollectionPicker
-                    actionKind="add"
-                    availability={destinationAvailability}
-                    collections={collections}
-                    disabled={bulkDisabled}
-                    label="Add"
-                    mobileMenuItem
-                    mutation={mutation}
-                    onRunAction={runMobileAction}
-                  />
-                  <BulkCollectionPicker
-                    actionKind="move"
-                    availability={destinationAvailability}
-                    collections={collections}
-                    disabled={bulkDisabled}
-                    label="Move"
-                    mobileMenuItem
-                    mutation={mutation}
-                    onRunAction={runMobileAction}
-                  />
-                  {removeAction ? (
-                    <DrawerMenuItem
-                      className="min-h-11"
-                      disabled={bulkDisabled}
-                      onClick={() => void runMobileAction(removeAction, null)}
-                    >
-                      {showRemoveProgress ? (
-                        <Spinner aria-hidden="true" className="size-4" />
-                      ) : (
-                        <MinusIcon aria-hidden="true" />
-                      )}
-                      Remove from this collection
-                    </DrawerMenuItem>
-                  ) : null}
-                </DrawerMenuGroup>
-                <DrawerMenuSeparator />
-                <DrawerMenuGroup>
-                  <DrawerMenuItem
-                    className="min-h-11"
-                    disabled={bulkDisabled}
-                    onClick={openMobileDeleteDialog}
-                    variant="destructive"
-                  >
-                    <TrashIcon aria-hidden="true" />
-                    Delete
-                  </DrawerMenuItem>
-                </DrawerMenuGroup>
-              </DrawerMenu>
-            </DrawerPanel>
-          </DrawerPopup>
-        </Drawer>
-      </div>
-
-      <AlertDialog
+      <DesktopSelectionBar
+        allVisibleSelected={allVisibleSelected}
+        bulkDisabled={bulkDisabled}
+        collections={collections}
+        destinationAvailability={destinationAvailability}
+        isPending={isPending}
+        mutation={mutation}
+        onClose={onClose}
+        onOpenDelete={openDeleteDialog}
+        onRunAction={onRunAction}
+        onToggleAll={onToggleAll}
+        removeAction={removeAction}
+        selectedCount={selectedCount}
+        showRangeHint={showRangeHint}
+        showRemoveProgress={showRemoveProgress}
+      />
+      <MobileSelectionActions
+        allVisibleSelected={allVisibleSelected}
+        bulkDisabled={bulkDisabled}
+        collections={collections}
+        destinationAvailability={destinationAvailability}
+        isPending={isPending}
+        mutation={mutation}
+        onOpenChange={setMobileActionsOpen}
+        onOpenDelete={openDeleteDialog}
+        onRunAction={onRunAction}
+        onToggleAll={onToggleAll}
+        open={mobileActionsOpen}
+        removeAction={removeAction}
+        selectedBookmarkLabel={selectedBookmarkLabel}
+        showRemoveProgress={showRemoveProgress}
+        triggerRef={mobileActionsTriggerRef}
+      />
+      <SelectionDeleteDialog
+        deleteButtonRef={deleteButtonRef}
+        isPending={isPending}
         onOpenChange={(open) => {
           if (isPending) return
           setDeleteOpen(open)
@@ -647,39 +811,10 @@ export function BookmarkSelectionBars({
           }
         }}
         open={deleteOpen}
-      >
-        <AlertDialogPopup>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete selected bookmarks?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {selectedCount} selected{" "}
-              {selectedCount === 1 ? "bookmark" : "bookmarks"} will move to
-              Trash. You can restore them for 30 days.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogClose
-              disabled={isPending}
-              render={<Button variant="ghost" />}
-            >
-              Cancel
-            </AlertDialogClose>
-            <Button
-              disabled={isPending}
-              onClick={() => void runDelete()}
-              ref={deleteButtonRef}
-              variant="destructive"
-            >
-              {showDeleteProgress ? (
-                <Spinner aria-hidden="true" className="size-4" />
-              ) : (
-                <TrashIcon aria-hidden="true" />
-              )}
-              Delete {selectedCount === 1 ? "bookmark" : "bookmarks"}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogPopup>
-      </AlertDialog>
+        onRunDelete={runDelete}
+        selectedCount={selectedCount}
+        showDeleteProgress={showDeleteProgress}
+      />
     </>
   )
 }

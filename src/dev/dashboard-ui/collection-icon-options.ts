@@ -97,13 +97,3 @@ export const collectionIconGroups: readonly CollectionIconGroup[] = [
     ],
   },
 ]
-
-const collectionIconLabels = new Map<CollectionIconName, string>(
-  collectionIconGroups.flatMap((group) =>
-    group.options.map((option) => [option.icon, option.label] as const)
-  )
-)
-
-export function getCollectionIconLabel(icon: CollectionIconName): string {
-  return collectionIconLabels.get(icon) ?? "Folder"
-}
