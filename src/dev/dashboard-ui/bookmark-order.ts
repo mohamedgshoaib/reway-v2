@@ -8,6 +8,8 @@ export function createCollectionOrders(
   const orders: Record<string, string[]> = {}
 
   for (const bookmark of bookmarks) {
+    if (bookmark.trashedAt !== undefined) continue
+
     for (const collection of bookmark.collections ?? []) {
       const order = orders[collection] ?? []
       order.push(bookmark.id)

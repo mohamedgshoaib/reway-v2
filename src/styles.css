@@ -17,6 +17,7 @@
   --animate-toast-error-odd: toast-error-odd 0.28s cubic-bezier(0.5, 1, 0.89, 1);
   --animate-toast-error-even: toast-error-even 0.28s
     cubic-bezier(0.5, 1, 0.89, 1);
+  --animate-toast-timeout: toast-timeout 4s linear forwards;
   --animate-caret-blink: 1s ease-out infinite caret-blink;
   --font-heading: "Cal Sans Text";
   --font-display: "Cal Sans Geo";
@@ -145,6 +146,14 @@
       translate: 0 0;
     }
   }
+  @keyframes toast-timeout {
+    from {
+      scale: 1 1;
+    }
+    to {
+      scale: 0 1;
+    }
+  }
   @keyframes caret-blink {
     0%,
     70%,
@@ -155,6 +164,19 @@
     50% {
       opacity: 0;
     }
+  }
+}
+
+[data-slot^="toast-viewport"]:focus-within
+  [data-slot="toast-timeout-indicator"],
+[data-slot^="toast-viewport"][data-window-active="false"]
+  [data-slot="toast-timeout-indicator"] {
+  animation-play-state: paused;
+}
+
+@media (hover: hover) {
+  [data-slot^="toast-viewport"]:hover [data-slot="toast-timeout-indicator"] {
+    animation-play-state: paused;
   }
 }
 

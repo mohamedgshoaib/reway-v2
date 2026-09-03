@@ -14,12 +14,19 @@ import {
   type BookmarkBulkMutationFixture,
 } from "@/dev/dashboard-ui/page"
 
+const { playSound } = vi.hoisted(() => ({ playSound: vi.fn<() => void>() }))
+
+vi.mock("@web-kits/audio/react", () => ({
+  useSound: () => playSound,
+}))
+
 const navigationPreferences = {
   desktop: { collections: true, tags: true },
   mobile: { collections: true, tags: true },
 }
 
 beforeEach(() => {
+  playSound.mockClear()
   toastManager.close()
 })
 
@@ -42,6 +49,17 @@ function enterSelectionFromBookmarkMenu(bookmarkTitle: string): void {
     screen.getByRole("button", { name: `Actions for ${bookmarkTitle}` })
   )
   fireEvent.click(screen.getByRole("button", { name: "Select" }))
+}
+
+function getResearchBookmark() {
+  const bookmark = mockBookmarks.find(
+    (item) =>
+      item.trashedAt === undefined &&
+      item.collections?.length === 1 &&
+      item.collections[0] === "research"
+  )
+  if (!bookmark) throw new Error("Research bookmark fixture is missing.")
+  return bookmark
 }
 
 describe("dashboard bookmark selection flow", () => {
@@ -93,6 +111,61 @@ describe("dashboard bookmark selection flow", () => {
     fireEvent.click(screen.getByRole("button", { name: "Select all" }))
     expect(screen.getByText("8 selected")).not.toBeNull()
     expect(screen.getByRole("button", { name: "Clear all" })).not.toBeNull()
+  })
+
+  it("undoes a single bookmark deletion and names its restored collection", async () => {
+    renderPage()
+    const bookmark = getResearchBookmark()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: `Actions for ${bookmark.title}` })
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }))
+    fireEvent.click(screen.getByRole("button", { name: "Delete bookmark" }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole("link", { name: bookmark.title })).toBeNull()
+    })
+    expect(screen.getByText("Moved to Trash")).not.toBeNull()
+    expect(
+      screen.getByText(`${bookmark.title} can be restored for 30 days.`)
+    ).not.toBeNull()
+
+    playSound.mockClear()
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }))
+
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: bookmark.title })).not.toBeNull()
+    })
+    expect(screen.getByText("Restored to Research")).not.toBeNull()
+    expect(playSound).toHaveBeenCalledOnce()
+  })
+
+  it("undoes a bulk deletion without reopening selection mode", async () => {
+    const bulkMutationFixture = vi
+      .fn<BookmarkBulkMutationFixture>()
+      .mockResolvedValue(undefined)
+    renderPage(bulkMutationFixture)
+    const bookmark = getResearchBookmark()
+
+    enterSelectionFromBookmarkMenu(bookmark.title)
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }))
+    fireEvent.click(screen.getByRole("button", { name: "Delete bookmark" }))
+
+    await waitFor(() => {
+      expect(screen.getByText("Moved 1 bookmark to Trash")).not.toBeNull()
+    })
+    expect(screen.queryByRole("link", { name: bookmark.title })).toBeNull()
+
+    playSound.mockClear()
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }))
+
+    await waitFor(() => {
+      expect(screen.getByRole("link", { name: bookmark.title })).not.toBeNull()
+    })
+    expect(screen.getByText("Restored to Research")).not.toBeNull()
+    expect(screen.queryByText("1 selected")).toBeNull()
+    expect(playSound).toHaveBeenCalledOnce()
   })
 
   it("rolls back a failed bulk action and preserves the selection", async () => {

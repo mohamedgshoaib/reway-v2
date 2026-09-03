@@ -118,6 +118,16 @@ describe("collection hierarchy", () => {
     ).toEqual(["research"])
   })
 
+  it("does not count bookmarks already in Trash as newly affected", () => {
+    const deletion = getCollectionDeletion(
+      collections,
+      [{ collections: ["media"] }, { collections: ["media"], trashedAt: 1 }],
+      "media"
+    )
+
+    expect(deletion.exclusiveBookmarkCount).toBe(1)
+  })
+
   it("normalizes names and enforces global uniqueness", () => {
     expect(
       getCollectionNameError(collections, "  streaming   platforms ")

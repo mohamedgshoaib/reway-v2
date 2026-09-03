@@ -78,11 +78,23 @@ describe("DashboardSidebar", () => {
       </SidebarProvider>
     )
 
-    expect(screen.getByRole("button", { name: "Display" })).not.toBeNull()
+    const display = screen.getByRole("button", { name: "Display" })
+    const trash = screen.getByRole("button", { name: "Trash" })
+    const settings = screen.getByRole("button", { name: "Settings" })
+    expect(display).not.toBeNull()
+    expect(
+      display.querySelector('[data-slot="display-menu-indicator"]')
+    ).not.toBeNull()
+    expect(
+      display.compareDocumentPosition(trash) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).not.toBe(0)
+    expect(
+      trash.compareDocumentPosition(settings) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).not.toBe(0)
     expect(screen.queryByText("Date added")).toBeNull()
     expect(screen.queryByText("List")).toBeNull()
 
-    fireEvent.click(screen.getByRole("button", { name: "Display" }))
+    fireEvent.click(display)
     fireEvent.click(
       await screen.findByRole("menuitemradio", { name: "Alphabetical" })
     )
@@ -150,8 +162,8 @@ describe("DashboardSidebar", () => {
     expect(screen.queryByText("New nested collection")).toBeNull()
   })
 
-  it("keeps collection and tag rows active across their menu actions", () => {
-    render(
+  it("keeps row paint for hover and keyboard focus without retaining pointer focus", () => {
+    const { container } = render(
       <SidebarProvider>
         <DashboardSidebar
           initialDisclosures={{ collections: true, tags: true }}
@@ -168,15 +180,76 @@ describe("DashboardSidebar", () => {
       name: "Streaming platforms",
     })
     const tagRow = screen.getByRole("button", { name: "Filter by Design" })
+    const displayRow = screen.getByRole("button", { name: "Display" })
+    const searchRow = screen.getByRole("button", { name: /Search/ })
 
-    for (const row of [mediaRow, nestedRow, tagRow]) {
+    expect(mediaRow.classList.contains("h-8")).toBe(true)
+    expect(nestedRow.classList.contains("h-8")).toBe(true)
+    expect(nestedRow.classList.contains("sm:h-7")).toBe(false)
+
+    for (const actionName of [
+      "Actions for Media",
+      "Actions for Streaming platforms",
+      "Actions for Design",
+    ]) {
+      const action = screen.getByRole("button", { name: actionName })
+      expect(action.querySelector("svg")?.getAttribute("class")).toContain(
+        "size-4"
+      )
+    }
+
+    for (const row of [mediaRow, nestedRow, tagRow, displayRow, searchRow]) {
       expect(row.className).toContain(
         "group-hover/menu-item:before:bg-sidebar-accent"
       )
       expect(row.className).toContain(
+        "group-has-focus-visible/menu-item:before:bg-sidebar-accent"
+      )
+      expect(row.className).toContain(
+        "group-has-data-popup-open/menu-item:before:bg-sidebar-accent"
+      )
+      expect(row.className).not.toContain(
         "group-focus-within/menu-item:before:bg-sidebar-accent"
       )
     }
+
+    const collectionsCaret = container.querySelector(
+      '[data-slot="collections-indicator"]'
+    )
+    const collectionActions = container.querySelector(
+      '[data-slot="sidebar-group-actions"]'
+    )
+    expect(collectionsCaret?.getAttribute("class")).toContain(
+      "group-hover/collection-header:opacity-70"
+    )
+    expect(collectionsCaret?.getAttribute("class")).toContain(
+      "group-has-focus-visible/collection-header:opacity-70"
+    )
+    expect(collectionsCaret?.getAttribute("class")).toContain(
+      "group-has-data-popup-open/collection-header:opacity-70"
+    )
+    expect(collectionActions?.className).toContain(
+      "group-has-focus-visible/collection-header:opacity-100"
+    )
+    expect(collectionActions?.className).toContain(
+      "group-has-data-popup-open/collection-header:opacity-100"
+    )
+    expect(collectionActions?.className).not.toContain(
+      "group-focus-within/collection-header:opacity-100"
+    )
+
+    const displayCaret = displayRow.querySelector(
+      '[data-slot="display-menu-indicator"]'
+    )
+    expect(displayCaret?.getAttribute("class")).toContain(
+      "group-hover/menu-item:opacity-70"
+    )
+    expect(displayCaret?.getAttribute("class")).toContain(
+      "group-has-focus-visible/menu-item:opacity-70"
+    )
+    expect(displayCaret?.getAttribute("class")).toContain(
+      "group-has-data-popup-open/menu-item:opacity-70"
+    )
   })
 
   it("disables hidden group triggers while collapsed", () => {
@@ -205,6 +278,25 @@ describe("DashboardSidebar", () => {
     expect(tagsTrigger?.getAttribute("aria-disabled")).toBe("true")
     expect(collectionsTrigger?.hasAttribute("inert")).toBe(true)
     expect(tagsTrigger?.hasAttribute("inert")).toBe(true)
+
+    const groupActions = container.querySelectorAll(
+      '[data-slot="sidebar-group-actions"]'
+    )
+    const groupCarets = container.querySelectorAll(
+      '[data-slot="collections-indicator"], [data-slot="tags-indicator"]'
+    )
+    expect(groupActions).toHaveLength(2)
+    expect(groupCarets).toHaveLength(2)
+    for (const actions of groupActions) {
+      expect(actions.getAttribute("class")).toContain(
+        "group-data-[collapsible=icon]:hidden"
+      )
+    }
+    for (const caret of groupCarets) {
+      expect(caret.getAttribute("class")).toContain(
+        "group-data-[collapsible=icon]:hidden"
+      )
+    }
 
     fireEvent.click(collectionsTrigger as HTMLButtonElement)
     fireEvent.click(tagsTrigger as HTMLButtonElement)
@@ -249,6 +341,50 @@ describe("DashboardSidebar", () => {
     await waitFor(() => {
       expect(navigationTrigger.getAttribute("aria-expanded")).toBe("false")
     })
+  })
+
+  it("shows a compact mobile result action only while tags are active", async () => {
+    const inactiveNavigation = render(
+      <SidebarProvider>
+        <MobileDashboardNavigation
+          activeTagIds={new Set()}
+          initialDisclosures={{ collections: true, tags: true }}
+          onSortChange={vi.fn<(sort: SortOption) => void>()}
+          onViewModeChange={vi.fn<(viewMode: ViewMode) => void>()}
+          sort="date"
+          viewMode="list"
+        />
+      </SidebarProvider>
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation" }))
+    await screen.findByText("Navigation")
+    expect(
+      screen.queryByRole("button", { name: "Show all bookmarks" })
+    ).toBeNull()
+    inactiveNavigation.unmount()
+
+    render(
+      <SidebarProvider>
+        <MobileDashboardNavigation
+          activeTagIds={new Set(["design"])}
+          initialDisclosures={{ collections: true, tags: true }}
+          onSortChange={vi.fn<(sort: SortOption) => void>()}
+          onViewModeChange={vi.fn<(viewMode: ViewMode) => void>()}
+          sort="date"
+          tagFilterResultCount={5}
+          viewMode="list"
+        />
+      </SidebarProvider>
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation" }))
+    await screen.findByText("Navigation")
+    const showResults = screen.getByRole("button", {
+      name: "Show 5 bookmarks",
+    })
+    expect(showResults.classList.contains("h-9")).toBe(true)
+    expect(showResults.classList.contains("h-10")).toBe(false)
   })
 
   it("keeps mobile navigation open under nested command search", async () => {

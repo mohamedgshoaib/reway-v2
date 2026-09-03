@@ -102,6 +102,89 @@ Write facts only. No plans, no advice, no narration.
   passed in focused runs and the four-worker full run.
 - Browser, touch, keyboard, screen-reader, responsive, and rendered contrast
   checks remain unverified after Phase 3.
+- Added fixed Trash fixtures and one pure Trash module for recovery labels,
+  Restore, and Delete forever.
+- Turned Trash into a working desktop and mobile system destination and kept
+  trashed bookmarks out of normal destinations, command search, counts, and
+  saved custom collection order.
+- Added stable 30-day recovery context to list, compact grid, and image-grid
+  views without adding a Trash color theme.
+- Replaced normal bookmark and selection actions in Trash with Restore and
+  Delete forever. Permanent deletion uses an Alert Dialog and cannot be undone.
+- Restore clears collection memberships, preserves tags and metadata, and
+  returns bookmarks as Uncollected.
+- Added optimistic bulk Restore and Delete forever with pending locks, one
+  summary, rollback, preserved selection, and Retry.
+- Split Trash action variants and the dashboard navigation footer into focused
+  modules after React Doctor flagged boolean-mode and large-module warnings.
+- Fourteen focused Trash model, action, selection, and flow tests passed.
+- `pnpm run check`, 133 tests across 31 files with four workers, the client and
+  server production build, `git diff --check`, and full-project React Doctor at
+  100/100 across 95 files passed after Phase 4.
+- Browser, touch, keyboard, screen-reader, responsive, and rendered contrast
+  checks remain unverified after Phase 4.
+- Set the shared toast duration to four seconds and added a lower-edge timer for
+  action toasts. The timer pauses on hover, keyboard focus, and while the window
+  or tab is inactive.
+- Aligned toast icons to the first text line for title and description-only
+  messages.
+- Kept prior collection memberships as Trash restore context and showed the
+  source in list, compact grid, and image-grid rows.
+- Restored bookmarks to every prior collection that still exists, with an
+  Uncollected fallback when none remain.
+- Added exact single and bulk restore summaries, including shared destinations
+  and mixed previous-collection results.
+- Added four-second Undo to single and bulk bookmark deletion. Undo reuses the
+  same toast, restores prior memberships, and leaves selection mode closed.
+- Added named four-second result toasts for collection deletion, tag deletion,
+  restore, and Delete forever.
+- Kept an existing Trash retention date unchanged when its source collection is
+  later deleted.
+- The focused deletion, restore, and toast run passed with 41 tests across 6
+  files.
+- `pnpm run check`, 145 tests across 32 files with four workers, the client and
+  server production build, `git diff --check`, and changed-scope React Doctor at
+  100/100 across 22 files passed after the deletion and recovery feedback slice.
+- Browser, touch, keyboard, screen-reader, responsive, and rendered checks remain
+  unverified after this slice.
+- Centered global toasts at the bottom on mobile while keeping the desktop
+  position at the bottom right. The mobile inset accounts for the device safe
+  area.
+- Played the Minimal Undo cue once after a single or bulk bookmark snapshot is
+  restored. The cue follows the action result rather than the generic toast
+  type.
+- Removed the duplicate mobile `Show all bookmarks` action. A compact
+  `Show [count] bookmarks` action now appears only while tag filters are active.
+- Reordered the shared navigation footer to Display, Trash, then Settings.
+  Display keeps its sliders icon and adds a trailing Up/Down caret.
+- The focused responsive toast, navigation, and Undo sound run passed with 20
+  tests across 3 files.
+- `pnpm run check`, 147 tests across 32 files with four workers, the client and
+  server production build, `git diff --check`, and changed-scope React Doctor at
+  100/100 across 23 files passed after this refinement.
+- Browser, touch, keyboard, screen-reader, responsive layout, and audible sound
+  checks remain unverified after this refinement.
+- Replaced retained `focus-within` paint with hover, open-popup, and visible
+  keyboard-focus state for sidebar rows, section actions, search, Display, and
+  bookmark overflow actions.
+- Made collection, tag, and Display carets appear on fine-pointer hover, while
+  their popup is open, or for visible keyboard focus. Touch keeps them visible.
+- Removed the density-specific overflow sizing experiment after rendered review.
+  Sidebar row actions and bookmark overflow actions use their prior shared sizes;
+  their larger hit targets remain separate from visible size.
+- The latest focused sidebar, bookmark-action, tag-filter, and Trash run passed
+  with 43 tests across 5 files.
+- `pnpm run check`, 148 tests across 32 files with four workers, the client and
+  server production build, `git diff --check`, and changed-scope React Doctor at
+  100/100 across 26 files passed at Phase 4 completion.
+- Browser, touch, keyboard, screen-reader, responsive layout, rendered geometry,
+  and audible sound checks remain unverified at Phase 4 completion.
+- Matched parent and child collection rows at 32 pixels and replaced row-specific
+  action offsets with shared vertical centering.
+- Added `OverflowMenuIcon` as the single 16-pixel ellipsis rule for bookmark,
+  Trash, collection, tag, section, and `/ui` overflow menus. Visible button and
+  hit-area sizes remain separate.
+- The latest sidebar and bookmark-action run passed with 26 tests across 3 files.
 
 ---
 
@@ -123,6 +206,15 @@ Write facts only. No plans, no advice, no narration.
   44 by 44 pixel touch target without making the visible control that tall.
 - Uncollected is a system destination beside All Bookmarks, not a managed user
   collection.
+- Trash uses one fixed mock clock. Restore returns bookmarks to each prior
+  collection that still exists and falls back to Uncollected when none remain.
+  Delete forever permanently removes them after confirmation.
+- Passive deletion and recovery results last four seconds. Bookmark deletion
+  offers Undo for the same four seconds; permanent deletion does not.
+- Global toasts use bottom right on desktop and bottom center on mobile.
+- Successful bookmark Undo plays one restrained semantic cue after restoration.
+- The navigation footer uses Display, Trash, then Settings. Mobile tag results
+  show one compact drawer action only while a tag is active.
 
 ---
 

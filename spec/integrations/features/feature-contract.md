@@ -174,6 +174,8 @@ The contract follows five interaction rules:
 - Creating from a bookmark picker keeps the user in the current workflow and returns the new item selected or applied.
 - A tag picker remains open after creation. Add-to-collection and Move-to-collection close after applying the new collection and return focus to the bookmark action.
 - Mobile management actions keep the navigation drawer open. Normal navigation still closes the drawer.
+- The navigation footer uses Display, Trash, then Settings on desktop and mobile. Display keeps its sliders icon and adds a trailing Up/Down caret to show that it opens more controls. On a fine pointer, the caret appears on hover, while its menu is open, or when keyboard focus is visible. Touch keeps it visible.
+- Mobile shows a compact `Show [count] bookmarks` action only while at least one tag filter is active. The action closes the drawer and returns focus to the navigation trigger.
 
 ### Collection and Tag Menus
 
@@ -181,6 +183,10 @@ The contract follows five interaction rules:
 - On desktop pointer hover anywhere on the row, or when the row receives keyboard focus, the collection row replaces its count with an ellipsis button. The active collection keeps the ellipsis visible.
 - Tag rows use the trailing slot for the ellipsis button and never show counts.
 - Touch surfaces keep row ellipsis buttons visible and hide collection counts so the two trailing items never overlap.
+- Pointer focus left after a menu or command closes does not keep a row painted or its actions visible. Hover, an open popup, and visible keyboard focus do.
+- Collection and tag section carets follow the same hover, open-popup, and visible-keyboard-focus rule. Touch keeps them visible.
+- Every overflow menu uses the shared 16-pixel `OverflowMenuIcon`. Sidebar row actions keep their 24-pixel visible button, while bookmark and section actions keep `icon-xs`. Their larger pointer and touch targets remain separate from the visible control.
+- Parent and child collection rows share a 32-pixel height. Nesting changes width and indentation, not height. The shared sidebar action centers itself without row-specific offsets.
 - A top-level collection row menu contains `New nested collection`, `Edit`, a separator, and `Delete`. Child collection row menus omit `New nested collection`.
 - Tag row menus contain `Edit`, a separator, and `Delete`.
 - Right-click opens the same row menu on desktop.
@@ -249,12 +255,30 @@ The contract follows five interaction rules:
 - Deleting the active collection, or a parent of the active collection, returns the content pane to All Bookmarks.
 - Deleting an active tag removes it from the OR tag filter, keeps any remaining tag filters, and returns to All Bookmarks when no tag filter remains.
 - Focus returns to the relevant section header after deletion.
-- Deletion shows a named toast. A parent collection deletion toast includes the number of collections deleted and the number of exclusive bookmarks moved to Trash.
+- Deletion shows a four-second named toast without Undo. A tag deletion names the tag and the number of bookmarks changed. A collection deletion names the collection; parent deletion also states the number of nested collections deleted and the number of exclusive bookmarks moved to Trash.
 - User collections and tags support management. All Bookmarks, Uncollected, Settings, Display, Trash, and other system destinations do not.
 
 ### Multi-Select & Bulk Actions
 
 - Users may select multiple bookmarks to delete, move to another collection, add to a collection, or remove from the current collection.
+
+### Trash
+
+- Trash is a working system destination in desktop and mobile navigation.
+- Trash shows only bookmarks with `trashedAt`. Trashed bookmarks stay out of All Bookmarks, collections, tags, command search, Uncollected, and saved custom collection order.
+- The dashboard mock uses one fixed clock for Trash fixtures and mutation dates. Visual components never run an expiry timer.
+- Each trashed bookmark shows the time left in its 30-day recovery window and its prior collection context as `From Research`, `From Research + 2`, or `From Uncollected`. Stored collection IDs on a trashed bookmark are restore context, not active memberships.
+- Restore clears `trashedAt`, preserves tags and metadata, and returns the bookmark to every prior collection that still exists. A bookmark with no surviving prior collection returns as Uncollected. Restore stays one click and does not open a destination dialog.
+- A single restore names its destination: `Restored to Research`, `Restored to 3 collections`, or `Restored to Uncollected`. A bulk restore names a shared destination when one exists. Mixed destinations use one count summary followed by `Returned to their previous collections.` or `Returned to their previous collections or Uncollected.` when a bookmark has no surviving collection.
+- Moving bookmarks to Trash shows one four-second toast with Undo. Undo restores the deleted snapshot to its valid prior collections, keeps selection mode closed, replaces the same stable toast with the restore result, and plays one restrained Undo cue after restoration.
+- Delete forever permanently removes the bookmark after an Alert Dialog states that the action cannot be undone. Success shows one four-second named toast without Undo.
+- Trashed bookmark menus keep Open, Copy link, Select, Restore, and Delete forever. Edit, tag, collection, re-enrich, and normal Delete actions stay hidden.
+- Trash selection mode replaces Add, Move, Remove, and Delete with Restore and Delete forever on desktop and mobile.
+- Bulk Restore and Delete forever apply one optimistic result to the selected snapshot. Pending work blocks repeat actions. Failure rolls back the full result, keeps the selection, and offers Retry.
+- Bulk success and failure use one summary and one polite announcement for the action, never one message per bookmark. Failure toasts remain open with Retry.
+- Toasts are reserved for results that are easy to miss, occur outside the current view, affect several items, or offer recovery. Direct changes that remain visible use inline feedback instead.
+- Global toasts sit at the bottom right on desktop and bottom center on mobile.
+- The Trash toolbar stays visually consistent with other destinations. Its labels and action set distinguish the mode without a decorative danger theme.
 
 ### Drag and Drop Reorder
 

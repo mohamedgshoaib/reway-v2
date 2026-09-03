@@ -6,8 +6,14 @@ import {
   waitFor,
   within,
 } from "@testing-library/react"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 
+import { toastManager } from "@/components/ui/toast"
+import { getCollectionDeletion } from "@/dev/dashboard-ui/collection-hierarchy"
+import {
+  mockBookmarks,
+  mockCollections,
+} from "@/dev/dashboard-ui/mock-bookmarks"
 import {
   DashboardUiPage,
   type BookmarkBulkMutationFixture,
@@ -18,7 +24,14 @@ const navigationPreferences = {
   mobile: { collections: true, tags: true },
 }
 
-afterEach(cleanup)
+beforeEach(() => {
+  toastManager.close()
+})
+
+afterEach(() => {
+  cleanup()
+  toastManager.close()
+})
 
 function renderPage(bulkMutationFixture?: BookmarkBulkMutationFixture): {
   desktopSidebar: HTMLElement
@@ -134,27 +147,27 @@ describe("dashboard tag filtering flow", () => {
 
     expect(navigationTrigger.getAttribute("aria-expanded")).toBe("true")
     expect(
-      navigation.getByRole("button", { name: "Show 4 bookmarks" })
+      navigation.getByRole("button", { name: "Show 5 bookmarks" })
     ).not.toBeNull()
     expect(
-      within(main).getByText("Research filter added. 4 bookmarks shown.")
+      within(main).getByText("Research filter added. 5 bookmarks shown.")
     ).not.toBeNull()
 
     fireEvent.click(
       navigation.getByRole("button", { name: "Filter by Design" })
     )
     expect(
-      navigation.getByRole("button", { name: "Show 11 bookmarks" })
+      navigation.getByRole("button", { name: "Show 12 bookmarks" })
     ).not.toBeNull()
     expect(
-      within(main).getByText("Design filter added. 11 bookmarks shown.")
+      within(main).getByText("Design filter added. 12 bookmarks shown.")
     ).not.toBeNull()
     expect(
-      within(main).queryByText("Research filter added. 4 bookmarks shown.")
+      within(main).queryByText("Research filter added. 5 bookmarks shown.")
     ).toBeNull()
 
     fireEvent.click(
-      navigation.getByRole("button", { name: "Show 11 bookmarks" })
+      navigation.getByRole("button", { name: "Show 12 bookmarks" })
     )
 
     await waitFor(() => {
@@ -183,6 +196,38 @@ describe("dashboard tag filtering flow", () => {
     expect(
       sidebar.queryByRole("button", { name: "Filter by Design" })
     ).toBeNull()
+    expect(screen.getByText("Deleted Design")).not.toBeNull()
+    const affectedCount = mockBookmarks.filter((bookmark) =>
+      bookmark.tags?.includes("design")
+    ).length
+    expect(
+      screen.getByText(`Removed from ${affectedCount} bookmarks.`)
+    ).not.toBeNull()
+  })
+
+  it("summarizes a parent collection deletion and its Trash impact", async () => {
+    const { desktopSidebar } = renderPage()
+    const sidebar = within(desktopSidebar)
+    const deletion = getCollectionDeletion(
+      mockCollections,
+      mockBookmarks,
+      "media"
+    )
+
+    fireEvent.click(sidebar.getByRole("button", { name: "Actions for Media" }))
+    fireEvent.click(screen.getByRole("menuitem", { name: "Delete" }))
+    fireEvent.click(screen.getByRole("button", { name: "Delete collection" }))
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Deleted Media and 2 nested collections")
+      ).not.toBeNull()
+    })
+    expect(
+      screen.getByText(
+        `${deletion.exclusiveBookmarkCount} ${deletion.exclusiveBookmarkCount === 1 ? "bookmark" : "bookmarks"} moved to Trash.`
+      )
+    ).not.toBeNull()
   })
 })
 

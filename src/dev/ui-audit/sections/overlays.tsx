@@ -3,7 +3,6 @@ import {
   ArrowElbowDownLeftIcon,
   ArrowUpIcon,
   CopyIcon,
-  DotsThreeIcon,
   FolderIcon,
   GearIcon,
   MagnifyingGlassIcon,
@@ -115,6 +114,7 @@ import {
   MenuSubTrigger,
   MenuTrigger,
 } from "@/components/ui/menu"
+import { OverflowMenuIcon } from "@/components/ui/overflow-menu-icon"
 import {
   Popover,
   PopoverDescription,
@@ -516,7 +516,7 @@ function ResponsiveMenuDemo(): React.ReactElement {
             <Button aria-label="Open menu" size="icon" variant="outline" />
           }
         >
-          <DotsThreeIcon aria-hidden="true" />
+          <OverflowMenuIcon />
         </DrawerTrigger>
         <DrawerPopup showBar>
           <DrawerPanel>
@@ -601,7 +601,7 @@ function ResponsiveMenuDemo(): React.ReactElement {
       <MenuTrigger
         render={<Button aria-label="Open menu" size="icon" variant="outline" />}
       >
-        <DotsThreeIcon aria-hidden="true" />
+        <OverflowMenuIcon />
       </MenuTrigger>
       <MenuPopup>
         <MenuGroup>

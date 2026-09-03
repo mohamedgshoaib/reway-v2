@@ -1,7 +1,9 @@
+import { minimal } from "@sounds"
+import { useSound } from "@web-kits/audio/react"
 import { useReducedMotion } from "motion/react"
 import * as React from "react"
 
-import { toastManager } from "@/components/ui/toast"
+import { TOAST_DEFAULT_TIMEOUT_MS, toastManager } from "@/components/ui/toast"
 import type { BookmarkActionHandlers } from "@/dev/dashboard-ui/bookmark-actions"
 import {
   createCollectionOrders,
@@ -19,6 +21,11 @@ import {
 import type { BookmarkSelectionChangeHandler } from "@/dev/dashboard-ui/bookmark-selection-control"
 import { markBookmarkRangeHintSeen } from "@/dev/dashboard-ui/bookmark-selection-hint-store"
 import {
+  applyBookmarkTrashAction,
+  getBookmarkRestoreSummary,
+  type BookmarkTrashAction,
+} from "@/dev/dashboard-ui/bookmark-trash"
+import {
   getCollectionDeletion,
   moveCollection,
   type Collection,
@@ -33,6 +40,7 @@ import {
 } from "@/dev/dashboard-ui/dashboard-destination"
 import type { DashboardMainPanel } from "@/dev/dashboard-ui/dashboard-main-panel"
 import {
+  MOCK_DASHBOARD_NOW,
   mockBookmarks,
   mockCollections,
   mockTags,
@@ -50,7 +58,6 @@ const INITIAL_DESTINATION = {
   kind: "collection",
 } as const satisfies DashboardDestination
 const MOCK_BULK_MUTATION_DELAY = 450
-const MOCK_DELETED_AT = Date.UTC(2026, 7, 31, 9)
 const BULK_TOAST_ID = "dashboard-bookmark-bulk-action"
 
 export type BookmarkBulkMutationFixture = (
@@ -73,6 +80,8 @@ function getBulkSuccessTitle(
 ): string {
   const count = bookmarkCountLabel(affectedCount)
   if (action.kind === "delete") return `Moved ${count} to Trash`
+  if (action.kind === "restore") return `Restored ${count}`
+  if (action.kind === "delete-forever") return `Deleted ${count} forever`
 
   const collectionName =
     collections.find((collection) => collection.id === action.collectionId)
@@ -86,11 +95,18 @@ function getBulkErrorTitle(action: BookmarkBulkAction): string {
   if (action.kind === "add") return "Could not add bookmarks"
   if (action.kind === "move") return "Could not move bookmarks"
   if (action.kind === "remove") return "Could not remove bookmarks"
+  if (action.kind === "restore") return "Could not restore bookmarks"
+  if (action.kind === "delete-forever") {
+    return "Could not delete bookmarks forever"
+  }
   return "Could not move bookmarks to Trash"
 }
 
 function useBookmarkWireframeState(): {
-  actionHandlers: Omit<BookmarkActionHandlers, "onSelectChange">
+  actionHandlers: Omit<
+    BookmarkActionHandlers,
+    "onDeleteForever" | "onRestore" | "onSelectChange"
+  >
   bookmarks: MockBookmark[]
   setBookmarks: React.Dispatch<React.SetStateAction<MockBookmark[]>>
 } {
@@ -108,7 +124,10 @@ function useBookmarkWireframeState(): {
     )
   }
 
-  const actionHandlers: Omit<BookmarkActionHandlers, "onSelectChange"> = {
+  const actionHandlers: Omit<
+    BookmarkActionHandlers,
+    "onDeleteForever" | "onRestore" | "onSelectChange"
+  > = {
     onAddToCollection: (bookmarkId, collection) => {
       updateBookmark(bookmarkId, (bookmark) => ({
         ...bookmark,
@@ -121,7 +140,7 @@ function useBookmarkWireframeState(): {
       setBookmarks((currentBookmarks) =>
         currentBookmarks.map((bookmark) =>
           bookmark.id === bookmarkId
-            ? { ...bookmark, trashedAt: MOCK_DELETED_AT }
+            ? { ...bookmark, trashedAt: MOCK_DASHBOARD_NOW }
             : bookmark
         )
       )
@@ -154,6 +173,7 @@ function useBookmarkWireframeState(): {
 }
 
 function useTagWireframeState(
+  bookmarks: readonly MockBookmark[],
   setBookmarks: React.Dispatch<React.SetStateAction<MockBookmark[]>>
 ): {
   tags: Tag[]
@@ -183,6 +203,11 @@ function useTagWireframeState(
   }
 
   const onDeleteTag = (tagId: string): void => {
+    const tag = tags.find((item) => item.id === tagId)
+    const affectedCount = bookmarks.filter((bookmark) =>
+      bookmark.tags?.includes(tagId)
+    ).length
+
     setTags((currentTags) => currentTags.filter((tag) => tag.id !== tagId))
     setBookmarks((currentBookmarks) =>
       currentBookmarks.map((bookmark) => ({
@@ -190,6 +215,17 @@ function useTagWireframeState(
         tags: bookmark.tags?.filter((bookmarkTagId) => bookmarkTagId !== tagId),
       }))
     )
+
+    if (tag) {
+      toastManager.add({
+        description: `Removed from ${bookmarkCountLabel(affectedCount)}.`,
+        id: `dashboard-tag-${tagId}`,
+        priority: "low",
+        timeout: TOAST_DEFAULT_TIMEOUT_MS,
+        title: `Deleted ${tag.name}`,
+        type: "success",
+      })
+    }
   }
 
   const onMoveTag = (sourceId: string, index: number): void => {
@@ -260,6 +296,7 @@ function useCollectionWireframeState(
   }
 
   const onDeleteCollection = (collectionId: string): void => {
+    const collection = collections.find((item) => item.id === collectionId)
     const deletion = getCollectionDeletion(collections, bookmarks, collectionId)
 
     setCollections(deletion.remainingCollections)
@@ -279,7 +316,10 @@ function useCollectionWireframeState(
         return {
           ...bookmark,
           collections: remainingMemberships,
-          trashedAt: movedToTrash ? Date.now() : bookmark.trashedAt,
+          trashedAt:
+            movedToTrash && bookmark.trashedAt === undefined
+              ? MOCK_DASHBOARD_NOW
+              : bookmark.trashedAt,
         }
       })
     )
@@ -289,6 +329,24 @@ function useCollectionWireframeState(
       deletion.deletedIds.has(destination.collectionId)
     ) {
       onActiveCollectionDeleted()
+    }
+
+    if (collection) {
+      const nestedCollectionCount = deletion.deletedIds.size - 1
+      toastManager.add({
+        description:
+          deletion.exclusiveBookmarkCount === 0
+            ? "No bookmarks moved to Trash."
+            : `${bookmarkCountLabel(deletion.exclusiveBookmarkCount)} moved to Trash.`,
+        id: `dashboard-collection-${collectionId}`,
+        priority: "low",
+        timeout: TOAST_DEFAULT_TIMEOUT_MS,
+        title:
+          nestedCollectionCount === 0
+            ? `Deleted ${collection.name}`
+            : `Deleted ${collection.name} and ${nestedCollectionCount} nested ${nestedCollectionCount === 1 ? "collection" : "collections"}`,
+        type: "success",
+      })
     }
   }
 
@@ -331,6 +389,7 @@ export function useDashboardUiController({
   initialNavigationPreferences: DashboardNavigationPreferences
   bulkMutationFixture?: BookmarkBulkMutationFixture
 }): DashboardUiController {
+  const playUndo = useSound(minimal.undo)
   const [destination, setDestination] =
     React.useState<DashboardDestination>(INITIAL_DESTINATION)
   const [selectionState, dispatchSelection] = React.useReducer(
@@ -382,17 +441,13 @@ export function useDashboardUiController({
     bookmarks,
     setBookmarks,
   } = useBookmarkWireframeState()
-  const actionHandlers: BookmarkActionHandlers = {
-    ...bookmarkActionHandlers,
-    onSelectChange: handleBookmarkActionSelection,
-  }
   const {
     tags,
     onCreateTag: handleCreateTag,
     onDeleteTag: deleteTag,
     onMoveTag: handleMoveTag,
     onUpdateTag: handleUpdateTag,
-  } = useTagWireframeState(setBookmarks)
+  } = useTagWireframeState(bookmarks, setBookmarks)
   const {
     collections,
     onCreateCollection: handleCreateCollection,
@@ -405,6 +460,96 @@ export function useDashboardUiController({
     setIsReordering(false)
     setSort("date")
   })
+
+  const restoreBookmarkSnapshot = (
+    toastId: string,
+    snapshot: readonly MockBookmark[]
+  ): void => {
+    const bookmarkIds = new Set(snapshot.map((bookmark) => bookmark.id))
+    setBookmarks(
+      (currentBookmarks) =>
+        applyBookmarkTrashAction(currentBookmarks, bookmarkIds, {
+          kind: "restore",
+        }).bookmarks
+    )
+    playUndo()
+
+    const summary = getBookmarkRestoreSummary(snapshot, collections)
+    toastManager.add({
+      actionProps: undefined,
+      description: summary.description,
+      id: toastId,
+      priority: "low",
+      timeout: TOAST_DEFAULT_TIMEOUT_MS,
+      title: summary.title,
+      type: "success",
+    })
+  }
+
+  const runSingleBookmarkDelete = (bookmarkId: string): void => {
+    const bookmark = bookmarks.find(
+      (item) => item.id === bookmarkId && item.trashedAt === undefined
+    )
+    if (!bookmark) return
+
+    bookmarkActionHandlers.onDelete(bookmarkId)
+    const toastId = `dashboard-bookmark-${bookmarkId}`
+    toastManager.add({
+      actionProps: {
+        children: "Undo",
+        onClick: () => restoreBookmarkSnapshot(toastId, [bookmark]),
+      },
+      description: `${bookmark.title} can be restored for 30 days.`,
+      id: toastId,
+      priority: "low",
+      timeout: TOAST_DEFAULT_TIMEOUT_MS,
+      title: "Moved to Trash",
+      type: "success",
+    })
+  }
+
+  const runSingleTrashAction = (
+    bookmarkId: string,
+    action: BookmarkTrashAction
+  ): void => {
+    const bookmark = bookmarks.find(
+      (item) => item.id === bookmarkId && item.trashedAt !== undefined
+    )
+    if (!bookmark) return
+
+    const result = applyBookmarkTrashAction(
+      bookmarks,
+      new Set([bookmarkId]),
+      action
+    )
+    if (result.affectedCount === 0) return
+
+    setBookmarks(result.bookmarks)
+    const toastId = `dashboard-bookmark-${bookmarkId}`
+    const summary = getBookmarkRestoreSummary([bookmark], collections)
+    toastManager.add({
+      actionProps: undefined,
+      description: action.kind === "restore" ? summary.description : undefined,
+      id: toastId,
+      priority: "low",
+      timeout: TOAST_DEFAULT_TIMEOUT_MS,
+      title:
+        action.kind === "restore"
+          ? summary.title
+          : `Deleted ${bookmark.title} forever`,
+      type: "success",
+    })
+  }
+
+  const actionHandlers: BookmarkActionHandlers = {
+    ...bookmarkActionHandlers,
+    onDelete: runSingleBookmarkDelete,
+    onDeleteForever: (bookmarkId) =>
+      runSingleTrashAction(bookmarkId, { kind: "delete-forever" }),
+    onRestore: (bookmarkId) =>
+      runSingleTrashAction(bookmarkId, { kind: "restore" }),
+    onSelectChange: handleBookmarkActionSelection,
+  }
   const [collectionOrders, setCollectionOrders] = React.useState<
     Record<string, string[]>
   >(() => createCollectionOrders(mockBookmarks))
@@ -428,6 +573,10 @@ export function useDashboardUiController({
         tags,
       }),
     [bookmarks, collections, destination, tags]
+  )
+  const libraryBookmarks = React.useMemo(
+    () => bookmarks.filter((bookmark) => bookmark.trashedAt === undefined),
+    [bookmarks]
   )
   const activeCollectionId = destinationView.sidebar.collectionId
   const activeTags = tags.filter((tag) =>
@@ -520,11 +669,20 @@ export function useDashboardUiController({
   ): Promise<boolean> => {
     if (bulkMutationInFlightRef.current || selectedIds.size === 0) return false
 
+    const bookmarkSnapshot = bookmarks.filter((bookmark) => {
+      if (!selectedIds.has(bookmark.id)) return false
+      if (action.kind === "restore" || action.kind === "delete-forever") {
+        return bookmark.trashedAt !== undefined
+      }
+      if (action.kind === "delete") return bookmark.trashedAt === undefined
+      return false
+    })
+
     const result = applyBookmarkBulkAction(
       bookmarks,
       selectedIds,
       action,
-      MOCK_DELETED_AT
+      MOCK_DASHBOARD_NOW
     )
     if (result.affectedCount === 0) return false
 
@@ -565,10 +723,29 @@ export function useDashboardUiController({
       bulkMutationInFlightRef.current = false
       bulkRollbackRef.current = null
       dispatchSelection({ type: "mutation-succeeded" })
+      const restoreSummary =
+        action.kind === "restore"
+          ? getBookmarkRestoreSummary(bookmarkSnapshot, collections)
+          : null
       toastManager.add({
+        actionProps:
+          action.kind === "delete"
+            ? {
+                children: "Undo",
+                onClick: () =>
+                  restoreBookmarkSnapshot(BULK_TOAST_ID, bookmarkSnapshot),
+              }
+            : undefined,
+        description:
+          action.kind === "delete"
+            ? `${result.affectedCount === 1 ? "It" : "They"} can be restored for 30 days.`
+            : restoreSummary?.description,
         id: BULK_TOAST_ID,
         priority: "low",
-        title: getBulkSuccessTitle(action, result.affectedCount, collections),
+        timeout: TOAST_DEFAULT_TIMEOUT_MS,
+        title:
+          restoreSummary?.title ??
+          getBulkSuccessTitle(action, result.affectedCount, collections),
         type: "success",
       })
       setSelectionAnnouncement("")
@@ -653,6 +830,8 @@ export function useDashboardUiController({
   const handleSelectUncollected = (): void =>
     navigateToDestination({ kind: "uncollected" })
 
+  const handleSelectTrash = (): void => navigateToDestination({ kind: "trash" })
+
   const handleTagActiveChange = (tagId: string, active: boolean): void => {
     const nextDestination = setDashboardTagActive(destination, tagId, active)
     if (
@@ -665,7 +844,7 @@ export function useDashboardUiController({
     if (isMobile) {
       const tagName = tags.find((tag) => tag.id === tagId)?.name ?? "Tag"
       const nextResultCount = deriveDashboardDestination({
-        bookmarks,
+        bookmarks: libraryBookmarks,
         collections,
         destination: nextDestination,
         tags,
@@ -763,6 +942,7 @@ export function useDashboardUiController({
         onMoveTag: handleMoveTag,
         onSelectAllBookmarks: handleSelectAllBookmarks,
         onSelectCollection: handleSelectCollection,
+        onSelectTrash: handleSelectTrash,
         onSelectUncollected: handleSelectUncollected,
         onSortChange: handleSortChange,
         onStartReorder: handleStartReorder,
@@ -774,6 +954,7 @@ export function useDashboardUiController({
         tagFilterResultCount: destinationView.bookmarks.length,
         tags,
         title: destinationView.heading,
+        trashActive: destinationView.sidebar.trash,
         uncollectedActive: destinationView.sidebar.uncollected,
         viewMode,
       },
@@ -801,6 +982,7 @@ export function useDashboardUiController({
         onToggleAll: handleToggleAllSelection,
         selectedCount: selectionView.selectedCount,
         selectedIds: selectionView.selectedIds,
+        variant: destination.kind === "trash" ? "trash" : "library",
         visibleCount: destinationView.bookmarks.length,
       },
       selectionMode,
@@ -817,7 +999,7 @@ export function useDashboardUiController({
       activeCollection: activeCollectionId,
       activeTagIds: destinationView.sidebar.tagIds,
       allBookmarksActive: destinationView.sidebar.allBookmarks,
-      bookmarks,
+      bookmarks: libraryBookmarks,
       canReorder,
       collections,
       initialDisclosures: initialNavigationPreferences.desktop,
@@ -830,6 +1012,7 @@ export function useDashboardUiController({
       onMoveTag: handleMoveTag,
       onSelectAllBookmarks: handleSelectAllBookmarks,
       onSelectCollection: handleSelectCollection,
+      onSelectTrash: handleSelectTrash,
       onSelectUncollected: handleSelectUncollected,
       onSortChange: handleSortChange,
       onStartReorder: handleStartReorder,
@@ -840,6 +1023,7 @@ export function useDashboardUiController({
       sort,
       tagFilterResultCount: destinationView.bookmarks.length,
       tags,
+      trashActive: destinationView.sidebar.trash,
       uncollectedActive: destinationView.sidebar.uncollected,
       viewMode,
     },

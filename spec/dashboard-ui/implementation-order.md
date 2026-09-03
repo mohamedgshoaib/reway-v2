@@ -41,7 +41,7 @@ Excluded for now:
 
 ## Current baseline
 
-As of 2026-08-31, the mock has a strong UI base:
+As of 2026-09-02, the mock has a strong UI base:
 
 - Responsive desktop and mobile navigation.
 - List, compact grid, and image-grid bookmark views.
@@ -61,10 +61,12 @@ As of 2026-08-31, the mock has a strong UI base:
   Clear, mobile result confirmation, and selection reset.
 - A working Uncollected destination with desktop and mobile navigation, system
   sorts, selection rules, and membership-driven updates.
+- A working Trash recovery view with fixed recovery windows, Restore, Delete
+  forever, item actions, Trash-specific bulk actions, rollback, and Retry.
 
 The following parts are incomplete:
 
-- Trash and Settings are visible but do not open working views.
+- Settings is visible but does not open a working view.
 - Command search says a pasted URL can be saved, but the mock does not add it.
 - Several approved optimistic, failure, retry, undo, and toast states remain
   absent from local collection and tag management.
@@ -89,7 +91,16 @@ unverified until the user gives explicit browser permission.
 - The full suite needed four workers to avoid CPU-contention timeouts in two
   existing dashboard tests. Both tests also passed in focused runs.
 - Browser checks remain unverified after Phase 3.
-- Phase 4 has not started.
+- Phase 4 is complete. Fourteen focused Trash model, action, selection, and flow
+  tests, `pnpm run check`, the full 133-test suite, the production build,
+  `git diff --check`, and full-project React Doctor at 100/100 across 95 files
+  passed.
+- The full suite used four workers. Browser, touch, keyboard, screen-reader,
+  responsive, and rendered contrast checks remain unverified after Phase 4.
+- The Phase 4 deletion and recovery feedback, responsive toast position, and
+  navigation refinements passed the latest 43-test focused run, the full
+  148-test suite, `pnpm run check`, the production build, `git diff --check`,
+  and changed-scope React Doctor at 100/100 across 26 files.
 
 ## What counts as a complete mock
 
@@ -394,7 +405,9 @@ announces its own state.
   keep the action label visible, and add one local progress indicator to the
   initiating control.
 - Success produces one named toast summary with the affected count, announces it
-  politely, clears selection, and exits the mode.
+  politely, clears selection, and exits the mode. Delete success includes a
+  four-second Undo action; Undo restores the bookmark snapshot without reopening
+  selection mode and replaces the same toast with the restore result.
 - Failure rolls back the full change, keeps selection mode open, preserves the
   selected IDs, and shows one error with Retry. Retry reuses the same action and
   destination without requiring the user to select everything again.
@@ -458,9 +471,9 @@ Make sidebar tags operate as filters rather than inert rows.
 - Selection clears when the active tag set changes.
 - Desktop tag rows update results immediately without closing navigation.
 - Mobile tag rows act as checkbox filters and keep the navigation drawer open.
-  A sticky `Show [count] bookmarks` action above the drawer footer closes the
-  drawer and returns focus to the navigation trigger. With no active tags, it
-  reads `Show all bookmarks`.
+  A compact `Show [count] bookmarks` action appears above the drawer footer only
+  while a tag is active. It closes the drawer and returns focus to the navigation
+  trigger.
 - Tag rows are toggle buttons with `aria-pressed` and expose selected state
   without relying on color. Their row action menus remain separate controls with
   non-overlapping hit areas.
@@ -480,7 +493,7 @@ Add Uncollected as a working system destination.
 - Add a clear empty state and ensure collection removal can send bookmarks here.
 - Keep collection counts and tag filters consistent after membership changes.
 
-## Phase 4: Trash
+## Phase 4: Trash [complete]
 
 Turn the existing Trash row into a complete recovery view.
 
@@ -488,13 +501,19 @@ Turn the existing Trash row into a complete recovery view.
 - Keep trashed bookmarks out of All Bookmarks, collections, tags, search results,
   and Uncollected.
 - Show recovery context based on the 30-day rule with fixed fixture dates.
-- Restore returns a bookmark as Uncollected.
+- Trash rows show prior collection context as `From Research`, `From Research +
+  2`, or `From Uncollected`.
+- Restore returns a bookmark to every prior collection that still exists. If no
+  prior collection survives, Restore returns it as Uncollected.
 - Delete forever uses a serious confirmation and cannot be undone.
 - Selection mode in Trash exposes Restore and Delete forever instead of normal
   library bulk actions.
 - Add empty, mixed-selection, pending, and failure states.
-- Show one restore or permanent-delete summary for a bulk result. Do not announce
-  or toast each bookmark separately.
+- Show one restore or permanent-delete summary for a bulk result. Name a shared
+  restore destination when one exists; use `Returned to their previous
+  collections.` for mixed results, or `Returned to their previous collections or
+  Uncollected.` when any bookmark has no surviving collection. Do not announce or
+  toast each bookmark separately.
 - Keep the Trash selection toolbar visibly distinct through its labels and action
   set, not a new decorative color theme.
 
@@ -505,7 +524,13 @@ fixture date should produce stable output and tests.
 
 Complete the interaction states already required for collection and tag work:
 
-- Named success toasts for create, edit, and delete.
+The deletion and recovery slice is complete: bookmark deletion has four-second
+Undo, collection and tag deletion have named passive results, Trash restores
+valid prior memberships with clear destination summaries, and Delete forever
+has one named passive result. Mobile toasts are centered, and successful Undo
+plays one semantic cue.
+
+- Named success toasts for create and edit. Delete feedback is covered above.
 - Edit Undo using the complete prior name and appearance snapshot.
 - Optimistic updates with rollback on fixture-controlled failure.
 - Error toasts with Retry that reopen the preserved draft.
@@ -519,6 +544,11 @@ Complete the interaction states already required for collection and tag work:
   or tags.
 - Polite success announcements and assertive, actionable error announcements.
 - Toast timers pause while the page is hidden or the toast has keyboard focus.
+- Passive success toasts and timed Undo toasts use four seconds. Failure toasts
+  with Retry remain open.
+- Global toasts sit at the bottom right on desktop and bottom center on mobile.
+- Successful bookmark Undo plays one restrained Undo cue after restoration. It
+  does not reuse a generic success cue or play once per bookmark.
 - Rapid updates for one managed item replace its existing toast instead of
   stacking messages.
 

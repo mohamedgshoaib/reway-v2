@@ -1,3 +1,7 @@
+import {
+  applyBookmarkTrashAction,
+  type BookmarkTrashAction,
+} from "@/dev/dashboard-ui/bookmark-trash"
 import type { MockBookmark } from "@/dev/dashboard-ui/mock-bookmarks"
 
 export type BookmarkBulkAction =
@@ -5,6 +9,7 @@ export type BookmarkBulkAction =
   | { kind: "move"; collectionId: string }
   | { kind: "remove"; collectionId: string }
   | { kind: "delete" }
+  | BookmarkTrashAction
 
 export type BookmarkSelectionMutation =
   | { status: "idle" }
@@ -247,9 +252,11 @@ export function deriveBookmarkSelection(
 }
 
 export function getBookmarkBulkActionKey(action: BookmarkBulkAction): string {
-  return action.kind === "delete"
-    ? action.kind
-    : `${action.kind}:${action.collectionId}`
+  return action.kind === "add" ||
+    action.kind === "move" ||
+    action.kind === "remove"
+    ? `${action.kind}:${action.collectionId}`
+    : action.kind
 }
 
 export function getBookmarkBulkDestinationDisabledReason(
@@ -334,6 +341,10 @@ export function applyBookmarkBulkAction(
   action: BookmarkBulkAction,
   deletedAt: number
 ): BookmarkBulkMutationResult {
+  if (action.kind === "restore" || action.kind === "delete-forever") {
+    return applyBookmarkTrashAction(bookmarks, selectedIds, action)
+  }
+
   let affectedCount = 0
   const nextBookmarks = bookmarks.map((bookmark) => {
     if (!selectedIds.has(bookmark.id)) return bookmark

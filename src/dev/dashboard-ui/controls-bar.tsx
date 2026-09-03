@@ -31,6 +31,7 @@ export function BookmarkControlsBar({
   onMoveTag,
   onSelectAllBookmarks,
   onSelectCollection,
+  onSelectTrash,
   onSelectUncollected,
   onSortChange,
   onStartReorder,
@@ -41,6 +42,7 @@ export function BookmarkControlsBar({
   sort,
   tagFilterResultCount,
   title,
+  trashActive = false,
   uncollectedActive = false,
   viewMode,
 }: {
@@ -66,6 +68,7 @@ export function BookmarkControlsBar({
   onMoveTag?: (sourceId: string, index: number) => void
   onSelectAllBookmarks?: () => void
   onSelectCollection?: (collection: string) => void
+  onSelectTrash?: () => void
   onSelectUncollected?: () => void
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
@@ -76,6 +79,7 @@ export function BookmarkControlsBar({
   sort: SortOption
   tagFilterResultCount?: number
   title: string
+  trashActive?: boolean
   uncollectedActive?: boolean
   viewMode: ViewMode
 }): React.ReactElement {
@@ -100,6 +104,7 @@ export function BookmarkControlsBar({
           onMoveTag={onMoveTag}
           onSelectAllBookmarks={onSelectAllBookmarks}
           onSelectCollection={onSelectCollection}
+          onSelectTrash={onSelectTrash}
           onSelectUncollected={onSelectUncollected}
           onSortChange={onSortChange}
           onStartReorder={onStartReorder}
@@ -110,6 +115,7 @@ export function BookmarkControlsBar({
           sort={sort}
           tagFilterResultCount={tagFilterResultCount}
           tags={tags}
+          trashActive={trashActive}
           uncollectedActive={uncollectedActive}
           viewMode={viewMode}
         />

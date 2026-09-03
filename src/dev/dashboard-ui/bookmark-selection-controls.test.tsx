@@ -25,9 +25,11 @@ const idleMutation: BookmarkSelectionMutation = { status: "idle" }
 function renderBars({
   mutation = idleMutation,
   selectedIds = new Set(["1", "2"]),
+  trashMode = false,
 }: {
   mutation?: BookmarkSelectionMutation
   selectedIds?: ReadonlySet<string>
+  trashMode?: boolean
 } = {}) {
   const onClose = vi.fn<() => void>()
   const onRunAction = vi.fn<
@@ -46,6 +48,7 @@ function renderBars({
       onToggleAll={onToggleAll}
       selectedCount={selectedIds.size}
       selectedIds={selectedIds}
+      variant={trashMode ? "trash" : "library"}
       visibleCount={8}
     />
   )
@@ -117,6 +120,52 @@ describe("bookmark selection controls", () => {
     await waitFor(() => {
       expect(onRunAction).toHaveBeenCalledWith(
         { kind: "delete" },
+        expect.any(HTMLElement)
+      )
+    })
+  })
+
+  it("replaces library actions with Trash recovery actions", async () => {
+    const { onRunAction } = renderBars({ trashMode: true })
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Open actions for 2 selected bookmarks",
+      })
+    )
+
+    expect(screen.queryByRole("button", { name: "Add" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Move" })).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Restore" }))
+
+    await waitFor(() => {
+      expect(onRunAction).toHaveBeenCalledWith(
+        { kind: "restore" },
+        expect.any(HTMLElement)
+      )
+    })
+  })
+
+  it("confirms permanent deletion and states that it cannot be undone", async () => {
+    const { onRunAction } = renderBars({ trashMode: true })
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Open actions for 2 selected bookmarks",
+      })
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Delete forever" }))
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Delete selected bookmarks forever?",
+      })
+    ).not.toBeNull()
+    expect(screen.getByText(/This cannot be undone/)).not.toBeNull()
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete forever" }))
+    await waitFor(() => {
+      expect(onRunAction).toHaveBeenCalledWith(
+        { kind: "delete-forever" },
         expect.any(HTMLElement)
       )
     })

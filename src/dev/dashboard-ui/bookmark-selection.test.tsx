@@ -17,9 +17,11 @@ function createActionHandlers(): BookmarkActionHandlers {
     onAddToCollection:
       vi.fn<(bookmarkId: string, collection: string) => void>(),
     onDelete: vi.fn<(bookmarkId: string) => void>(),
+    onDeleteForever: vi.fn<(bookmarkId: string) => void>(),
     onMoveToCollection:
       vi.fn<(bookmarkId: string, collection: string) => void>(),
     onReenrich: vi.fn<(bookmarkId: string) => void>(),
+    onRestore: vi.fn<(bookmarkId: string) => void>(),
     onSelectChange: vi.fn<(bookmarkId: string, selected: boolean) => void>(),
     onTagsChange: vi.fn<(bookmarkId: string, tags: string[]) => void>(),
     onTitleChange: vi.fn<(bookmarkId: string, title: string) => void>(),

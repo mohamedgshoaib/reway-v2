@@ -56,17 +56,23 @@ describe("collection UI regressions", () => {
     const action = screen.getByRole("button", {
       name: "Actions for Streaming platforms",
     })
+    const childIcon = childButton.querySelector("svg")
 
     expect(childButton.className).toContain("w-full")
+    expect(childButton.className).not.toContain(
+      "[&>svg]:text-sidebar-accent-foreground"
+    )
+    expect(childIcon?.getAttribute("class")).toContain("text-red-700")
+    expect(childIcon?.getAttribute("class")).toContain("dark:text-red-400")
     expect(count?.className).toContain("peer-data-[size=md]/menu-button:top-1")
     expect(count?.className).toContain("max-[799px]:hidden")
     expect(count?.style.opacity).toBe("")
     expect(action?.className).toContain("size-6")
     expect(action?.className).toContain("rounded-md")
     expect(action?.className).toContain("after:-inset-1")
-    expect(action?.className).toContain(
-      "peer-data-[size=md]/menu-button:top-0.5"
-    )
+    expect(action?.className).toContain("top-1/2")
+    expect(action?.className).toContain("-translate-y-1/2")
+    expect(action?.className).not.toContain("peer-data-[size=md]/menu-button")
   })
 
   it("shows collection labels instead of stored parent values", () => {
@@ -364,7 +370,7 @@ describe("collection UI regressions", () => {
     fireEvent.click(screen.getByRole("menuitemradio", { name: "Custom" }))
     fireEvent.click(screen.getByRole("menuitem", { name: "Reorder tags" }))
 
-    const handle = screen.getByRole("button", { name: "Move AI" })
+    const handle = screen.getByRole("button", { name: "Move Design" })
     await waitFor(() => {
       expect(handle.getAttribute("aria-roledescription")).toBe("draggable")
     })

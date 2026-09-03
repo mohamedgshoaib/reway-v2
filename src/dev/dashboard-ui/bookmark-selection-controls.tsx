@@ -1,4 +1,5 @@
 import {
+  ArrowCounterClockwiseIcon,
   ArrowRightIcon,
   CaretUpIcon,
   CheckSquareOffsetIcon,
@@ -80,6 +81,8 @@ type RunBulkAction = (
 ) => Promise<boolean>
 
 const DELETE_ACTION = { kind: "delete" } as const
+const DELETE_FOREVER_ACTION = { kind: "delete-forever" } as const
+const RESTORE_ACTION = { kind: "restore" } as const
 
 function DestinationContent({
   collection,
@@ -383,39 +386,42 @@ function BulkCollectionPicker({
   )
 }
 
+interface SelectionControlState {
+  allVisibleSelected: boolean
+  bulkDisabled: boolean
+  isPending: boolean
+  selectedCount: number
+  showRangeHint: boolean
+}
+
+type SelectionActionVariant =
+  | {
+      kind: "library"
+      collections: readonly Collection[]
+      destinationAvailability: ReadonlyMap<
+        string,
+        BookmarkBulkDestinationAvailability
+      >
+      mutation: BookmarkSelectionMutation
+      removeAction: Extract<BookmarkBulkAction, { kind: "remove" }> | null
+      showRemoveProgress: boolean
+    }
+  | { kind: "trash"; showRestoreProgress: boolean }
+
 function DesktopSelectionBar({
-  allVisibleSelected,
-  bulkDisabled,
-  collections,
-  destinationAvailability,
-  isPending,
-  mutation,
+  actions,
   onClose,
   onOpenDelete,
   onRunAction,
   onToggleAll,
-  removeAction,
-  selectedCount,
-  showRangeHint,
-  showRemoveProgress,
+  state,
 }: {
-  allVisibleSelected: boolean
-  bulkDisabled: boolean
-  collections: readonly Collection[]
-  destinationAvailability: ReadonlyMap<
-    string,
-    BookmarkBulkDestinationAvailability
-  >
-  isPending: boolean
-  mutation: BookmarkSelectionMutation
+  actions: SelectionActionVariant
   onClose: () => void
   onOpenDelete: (returnFocusTarget: HTMLElement | null) => void
   onRunAction: RunBulkAction
   onToggleAll: () => void
-  removeAction: Extract<BookmarkBulkAction, { kind: "remove" }> | null
-  selectedCount: number
-  showRangeHint: boolean
-  showRemoveProgress: boolean
+  state: SelectionControlState
 }): React.ReactElement {
   return (
     <div className="mb-4 flex h-9 min-w-0 items-center gap-2 px-2 min-[800px]:mb-2">
@@ -428,9 +434,9 @@ function DesktopSelectionBar({
         <XIcon aria-hidden="true" />
       </Button>
       <span className="shrink-0 text-sm font-medium tabular-nums">
-        {selectedCount} selected
+        {state.selectedCount} selected
       </span>
-      {showRangeHint ? (
+      {state.showRangeHint ? (
         <span className="hidden items-center gap-1 text-xs text-muted-foreground min-[800px]:inline-flex">
           Shift-click to select a range
           <Button
@@ -445,98 +451,115 @@ function DesktopSelectionBar({
       ) : null}
       <div className="ms-auto hidden min-w-0 items-center gap-1 min-[800px]:flex">
         <Button
-          disabled={isPending}
+          disabled={state.isPending}
           onClick={onToggleAll}
           size="sm"
           variant="ghost"
         >
           <CheckSquareOffsetIcon aria-hidden="true" />
-          {allVisibleSelected ? "Clear all" : "Select all"}
+          {state.allVisibleSelected ? "Clear all" : "Select all"}
         </Button>
-        <BulkCollectionPicker
-          actionKind="add"
-          availability={destinationAvailability}
-          collections={collections}
-          disabled={bulkDisabled}
-          label="Add"
-          mutation={mutation}
-          onRunAction={onRunAction}
-        />
-        <BulkCollectionPicker
-          actionKind="move"
-          availability={destinationAvailability}
-          collections={collections}
-          disabled={bulkDisabled}
-          label="Move"
-          mutation={mutation}
-          onRunAction={onRunAction}
-        />
-        {removeAction ? (
-          <Button
-            disabled={bulkDisabled}
-            onClick={(event) =>
-              void onRunAction(removeAction, event.currentTarget)
-            }
-            size="sm"
-            variant="ghost"
-          >
-            {showRemoveProgress ? (
-              <Spinner aria-hidden="true" className="size-4" />
-            ) : (
-              <MinusIcon aria-hidden="true" />
-            )}
-            Remove
-          </Button>
-        ) : null}
-        <Separator className="mx-1 h-5" orientation="vertical" />
-        <Button
-          disabled={bulkDisabled}
-          onClick={(event) => onOpenDelete(event.currentTarget)}
-          size="sm"
-          variant="destructive-outline"
-        >
-          <TrashIcon aria-hidden="true" />
-          Delete
-        </Button>
+        {actions.kind === "trash" ? (
+          <>
+            <Button
+              disabled={state.bulkDisabled}
+              onClick={(event) =>
+                void onRunAction(RESTORE_ACTION, event.currentTarget)
+              }
+              size="sm"
+              variant="ghost"
+            >
+              {actions.showRestoreProgress ? (
+                <Spinner aria-hidden="true" className="size-4" />
+              ) : (
+                <ArrowCounterClockwiseIcon aria-hidden="true" />
+              )}
+              Restore
+            </Button>
+            <Separator className="mx-1 h-5" orientation="vertical" />
+            <Button
+              disabled={state.bulkDisabled}
+              onClick={(event) => onOpenDelete(event.currentTarget)}
+              size="sm"
+              variant="destructive-outline"
+            >
+              <TrashIcon aria-hidden="true" />
+              Delete forever
+            </Button>
+          </>
+        ) : (
+          <>
+            <BulkCollectionPicker
+              actionKind="add"
+              availability={actions.destinationAvailability}
+              collections={actions.collections}
+              disabled={state.bulkDisabled}
+              label="Add"
+              mutation={actions.mutation}
+              onRunAction={onRunAction}
+            />
+            <BulkCollectionPicker
+              actionKind="move"
+              availability={actions.destinationAvailability}
+              collections={actions.collections}
+              disabled={state.bulkDisabled}
+              label="Move"
+              mutation={actions.mutation}
+              onRunAction={onRunAction}
+            />
+            {actions.removeAction ? (
+              <Button
+                disabled={state.bulkDisabled}
+                onClick={(event) =>
+                  void onRunAction(actions.removeAction!, event.currentTarget)
+                }
+                size="sm"
+                variant="ghost"
+              >
+                {actions.showRemoveProgress ? (
+                  <Spinner aria-hidden="true" className="size-4" />
+                ) : (
+                  <MinusIcon aria-hidden="true" />
+                )}
+                Remove
+              </Button>
+            ) : null}
+            <Separator className="mx-1 h-5" orientation="vertical" />
+            <Button
+              disabled={state.bulkDisabled}
+              onClick={(event) => onOpenDelete(event.currentTarget)}
+              size="sm"
+              variant="destructive-outline"
+            >
+              <TrashIcon aria-hidden="true" />
+              Delete
+            </Button>
+          </>
+        )}
       </div>
     </div>
   )
 }
 
 function MobileSelectionActions({
-  allVisibleSelected,
-  bulkDisabled,
-  collections,
-  destinationAvailability,
-  isPending,
-  mutation,
+  actions,
   onOpenChange,
   onOpenDelete,
   onRunAction,
   onToggleAll,
   open,
-  removeAction,
   selectedBookmarkLabel,
-  showRemoveProgress,
+  state,
   triggerRef,
 }: {
-  allVisibleSelected: boolean
-  bulkDisabled: boolean
-  collections: readonly Collection[]
-  destinationAvailability: ReadonlyMap<
-    string,
-    BookmarkBulkDestinationAvailability
-  >
-  isPending: boolean
-  mutation: BookmarkSelectionMutation
+  actions: SelectionActionVariant
   onOpenChange: (open: boolean) => void
   onOpenDelete: (returnFocusTarget: HTMLElement | null) => void
   onRunAction: RunBulkAction
   onToggleAll: () => void
   open: boolean
-  removeAction: Extract<BookmarkBulkAction, { kind: "remove" }> | null
   selectedBookmarkLabel: string
-  showRemoveProgress: boolean
+  state: SelectionControlState
   triggerRef: React.RefObject<HTMLButtonElement | null>
 }): React.ReactElement {
   const runMobileAction: RunBulkAction = (action) => {
@@ -571,56 +594,76 @@ function MobileSelectionActions({
                 <DrawerMenuGroupLabel>Selection</DrawerMenuGroupLabel>
                 <DrawerMenuItem
                   className="min-h-11"
-                  disabled={isPending}
+                  disabled={state.isPending}
                   onClick={onToggleAll}
                 >
                   <CheckSquareOffsetIcon aria-hidden="true" />
-                  {allVisibleSelected ? "Clear all" : "Select all"}
+                  {state.allVisibleSelected ? "Clear all" : "Select all"}
                 </DrawerMenuItem>
               </DrawerMenuGroup>
               <DrawerMenuSeparator />
-              <DrawerMenuGroup>
-                <DrawerMenuGroupLabel>Organize</DrawerMenuGroupLabel>
-                <BulkCollectionPicker
-                  actionKind="add"
-                  availability={destinationAvailability}
-                  collections={collections}
-                  disabled={bulkDisabled}
-                  label="Add"
-                  mobileMenuItem
-                  mutation={mutation}
-                  onRunAction={runMobileAction}
-                />
-                <BulkCollectionPicker
-                  actionKind="move"
-                  availability={destinationAvailability}
-                  collections={collections}
-                  disabled={bulkDisabled}
-                  label="Move"
-                  mobileMenuItem
-                  mutation={mutation}
-                  onRunAction={runMobileAction}
-                />
-                {removeAction ? (
+              {actions.kind === "trash" ? (
+                <DrawerMenuGroup>
+                  <DrawerMenuGroupLabel>Recovery</DrawerMenuGroupLabel>
                   <DrawerMenuItem
                     className="min-h-11"
-                    disabled={bulkDisabled}
-                    onClick={() => void runMobileAction(removeAction, null)}
+                    disabled={state.bulkDisabled}
+                    onClick={() => void runMobileAction(RESTORE_ACTION, null)}
                   >
-                    {showRemoveProgress ? (
+                    {actions.showRestoreProgress ? (
                       <Spinner aria-hidden="true" className="size-4" />
                     ) : (
-                      <MinusIcon aria-hidden="true" />
+                      <ArrowCounterClockwiseIcon aria-hidden="true" />
                     )}
-                    Remove from this collection
+                    Restore
                   </DrawerMenuItem>
-                ) : null}
-              </DrawerMenuGroup>
+                </DrawerMenuGroup>
+              ) : (
+                <DrawerMenuGroup>
+                  <DrawerMenuGroupLabel>Organize</DrawerMenuGroupLabel>
+                  <BulkCollectionPicker
+                    actionKind="add"
+                    availability={actions.destinationAvailability}
+                    collections={actions.collections}
+                    disabled={state.bulkDisabled}
+                    label="Add"
+                    mobileMenuItem
+                    mutation={actions.mutation}
+                    onRunAction={runMobileAction}
+                  />
+                  <BulkCollectionPicker
+                    actionKind="move"
+                    availability={actions.destinationAvailability}
+                    collections={actions.collections}
+                    disabled={state.bulkDisabled}
+                    label="Move"
+                    mobileMenuItem
+                    mutation={actions.mutation}
+                    onRunAction={runMobileAction}
+                  />
+                  {actions.removeAction ? (
+                    <DrawerMenuItem
+                      className="min-h-11"
+                      disabled={state.bulkDisabled}
+                      onClick={() =>
+                        void runMobileAction(actions.removeAction!, null)
+                      }
+                    >
+                      {actions.showRemoveProgress ? (
+                        <Spinner aria-hidden="true" className="size-4" />
+                      ) : (
+                        <MinusIcon aria-hidden="true" />
+                      )}
+                      Remove from this collection
+                    </DrawerMenuItem>
+                  ) : null}
+                </DrawerMenuGroup>
+              )}
               <DrawerMenuSeparator />
               <DrawerMenuGroup>
                 <DrawerMenuItem
                   className="min-h-11"
-                  disabled={bulkDisabled}
+                  disabled={state.bulkDisabled}
                   onClick={() => {
                     onOpenChange(false)
                     onOpenDelete(triggerRef.current)
@@ -628,7 +671,7 @@ function MobileSelectionActions({
                   variant="destructive"
                 >
                   <TrashIcon aria-hidden="true" />
-                  Delete
+                  {actions.kind === "trash" ? "Delete forever" : "Delete"}
                 </DrawerMenuItem>
               </DrawerMenuGroup>
             </DrawerMenu>
@@ -647,6 +690,7 @@ function SelectionDeleteDialog({
   open,
   selectedCount,
   showDeleteProgress,
+  variant,
 }: {
   deleteButtonRef: React.RefObject<HTMLButtonElement | null>
   isPending: boolean
@@ -655,16 +699,31 @@ function SelectionDeleteDialog({
   open: boolean
   selectedCount: number
   showDeleteProgress: boolean
+  variant: "library" | "trash"
 }): React.ReactElement {
   return (
     <AlertDialog onOpenChange={onOpenChange} open={open}>
       <AlertDialogPopup>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete selected bookmarks?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {variant === "trash"
+              ? "Delete selected bookmarks forever?"
+              : "Delete selected bookmarks?"}
+          </AlertDialogTitle>
           <AlertDialogDescription>
-            {selectedCount} selected{" "}
-            {selectedCount === 1 ? "bookmark" : "bookmarks"} will move to Trash.
-            You can restore them for 30 days.
+            {variant === "trash" ? (
+              <>
+                {selectedCount} selected{" "}
+                {selectedCount === 1 ? "bookmark" : "bookmarks"} will be removed
+                permanently. This cannot be undone.
+              </>
+            ) : (
+              <>
+                {selectedCount} selected{" "}
+                {selectedCount === 1 ? "bookmark" : "bookmarks"} will move to
+                Trash. You can restore them for 30 days.
+              </>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -685,7 +744,9 @@ function SelectionDeleteDialog({
             ) : (
               <TrashIcon aria-hidden="true" />
             )}
-            Delete {selectedCount === 1 ? "bookmark" : "bookmarks"}
+            {variant === "trash"
+              ? "Delete forever"
+              : `Delete ${selectedCount === 1 ? "bookmark" : "bookmarks"}`}
           </Button>
         </AlertDialogFooter>
       </AlertDialogPopup>
@@ -704,6 +765,7 @@ export function BookmarkSelectionBars({
   onToggleAll,
   selectedCount,
   selectedIds,
+  variant = "library",
   visibleCount,
 }: {
   activeCollectionId: string | null
@@ -716,6 +778,7 @@ export function BookmarkSelectionBars({
   onToggleAll: () => void
   selectedCount: number
   selectedIds: ReadonlySet<string>
+  variant?: "library" | "trash"
   visibleCount: number
 }): React.ReactElement {
   const hasSeenRangeHint = useSyncExternalStore(
@@ -741,7 +804,8 @@ export function BookmarkSelectionBars({
   const showDeleteProgress =
     mutation.status === "pending" &&
     mutation.showProgress &&
-    mutation.action.kind === "delete"
+    mutation.action.kind ===
+      (variant === "trash" ? DELETE_FOREVER_ACTION.kind : DELETE_ACTION.kind)
   const bulkDisabled = selectedCount === 0 || isPending
   const removeAction = activeCollectionId
     ? ({ collectionId: activeCollectionId, kind: "remove" } as const)
@@ -752,11 +816,36 @@ export function BookmarkSelectionBars({
     mutation.showProgress &&
     getBookmarkBulkActionKey(mutation.action) ===
       getBookmarkBulkActionKey(removeAction)
+  const showRestoreProgress =
+    mutation.status === "pending" &&
+    mutation.showProgress &&
+    mutation.action.kind === "restore"
   const showRangeHint = visibleCount >= 2 && !hasSeenRangeHint
   const selectedBookmarkLabel = `${selectedCount} selected ${selectedCount === 1 ? "bookmark" : "bookmarks"}`
+  const controlsState: SelectionControlState = {
+    allVisibleSelected,
+    bulkDisabled,
+    isPending,
+    selectedCount,
+    showRangeHint,
+  }
+  const actions: SelectionActionVariant =
+    variant === "trash"
+      ? { kind: "trash", showRestoreProgress }
+      : {
+          collections,
+          destinationAvailability,
+          kind: "library",
+          mutation,
+          removeAction,
+          showRemoveProgress,
+        }
 
   const runDelete = async (): Promise<void> => {
-    const succeeded = await onRunAction(DELETE_ACTION, deleteButtonRef.current)
+    const succeeded = await onRunAction(
+      variant === "trash" ? DELETE_FOREVER_ACTION : DELETE_ACTION,
+      deleteButtonRef.current
+    )
     if (succeeded) setDeleteOpen(false)
   }
 
@@ -768,36 +857,22 @@ export function BookmarkSelectionBars({
   return (
     <>
       <DesktopSelectionBar
-        allVisibleSelected={allVisibleSelected}
-        bulkDisabled={bulkDisabled}
-        collections={collections}
-        destinationAvailability={destinationAvailability}
-        isPending={isPending}
-        mutation={mutation}
+        actions={actions}
         onClose={onClose}
         onOpenDelete={openDeleteDialog}
         onRunAction={onRunAction}
         onToggleAll={onToggleAll}
-        removeAction={removeAction}
-        selectedCount={selectedCount}
-        showRangeHint={showRangeHint}
-        showRemoveProgress={showRemoveProgress}
+        state={controlsState}
       />
       <MobileSelectionActions
-        allVisibleSelected={allVisibleSelected}
-        bulkDisabled={bulkDisabled}
-        collections={collections}
-        destinationAvailability={destinationAvailability}
-        isPending={isPending}
-        mutation={mutation}
+        actions={actions}
         onOpenChange={setMobileActionsOpen}
         onOpenDelete={openDeleteDialog}
         onRunAction={onRunAction}
         onToggleAll={onToggleAll}
         open={mobileActionsOpen}
-        removeAction={removeAction}
         selectedBookmarkLabel={selectedBookmarkLabel}
-        showRemoveProgress={showRemoveProgress}
+        state={controlsState}
         triggerRef={mobileActionsTriggerRef}
       />
       <SelectionDeleteDialog
@@ -814,6 +889,7 @@ export function BookmarkSelectionBars({
         onRunDelete={runDelete}
         selectedCount={selectedCount}
         showDeleteProgress={showDeleteProgress}
+        variant={variant}
       />
     </>
   )

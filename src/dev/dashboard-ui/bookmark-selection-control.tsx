@@ -40,11 +40,13 @@ function hasShiftModifier(event: Event): boolean {
 function SelectionCheckbox({
   bookmark,
   checked,
+  labelId,
   onSelectionChange,
   visibleIds,
 }: {
   bookmark: MockBookmark
   checked: boolean
+  labelId: string
   onSelectionChange: BookmarkSelectionChangeHandler
   visibleIds: readonly string[]
 }): React.ReactElement {
@@ -62,6 +64,7 @@ function SelectionCheckbox({
 
   return (
     <Checkbox
+      aria-labelledby={labelId}
       checked={checked}
       onCheckedChange={handleCheckedChange}
       sound={false}
@@ -73,11 +76,13 @@ function SelectionCheckbox({
 export function BookmarkLeadingControl({
   bookmark,
   checked,
+  labelId,
   onSelectionChange,
   visibleIds,
 }: {
   bookmark: MockBookmark
   checked: boolean
+  labelId: string
   onSelectionChange: BookmarkSelectionChangeHandler
   visibleIds: readonly string[]
 }): React.ReactElement {
@@ -89,6 +94,7 @@ export function BookmarkLeadingControl({
       <SelectionCheckbox
         bookmark={bookmark}
         checked={checked}
+        labelId={labelId}
         onSelectionChange={onSelectionChange}
         visibleIds={visibleIds}
       />

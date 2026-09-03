@@ -47,6 +47,7 @@ export type CollectionColor = AppearanceColor
 
 export interface CollectionMembershipSource {
   collections?: readonly CollectionId[]
+  trashedAt?: number
 }
 
 export interface CollectionNode {
@@ -315,6 +316,7 @@ export function getCollectionDeletion(
 
   let exclusiveBookmarkCount = 0
   for (const bookmark of bookmarks) {
+    if (bookmark.trashedAt !== undefined) continue
     const memberships = bookmark.collections ?? []
     if (
       memberships.length > 0 &&

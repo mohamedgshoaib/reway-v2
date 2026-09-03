@@ -105,6 +105,33 @@ export function FeedbackSection(): React.ReactElement {
         <Button
           onClick={() =>
             toastManager.add({
+              description: "Bookmark added to your library.",
+              type: "success",
+            })
+          }
+          variant="outline"
+        >
+          Trigger description-only toast
+        </Button>
+        <Button
+          onClick={() => {
+            const toastId = toastManager.add({
+              actionProps: {
+                children: "Undo",
+                onClick: () => toastManager.close(toastId),
+              },
+              description: "Bookmark moved to Trash.",
+              title: "Deleted",
+              type: "success",
+            })
+          }}
+          variant="outline"
+        >
+          Trigger action toast
+        </Button>
+        <Button
+          onClick={() =>
+            toastManager.add({
               title: "Enrichment failed",
               description: "Retry from the bookmark overflow menu.",
               type: "error",

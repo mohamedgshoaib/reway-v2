@@ -17,8 +17,13 @@ import {
   BookmarkLeadingFavicon,
   type BookmarkSelectionChangeHandler,
 } from "@/dev/dashboard-ui/bookmark-selection-control"
+import {
+  getBookmarkTrashOrigin,
+  getBookmarkTrashRecovery,
+} from "@/dev/dashboard-ui/bookmark-trash"
 import { getBookmarkUrl } from "@/dev/dashboard-ui/bookmark-url"
 import type { Collection } from "@/dev/dashboard-ui/collection-hierarchy"
+import { MOCK_DASHBOARD_NOW } from "@/dev/dashboard-ui/mock-bookmarks"
 import type {
   MockBookmark,
   SortOption,
@@ -50,6 +55,7 @@ const preventShiftTextSelection: React.MouseEventHandler<HTMLLabelElement> = (
 
 function BookmarkRowSurface({
   bookmark,
+  collections,
   isDragging = false,
   isSelected,
   onSelectionChange,
@@ -58,6 +64,7 @@ function BookmarkRowSurface({
   visibleIds,
 }: {
   bookmark: MockBookmark
+  collections: readonly Collection[]
   isDragging?: boolean
   isSelected: boolean
   onSelectionChange?: BookmarkSelectionChangeHandler
@@ -65,6 +72,15 @@ function BookmarkRowSurface({
   trailing: React.ReactNode
   visibleIds: readonly string[]
 }): React.ReactElement {
+  const recovery = getBookmarkTrashRecovery(bookmark, MOCK_DASHBOARD_NOW)
+  const origin = recovery ? getBookmarkTrashOrigin(bookmark, collections) : null
+  const recoveryContext =
+    recovery && origin ? `${origin.label} · ${recovery.label}` : null
+  const recoveryAccessibleLabel =
+    recovery && origin
+      ? `${origin.label}. ${recovery.label} to restore`
+      : undefined
+  const selectionLabelId = `bookmark-selection-label-${bookmark.id}`
   const className = cn(
     stateSurfaceVariants({ axis: "block" }),
     "group/bookmark flex min-h-10 items-center gap-2 rounded-md px-2 py-2 before:rounded-[calc(var(--radius-md)-1px)] hover:before:bg-accent data-selected:before:bg-accent",
@@ -81,13 +97,24 @@ function BookmarkRowSurface({
         <BookmarkLeadingControl
           bookmark={bookmark}
           checked={isSelected}
+          labelId={selectionLabelId}
           onSelectionChange={onSelectionChange}
           visibleIds={visibleIds}
         />
-        <span className="min-w-0 flex-1 truncate text-sm text-foreground">
+        <span
+          className="min-w-0 flex-1 truncate text-sm text-foreground"
+          id={selectionLabelId}
+        >
           {bookmark.title}
         </span>
-        {bookmark.metadataStatus === "pending" ? (
+        {recoveryContext ? (
+          <span
+            aria-label={recoveryAccessibleLabel}
+            className="shrink-0 text-xs text-muted-foreground tabular-nums"
+          >
+            {recoveryContext}
+          </span>
+        ) : bookmark.metadataStatus === "pending" ? (
           <span className="shrink-0 text-xs text-muted-foreground">
             Pending
           </span>
@@ -114,7 +141,14 @@ function BookmarkRowSurface({
       <span className="pointer-events-none relative z-10 min-w-0 flex-1 truncate text-sm text-foreground">
         {bookmark.title}
       </span>
-      {bookmark.metadataStatus === "pending" ? (
+      {recoveryContext ? (
+        <span
+          aria-label={recoveryAccessibleLabel}
+          className="pointer-events-none relative z-10 shrink-0 text-xs text-muted-foreground tabular-nums"
+        >
+          {recoveryContext}
+        </span>
+      ) : bookmark.metadataStatus === "pending" ? (
         <span className="pointer-events-none relative z-10 shrink-0 text-xs text-muted-foreground">
           Pending
         </span>
@@ -126,6 +160,7 @@ function BookmarkRowSurface({
 
 function BookmarkRow({
   bookmark,
+  collections,
   isSelected,
   onSelectionChange,
   selectionMode,
@@ -144,6 +179,7 @@ function BookmarkRow({
   const surface = (
     <BookmarkRowSurface
       bookmark={bookmark}
+      collections={collections}
       isSelected={isSelected}
       onSelectionChange={onSelectionChange}
       selectionMode={selectionMode}
@@ -153,6 +189,7 @@ function BookmarkRow({
             {...actionHandlers}
             availableTags={tags}
             bookmark={bookmark}
+            collections={collections}
             isSelected={isSelected}
           />
         )
@@ -169,6 +206,7 @@ function BookmarkRow({
         {...actionHandlers}
         availableTags={tags}
         bookmark={bookmark}
+        collections={collections}
         isSelected={isSelected}
       >
         {surface}
@@ -179,9 +217,11 @@ function BookmarkRow({
 
 function SortableBookmarkRow({
   bookmark,
+  collections,
   index,
 }: {
   bookmark: MockBookmark
+  collections: readonly Collection[]
   index: number
 }): React.ReactElement {
   const { handleRef, isDragging, ref } = useBookmarkSortable({
@@ -199,6 +239,7 @@ function SortableBookmarkRow({
     >
       <BookmarkRowSurface
         bookmark={bookmark}
+        collections={collections}
         isDragging={isDragging}
         isSelected={false}
         selectionMode={false}
@@ -216,6 +257,7 @@ function SortableBookmarkRow({
 
 export function BookmarkList({
   bookmarks,
+  collections,
   isReordering = false,
   onDirectSelectionChange,
   selectedBookmarkIds,
@@ -234,6 +276,7 @@ export function BookmarkList({
     <BookmarkRow
       {...actionHandlers}
       bookmark={bookmark}
+      collections={collections}
       isSelected={selectedBookmarkIds.has(bookmark.id)}
       key={bookmark.id}
       onSelectionChange={handleSelectionChange}
@@ -249,6 +292,7 @@ export function BookmarkList({
         {bookmarks.map((bookmark, index) => (
           <SortableBookmarkRow
             bookmark={bookmark}
+            collections={collections}
             index={index}
             key={bookmark.id}
           />

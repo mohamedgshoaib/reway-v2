@@ -5,7 +5,6 @@ import {
   ArrowUpRightIcon,
   CheckSquareOffsetIcon,
   CopyIcon,
-  DotsThreeIcon,
   FolderIcon,
   PencilSimpleIcon,
   TagChevronIcon,
@@ -84,6 +83,12 @@ import {
   MenuSubTrigger,
   MenuTrigger,
 } from "@/components/ui/menu"
+import { OverflowMenuIcon } from "@/components/ui/overflow-menu-icon"
+import {
+  BookmarkTrashActions,
+  BookmarkTrashContextMenu,
+  type BookmarkTrashActionHandlers,
+} from "@/dev/dashboard-ui/bookmark-trash-actions"
 import { getBookmarkUrl } from "@/dev/dashboard-ui/bookmark-url"
 import {
   createCollectionIndex,
@@ -95,7 +100,7 @@ import { TagIcon } from "@/dev/dashboard-ui/tag-icon"
 import type { Tag } from "@/dev/dashboard-ui/tag-model"
 import { useIsMobile } from "@/hooks/use-media-query"
 
-export interface BookmarkActionHandlers {
+export interface BookmarkActionHandlers extends BookmarkTrashActionHandlers {
   onAddToCollection: (bookmarkId: string, collection: string) => void
   onDelete: (bookmarkId: string) => void
   onMoveToCollection: (bookmarkId: string, collection: string) => void
@@ -557,8 +562,10 @@ export function BookmarkActions({
   isSelected,
   onAddToCollection,
   onDelete,
+  onDeleteForever,
   onMoveToCollection,
   onReenrich,
+  onRestore,
   onSelectChange,
   onTagsChange,
   onTitleChange,
@@ -605,14 +612,26 @@ export function BookmarkActions({
   const trigger = (
     <Button
       aria-label={`Actions for ${bookmark.title}${isSelected ? ", selected" : ""}`}
-      className="transition-opacity duration-100 data-popup-open:opacity-100 min-[800px]:pointer-fine:opacity-0 min-[800px]:pointer-fine:group-focus-within/bookmark:opacity-100 min-[800px]:pointer-fine:group-hover/bookmark:opacity-100"
+      className="transition-opacity duration-100 data-popup-open:opacity-100 min-[800px]:pointer-fine:opacity-0 min-[800px]:pointer-fine:group-hover/bookmark:opacity-100 min-[800px]:pointer-fine:group-has-focus-visible/bookmark:opacity-100"
       data-bookmark-actions={bookmark.id}
       size="icon-xs"
       variant="ghost"
     >
-      <DotsThreeIcon aria-hidden="true" weight="bold" />
+      <OverflowMenuIcon />
     </Button>
   )
+
+  if (bookmark.trashedAt !== undefined) {
+    return (
+      <BookmarkTrashActions
+        bookmark={bookmark}
+        isSelected={isSelected}
+        onDeleteForever={onDeleteForever}
+        onRestore={onRestore}
+        onSelectChange={onSelectChange}
+      />
+    )
+  }
 
   if (isMobile) {
     return (
@@ -820,8 +839,10 @@ export function BookmarkContextMenu({
   isSelected,
   onAddToCollection,
   onDelete,
+  onDeleteForever,
   onMoveToCollection,
   onReenrich,
+  onRestore,
   onSelectChange,
   onTagsChange,
   onTitleChange,
@@ -834,6 +855,20 @@ export function BookmarkContextMenu({
   const [editTitle, setEditTitle] = React.useState(bookmark.title)
   const [tagsOpen, setTagsOpen] = React.useState(false)
   const tags = bookmark.tags ?? []
+
+  if (bookmark.trashedAt !== undefined) {
+    return (
+      <BookmarkTrashContextMenu
+        bookmark={bookmark}
+        isSelected={isSelected}
+        onDeleteForever={onDeleteForever}
+        onRestore={onRestore}
+        onSelectChange={onSelectChange}
+      >
+        {children}
+      </BookmarkTrashContextMenu>
+    )
+  }
 
   if (isMobile) return <>{children}</>
 

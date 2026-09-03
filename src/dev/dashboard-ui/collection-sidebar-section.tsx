@@ -1,7 +1,6 @@
 import {
   CaretDownIcon,
   DotsSixVerticalIcon,
-  DotsThreeIcon,
   PencilSimpleIcon,
   PlusIcon,
   TrashIcon,
@@ -24,6 +23,7 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from "@/components/ui/menu"
+import { OverflowMenuIcon } from "@/components/ui/overflow-menu-icon"
 import {
   SidebarGroup,
   SidebarGroupActions,
@@ -69,7 +69,7 @@ function CollectionRowMenu({
 }): React.ReactElement {
   return (
     <>
-      <SidebarMenuBadge className="group-focus-within/menu-item:opacity-0 group-hover/menu-item:opacity-0">
+      <SidebarMenuBadge className="group-hover/menu-item:opacity-0 group-has-focus-visible/menu-item:opacity-0 group-has-data-popup-open/menu-item:opacity-0">
         {row.directCount}
       </SidebarMenuBadge>
       <Menu>
@@ -81,7 +81,7 @@ function CollectionRowMenu({
             />
           }
         >
-          <DotsThreeIcon aria-hidden="true" weight="bold" />
+          <OverflowMenuIcon />
         </MenuTrigger>
         <MenuPopup align="start" side="right">
           {onNewNested ? (
@@ -326,7 +326,7 @@ export function CollectionSidebarSection({
               </span>
               {!isReordering ? (
                 <CaretDownIcon
-                  className="size-3.5 shrink-0 opacity-70 transition-transform duration-200"
+                  className="size-3.5 shrink-0 opacity-70 transition-[opacity,transform] duration-200 group-data-[collapsible=icon]:hidden min-[800px]:pointer-fine:opacity-0 min-[800px]:pointer-fine:group-hover/collection-header:opacity-70 min-[800px]:pointer-fine:group-has-focus-visible/collection-header:opacity-70 min-[800px]:pointer-fine:group-has-data-popup-open/collection-header:opacity-70"
                   data-slot="collections-indicator"
                   weight="regular"
                 />
@@ -337,7 +337,7 @@ export function CollectionSidebarSection({
                 "transition-opacity duration-100",
                 isReordering
                   ? "opacity-100"
-                  : "opacity-100 min-[800px]:pointer-fine:opacity-0 min-[800px]:pointer-fine:group-focus-within/collection-header:opacity-100 min-[800px]:pointer-fine:group-hover/collection-header:opacity-100",
+                  : "opacity-100 min-[800px]:pointer-fine:opacity-0 min-[800px]:pointer-fine:group-hover/collection-header:opacity-100 min-[800px]:pointer-fine:group-has-focus-visible/collection-header:opacity-100 min-[800px]:pointer-fine:group-has-data-popup-open/collection-header:opacity-100",
                 collapsed && "pointer-events-none opacity-0"
               )}
               inert={collapsed}
@@ -362,7 +362,7 @@ export function CollectionSidebarSection({
                         />
                       }
                     >
-                      <DotsThreeIcon aria-hidden="true" weight="bold" />
+                      <OverflowMenuIcon />
                     </MenuTrigger>
                     <MenuPopup align="start" side="right">
                       <MenuRadioGroup

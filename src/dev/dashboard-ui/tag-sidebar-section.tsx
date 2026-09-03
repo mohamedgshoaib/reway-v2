@@ -1,7 +1,6 @@
 import {
   CaretDownIcon,
   DotsSixVerticalIcon,
-  DotsThreeIcon,
   PencilSimpleIcon,
   PlusIcon,
   TrashIcon,
@@ -24,6 +23,7 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from "@/components/ui/menu"
+import { OverflowMenuIcon } from "@/components/ui/overflow-menu-icon"
 import {
   SidebarGroup,
   SidebarGroupActions,
@@ -85,7 +85,7 @@ function TagRow({
             />
           }
         >
-          <DotsThreeIcon aria-hidden="true" weight="bold" />
+          <OverflowMenuIcon />
         </MenuTrigger>
         <MenuPopup align="start" side="right">
           <MenuItem onClick={onEdit}>
@@ -169,7 +169,7 @@ export function TagSidebarSection({
               </span>
               {!isReordering ? (
                 <CaretDownIcon
-                  className="size-3.5 shrink-0 opacity-70 transition-transform duration-200"
+                  className="size-3.5 shrink-0 opacity-70 transition-[opacity,transform] duration-200 group-data-[collapsible=icon]:hidden min-[800px]:pointer-fine:opacity-0 min-[800px]:pointer-fine:group-hover/tag-header:opacity-70 min-[800px]:pointer-fine:group-has-focus-visible/tag-header:opacity-70 min-[800px]:pointer-fine:group-has-data-popup-open/tag-header:opacity-70"
                   data-slot="tags-indicator"
                   weight="regular"
                 />
@@ -180,7 +180,7 @@ export function TagSidebarSection({
                 "transition-opacity duration-100",
                 isReordering
                   ? "opacity-100"
-                  : "opacity-100 min-[800px]:pointer-fine:opacity-0 min-[800px]:pointer-fine:group-focus-within/tag-header:opacity-100 min-[800px]:pointer-fine:group-hover/tag-header:opacity-100",
+                  : "opacity-100 min-[800px]:pointer-fine:opacity-0 min-[800px]:pointer-fine:group-hover/tag-header:opacity-100 min-[800px]:pointer-fine:group-has-focus-visible/tag-header:opacity-100 min-[800px]:pointer-fine:group-has-data-popup-open/tag-header:opacity-100",
                 collapsed && "pointer-events-none opacity-0"
               )}
               inert={collapsed}
@@ -205,7 +205,7 @@ export function TagSidebarSection({
                         />
                       }
                     >
-                      <DotsThreeIcon aria-hidden="true" weight="bold" />
+                      <OverflowMenuIcon />
                     </MenuTrigger>
                     <MenuPopup align="start" side="right">
                       <MenuRadioGroup

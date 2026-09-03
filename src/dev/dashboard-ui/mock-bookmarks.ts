@@ -9,6 +9,8 @@ export type ViewMode = "list" | "grid" | "grid-image"
 
 export type MockTag = Tag
 
+export const MOCK_DASHBOARD_NOW = Date.UTC(2026, 8, 1, 9)
+
 export const mockTags: MockTag[] = [
   {
     color: { kind: "palette", value: "blue" },
@@ -37,48 +39,6 @@ export const mockTags: MockTag[] = [
     id: "research",
     name: "Research",
     order: 8,
-  },
-  {
-    color: { kind: "palette", value: "rose" },
-    createdAt: 6,
-    id: "marketing",
-    name: "Marketing",
-    order: 4,
-  },
-  {
-    color: { kind: "palette", value: "indigo" },
-    createdAt: 5,
-    id: "ai",
-    name: "AI",
-    order: 0,
-  },
-  {
-    color: { kind: "palette", value: "orange" },
-    createdAt: 4,
-    id: "typography",
-    name: "Typography",
-    order: 9,
-  },
-  {
-    color: { kind: "palette", value: "green" },
-    createdAt: 3,
-    id: "accessibility",
-    name: "Accessibility",
-    order: 3,
-  },
-  {
-    color: { kind: "palette", value: "cyan" },
-    createdAt: 2,
-    id: "performance",
-    name: "Performance",
-    order: 5,
-  },
-  {
-    color: { kind: "palette", value: "lime" },
-    createdAt: 1,
-    id: "writing",
-    name: "Writing",
-    order: 6,
   },
 ]
 
@@ -230,7 +190,7 @@ export const mockBookmarks: MockBookmark[] = [
     createdAt: daysAgo(0, 5),
     collections: ["research"],
     metadataStatus: "enriched",
-    tags: ["engineering", "ai", "research"],
+    tags: ["engineering", "research"],
     visitCount: 42,
   },
   {
@@ -241,7 +201,7 @@ export const mockBookmarks: MockBookmark[] = [
     createdAt: daysAgo(1),
     collections: ["research", "reading-list"],
     metadataStatus: "enriched",
-    tags: ["research", "ai"],
+    tags: ["research", "engineering"],
     visitCount: 18,
   },
   {
@@ -252,7 +212,7 @@ export const mockBookmarks: MockBookmark[] = [
     createdAt: daysAgo(1, 6),
     collections: ["research"],
     metadataStatus: "enriched",
-    tags: ["ai", "product"],
+    tags: ["engineering", "product"],
     visitCount: 5,
   },
   {
@@ -263,7 +223,7 @@ export const mockBookmarks: MockBookmark[] = [
     createdAt: daysAgo(2),
     collections: ["research", "design-references"],
     metadataStatus: "enriched",
-    tags: ["design", "accessibility"],
+    tags: ["design"],
     visitCount: 1,
   },
   {
@@ -274,7 +234,7 @@ export const mockBookmarks: MockBookmark[] = [
     createdAt: daysAgo(3),
     collections: ["research"],
     metadataStatus: "enriched",
-    tags: ["ai", "product"],
+    tags: ["engineering", "product"],
     visitCount: 67,
   },
   {
@@ -285,7 +245,7 @@ export const mockBookmarks: MockBookmark[] = [
     createdAt: daysAgo(4),
     collections: ["research"],
     metadataStatus: "pending",
-    tags: ["research", "writing"],
+    tags: ["research"],
     visitCount: 0,
   },
   {
@@ -296,7 +256,7 @@ export const mockBookmarks: MockBookmark[] = [
     createdAt: daysAgo(5),
     collections: ["research", "design-references"],
     metadataStatus: "enriched",
-    tags: ["design", "marketing"],
+    tags: ["design", "product"],
     visitCount: 9,
   },
   {
@@ -306,7 +266,7 @@ export const mockBookmarks: MockBookmark[] = [
     ogImage: "https://picsum.photos/seed/nextjs/400/240",
     createdAt: daysAgo(45),
     metadataStatus: "enriched",
-    tags: ["engineering", "performance"],
+    tags: ["engineering"],
     visitCount: 24,
   },
   {
@@ -318,7 +278,7 @@ export const mockBookmarks: MockBookmark[] = [
     ogImage: null,
     createdAt: daysAgo(60),
     metadataStatus: "enriched",
-    tags: ["writing"],
+    tags: ["research"],
     visitCount: 2,
   },
   {
@@ -350,7 +310,7 @@ export const mockBookmarks: MockBookmark[] = [
     ogImage: "https://picsum.photos/seed/notion/400/240",
     createdAt: daysAgo(9),
     metadataStatus: "enriched",
-    tags: ["research", "writing"],
+    tags: ["research"],
     visitCount: 22,
     collections: ["book-notes"],
   },
@@ -371,7 +331,7 @@ export const mockBookmarks: MockBookmark[] = [
     ogImage: "https://picsum.photos/seed/baseui/400/240",
     createdAt: daysAgo(15),
     metadataStatus: "enriched",
-    tags: ["engineering", "accessibility"],
+    tags: ["engineering", "design"],
     visitCount: 40,
     collections: ["reading-list"],
   },
@@ -392,7 +352,7 @@ export const mockBookmarks: MockBookmark[] = [
     ogImage: "https://picsum.photos/seed/tanstack/400/240",
     createdAt: daysAgo(22),
     metadataStatus: "enriched",
-    tags: ["engineering", "performance"],
+    tags: ["engineering"],
     visitCount: 19,
   },
   {
@@ -424,6 +384,41 @@ export const mockBookmarks: MockBookmark[] = [
     metadataStatus: "enriched",
     tags: ["design"],
     visitCount: 4,
+  },
+  {
+    id: "trash-1",
+    title: "A List Apart",
+    domain: "alistapart.com",
+    ogImage: "https://picsum.photos/seed/alistapart/400/240",
+    createdAt: Date.UTC(2026, 7, 10, 9),
+    collections: ["reading-list"],
+    metadataStatus: "enriched",
+    tags: ["design", "research"],
+    trashedAt: Date.UTC(2026, 7, 31, 9),
+    visitCount: 16,
+  },
+  {
+    id: "trash-2",
+    title: "Smashing Magazine",
+    domain: "smashingmagazine.com",
+    ogImage: "https://picsum.photos/seed/smashing/400/240",
+    createdAt: Date.UTC(2026, 6, 20, 9),
+    collections: ["design-references"],
+    metadataStatus: "enriched",
+    tags: ["design"],
+    trashedAt: Date.UTC(2026, 7, 14, 9),
+    visitCount: 11,
+  },
+  {
+    id: "trash-3",
+    title: "Web Design Museum",
+    domain: "webdesignmuseum.org",
+    ogImage: "https://picsum.photos/seed/webdesignmuseum/400/240",
+    createdAt: Date.UTC(2026, 5, 12, 9),
+    metadataStatus: "enriched",
+    tags: ["design"],
+    trashedAt: Date.UTC(2026, 7, 3, 9),
+    visitCount: 3,
   },
 ]
 

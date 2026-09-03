@@ -1,5 +1,6 @@
 import {
   BookmarkIcon,
+  CaretUpDownIcon,
   DotsSixVerticalIcon,
   FolderSimpleDashedIcon,
   GearIcon,
@@ -124,6 +125,7 @@ export function DashboardSidebar({
   onMoveTag,
   onSelectAllBookmarks,
   onSelectCollection,
+  onSelectTrash,
   onSelectUncollected,
   onSortChange,
   onStartReorder,
@@ -133,6 +135,7 @@ export function DashboardSidebar({
   onViewModeChange,
   sort,
   tagFilterResultCount = bookmarks.length,
+  trashActive = false,
   uncollectedActive = false,
   viewMode,
 }: {
@@ -158,6 +161,7 @@ export function DashboardSidebar({
   onMoveTag?: (sourceId: string, index: number) => void
   onSelectAllBookmarks?: () => void
   onSelectCollection?: (collection: string) => void
+  onSelectTrash?: () => void
   onSelectUncollected?: () => void
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
@@ -167,6 +171,7 @@ export function DashboardSidebar({
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
   tagFilterResultCount?: number
+  trashActive?: boolean
   uncollectedActive?: boolean
   viewMode: ViewMode
 }): React.ReactElement {
@@ -252,6 +257,7 @@ export function DashboardSidebar({
         onMoveTag={onMoveTag}
         onSelectAllBookmarks={onSelectAllBookmarks}
         onSelectCollection={onSelectCollection}
+        onSelectTrash={onSelectTrash}
         onSelectUncollected={onSelectUncollected}
         onSortChange={onSortChange}
         onStartReorder={onStartReorder}
@@ -263,6 +269,7 @@ export function DashboardSidebar({
         surface="desktop"
         tagFilterResultCount={tagFilterResultCount}
         tags={tags}
+        trashActive={trashActive}
         uncollectedActive={uncollectedActive}
         viewMode={viewMode}
       />
@@ -289,6 +296,7 @@ export function MobileDashboardNavigation({
   onMoveTag,
   onSelectAllBookmarks,
   onSelectCollection,
+  onSelectTrash,
   onSelectUncollected,
   onSortChange,
   onStartReorder,
@@ -298,6 +306,7 @@ export function MobileDashboardNavigation({
   onViewModeChange,
   sort,
   tagFilterResultCount = bookmarks.length,
+  trashActive = false,
   uncollectedActive = false,
   viewMode,
 }: {
@@ -323,6 +332,7 @@ export function MobileDashboardNavigation({
   onMoveTag?: (sourceId: string, index: number) => void
   onSelectAllBookmarks?: () => void
   onSelectCollection?: (collection: string) => void
+  onSelectTrash?: () => void
   onSelectUncollected?: () => void
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
@@ -332,6 +342,7 @@ export function MobileDashboardNavigation({
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
   tagFilterResultCount?: number
+  trashActive?: boolean
   uncollectedActive?: boolean
   viewMode: ViewMode
 }): React.ReactElement {
@@ -410,6 +421,7 @@ export function MobileDashboardNavigation({
             onOpenDisplay={() => setDisplayOpen(true)}
             onSelectAllBookmarks={onSelectAllBookmarks}
             onSelectCollection={onSelectCollection}
+            onSelectTrash={onSelectTrash}
             onSelectUncollected={onSelectUncollected}
             onSortChange={onSortChange}
             onStartReorder={onStartReorder}
@@ -426,6 +438,7 @@ export function MobileDashboardNavigation({
             surface="mobile"
             tagFilterResultCount={tagFilterResultCount}
             tags={tags}
+            trashActive={trashActive}
             uncollectedActive={uncollectedActive}
             viewMode={viewMode}
           />
@@ -543,6 +556,156 @@ function MobileDisplayDialog({
   )
 }
 
+interface DashboardNavigationFooterActions {
+  onNavigate: () => void
+  onOpenDisplay?: () => void
+  onSelectTrash?: () => void
+  onSortChange: (sort: SortOption) => void
+  onStartReorder?: () => void
+  onViewModeChange: (viewMode: ViewMode) => void
+}
+
+interface DashboardNavigationFooterState {
+  activeCollection: string | null
+  canReorder: boolean
+  isReordering: boolean
+  sort: SortOption
+  surface: DashboardNavigationSurface
+  trashActive: boolean
+  viewMode: ViewMode
+}
+
+function DashboardNavigationFooter({
+  actions,
+  state,
+}: {
+  actions: DashboardNavigationFooterActions
+  state: DashboardNavigationFooterState
+}): React.ReactElement {
+  return (
+    <SidebarFooter>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          {state.surface === "mobile" && actions.onOpenDisplay ? (
+            <SidebarMenuButton
+              disabled={state.isReordering}
+              onClick={actions.onOpenDisplay}
+              tooltip="Display"
+            >
+              <SlidersHorizontalIcon weight="duotone" />
+              <SidebarMenuButtonLabel>Display</SidebarMenuButtonLabel>
+              <CaretUpDownIcon
+                aria-hidden="true"
+                className="ms-auto opacity-70 transition-opacity duration-100 min-[800px]:pointer-fine:opacity-0 min-[800px]:pointer-fine:group-hover/menu-item:opacity-70 min-[800px]:pointer-fine:group-has-focus-visible/menu-item:opacity-70 min-[800px]:pointer-fine:group-has-data-popup-open/menu-item:opacity-70"
+                data-slot="display-menu-indicator"
+                weight="regular"
+              />
+            </SidebarMenuButton>
+          ) : (
+            <Menu>
+              <MenuTrigger
+                render={
+                  <SidebarMenuButton
+                    data-dashboard-display-trigger
+                    disabled={state.isReordering}
+                    tooltip="Display"
+                  />
+                }
+              >
+                <SlidersHorizontalIcon weight="duotone" />
+                <SidebarMenuButtonLabel>Display</SidebarMenuButtonLabel>
+                <CaretUpDownIcon
+                  aria-hidden="true"
+                  className="ms-auto opacity-70 transition-opacity duration-100 group-data-[collapsible=icon]:hidden min-[800px]:pointer-fine:opacity-0 min-[800px]:pointer-fine:group-hover/menu-item:opacity-70 min-[800px]:pointer-fine:group-has-focus-visible/menu-item:opacity-70 min-[800px]:pointer-fine:group-has-data-popup-open/menu-item:opacity-70"
+                  data-slot="display-menu-indicator"
+                  weight="regular"
+                />
+              </MenuTrigger>
+              <MenuPopup align="end" side="right">
+                <MenuRadioGroup
+                  onValueChange={(value) =>
+                    actions.onSortChange(value as SortOption)
+                  }
+                  value={state.sort}
+                >
+                  <MenuGroupLabel>Sort by</MenuGroupLabel>
+                  <MenuRadioItem closeOnClick value="date">
+                    Date added
+                  </MenuRadioItem>
+                  <MenuRadioItem closeOnClick value="visits">
+                    Most visited
+                  </MenuRadioItem>
+                  <MenuRadioItem closeOnClick value="alpha">
+                    Alphabetical
+                  </MenuRadioItem>
+                  {state.activeCollection ? (
+                    <MenuRadioItem closeOnClick value="custom">
+                      Custom order
+                    </MenuRadioItem>
+                  ) : null}
+                </MenuRadioGroup>
+                <MenuSeparator />
+                <MenuRadioGroup
+                  onValueChange={(value) =>
+                    actions.onViewModeChange(value as ViewMode)
+                  }
+                  value={state.viewMode}
+                >
+                  <MenuGroupLabel>View as</MenuGroupLabel>
+                  <MenuRadioItem closeOnClick value="list">
+                    List
+                  </MenuRadioItem>
+                  <MenuRadioItem closeOnClick value="grid">
+                    Grid
+                  </MenuRadioItem>
+                  <MenuRadioItem closeOnClick value="grid-image">
+                    Grid with images
+                  </MenuRadioItem>
+                </MenuRadioGroup>
+                {state.activeCollection ? (
+                  <>
+                    <MenuSeparator />
+                    <MenuGroup>
+                      <MenuGroupLabel>Order</MenuGroupLabel>
+                      <MenuItem
+                        closeOnClick
+                        disabled={!state.canReorder}
+                        onClick={actions.onStartReorder}
+                      >
+                        <DotsSixVerticalIcon weight="bold" />
+                        Reorder items
+                      </MenuItem>
+                    </MenuGroup>
+                  </>
+                ) : null}
+              </MenuPopup>
+            </Menu>
+          )}
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            isActive={state.trashActive}
+            onClick={() => {
+              actions.onSelectTrash?.()
+              actions.onNavigate()
+            }}
+            tooltip="Trash"
+          >
+            <TrashIcon weight="duotone" />
+            <SidebarMenuButtonLabel>Trash</SidebarMenuButtonLabel>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton onClick={actions.onNavigate} tooltip="Settings">
+            <GearIcon weight="duotone" />
+            <SidebarMenuButtonLabel>Settings</SidebarMenuButtonLabel>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    </SidebarFooter>
+  )
+}
+
 function DashboardNavigationContent({
   activeTagIds,
   activeCollection,
@@ -565,6 +728,7 @@ function DashboardNavigationContent({
   onOpenDisplay,
   onSelectAllBookmarks,
   onSelectCollection,
+  onSelectTrash,
   onSelectUncollected,
   onSortChange,
   onStartReorder,
@@ -577,6 +741,7 @@ function DashboardNavigationContent({
   surface,
   tagFilterResultCount,
   tags,
+  trashActive,
   uncollectedActive,
   viewMode,
 }: {
@@ -609,6 +774,7 @@ function DashboardNavigationContent({
   onOpenDisplay?: () => void
   onSelectAllBookmarks?: () => void
   onSelectCollection?: (collection: string) => void
+  onSelectTrash?: () => void
   onSelectUncollected?: () => void
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
@@ -620,6 +786,7 @@ function DashboardNavigationContent({
   sort: SortOption
   surface: DashboardNavigationSurface
   tagFilterResultCount: number
+  trashActive: boolean
   uncollectedActive: boolean
   viewMode: ViewMode
 }): React.ReactElement {
@@ -725,112 +892,32 @@ function DashboardNavigationContent({
           tags={tags}
         />
       </SidebarContent>
-      {surface === "mobile" ? (
+      {surface === "mobile" && activeTagIds.size > 0 ? (
         <div className="border-t border-sidebar-border px-2 pt-2">
-          <Button className="w-full" onClick={onShowTagResults} size="lg">
+          <Button className="w-full" onClick={onShowTagResults}>
             {getShowTagResultsLabel(activeTagIds.size, tagFilterResultCount)}
           </Button>
         </div>
       ) : null}
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleNavigate} tooltip="Settings">
-              <GearIcon weight="duotone" />
-              <SidebarMenuButtonLabel>Settings</SidebarMenuButtonLabel>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            {surface === "mobile" && onOpenDisplay ? (
-              <SidebarMenuButton
-                disabled={isReordering}
-                onClick={onOpenDisplay}
-                tooltip="Display"
-              >
-                <SlidersHorizontalIcon weight="duotone" />
-                <SidebarMenuButtonLabel>Display</SidebarMenuButtonLabel>
-              </SidebarMenuButton>
-            ) : (
-              <Menu>
-                <MenuTrigger
-                  render={
-                    <SidebarMenuButton
-                      data-dashboard-display-trigger
-                      disabled={isReordering}
-                      tooltip="Display"
-                    />
-                  }
-                >
-                  <SlidersHorizontalIcon weight="duotone" />
-                  <SidebarMenuButtonLabel>Display</SidebarMenuButtonLabel>
-                </MenuTrigger>
-                <MenuPopup align="end" side="right">
-                  <MenuRadioGroup
-                    onValueChange={(value) => onSortChange(value as SortOption)}
-                    value={sort}
-                  >
-                    <MenuGroupLabel>Sort by</MenuGroupLabel>
-                    <MenuRadioItem closeOnClick value="date">
-                      Date added
-                    </MenuRadioItem>
-                    <MenuRadioItem closeOnClick value="visits">
-                      Most visited
-                    </MenuRadioItem>
-                    <MenuRadioItem closeOnClick value="alpha">
-                      Alphabetical
-                    </MenuRadioItem>
-                    {activeCollection ? (
-                      <MenuRadioItem closeOnClick value="custom">
-                        Custom order
-                      </MenuRadioItem>
-                    ) : null}
-                  </MenuRadioGroup>
-                  <MenuSeparator />
-                  <MenuRadioGroup
-                    onValueChange={(value) =>
-                      onViewModeChange(value as ViewMode)
-                    }
-                    value={viewMode}
-                  >
-                    <MenuGroupLabel>View as</MenuGroupLabel>
-                    <MenuRadioItem closeOnClick value="list">
-                      List
-                    </MenuRadioItem>
-                    <MenuRadioItem closeOnClick value="grid">
-                      Grid
-                    </MenuRadioItem>
-                    <MenuRadioItem closeOnClick value="grid-image">
-                      Grid with images
-                    </MenuRadioItem>
-                  </MenuRadioGroup>
-                  {activeCollection ? (
-                    <>
-                      <MenuSeparator />
-                      <MenuGroup>
-                        <MenuGroupLabel>Order</MenuGroupLabel>
-                        <MenuItem
-                          closeOnClick
-                          disabled={!canReorder}
-                          onClick={onStartReorder}
-                        >
-                          <DotsSixVerticalIcon weight="bold" />
-                          Reorder items
-                        </MenuItem>
-                      </MenuGroup>
-                    </>
-                  ) : null}
-                </MenuPopup>
-              </Menu>
-            )}
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleNavigate} tooltip="Trash">
-              <TrashIcon weight="duotone" />
-              <SidebarMenuButtonLabel>Trash</SidebarMenuButtonLabel>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+      <DashboardNavigationFooter
+        actions={{
+          onNavigate: handleNavigate,
+          onOpenDisplay,
+          onSelectTrash,
+          onSortChange,
+          onStartReorder,
+          onViewModeChange,
+        }}
+        state={{
+          activeCollection,
+          canReorder,
+          isReordering,
+          sort,
+          surface,
+          trashActive,
+          viewMode,
+        }}
+      />
     </>
   )
 }

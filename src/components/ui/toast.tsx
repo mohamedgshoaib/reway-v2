@@ -11,10 +11,11 @@ import {
 import { minimal } from "@sounds"
 import { useSound } from "@web-kits/audio/react"
 import type React from "react"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useSyncExternalStore } from "react"
 
 import { AnimatedIcon } from "@/components/ui/animated-icon"
 import { buttonVariants } from "@/components/ui/button"
+import { useIsMobile } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
 
 const TOAST_ICONS = {
@@ -24,6 +25,39 @@ const TOAST_ICONS = {
   success: CheckCircleIcon,
   warning: WarningIcon,
 } as const
+
+export const TOAST_DEFAULT_TIMEOUT_MS = 4000
+
+type ToastIcon = (typeof TOAST_ICONS)[keyof typeof TOAST_ICONS]
+type ToastItem = React.ComponentProps<typeof Toast.Root>["toast"]
+
+function subscribeToWindowActivity(onStoreChange: () => void): () => void {
+  window.addEventListener("blur", onStoreChange)
+  window.addEventListener("focus", onStoreChange)
+  document.addEventListener("visibilitychange", onStoreChange)
+
+  return () => {
+    window.removeEventListener("blur", onStoreChange)
+    window.removeEventListener("focus", onStoreChange)
+    document.removeEventListener("visibilitychange", onStoreChange)
+  }
+}
+
+function getWindowActivitySnapshot(): boolean {
+  return document.visibilityState === "visible" && document.hasFocus()
+}
+
+function getWindowActivityServerSnapshot(): boolean {
+  return true
+}
+
+function useWindowActive(): boolean {
+  return useSyncExternalStore(
+    subscribeToWindowActivity,
+    getWindowActivitySnapshot,
+    getWindowActivityServerSnapshot
+  )
+}
 
 function useToastSounds(toasts: { id: string; type?: string }[]): void {
   const playSuccess = useSound(minimal.success)
@@ -98,31 +132,101 @@ function upsertReplayClassName(toast: {
   return isEven ? "animate-toast-success-even" : "animate-toast-success-odd"
 }
 
+function ToastMessageContent({
+  Icon,
+  showTimeout,
+  toast,
+}: {
+  Icon: ToastIcon | null
+  showTimeout: boolean
+  toast: ToastItem
+}): React.ReactElement {
+  return (
+    <>
+      <Toast.Content className="pointer-events-auto flex items-center justify-between gap-1.5 overflow-hidden px-3.5 py-3 text-sm transition-opacity duration-250 data-behind:opacity-0 data-behind:not-data-expanded:pointer-events-none data-expanded:opacity-100">
+        <div className="flex min-w-0 flex-1 items-start gap-2">
+          {Icon && (
+            <div className="h-lh w-4 shrink-0" data-slot="toast-icon">
+              <AnimatedIcon
+                className="flex size-full -translate-y-px items-center justify-center"
+                transitionKey={toast.type ?? "default"}
+              >
+                <Icon
+                  aria-hidden="true"
+                  className="size-4 shrink-0 in-data-[type=error]:text-destructive in-data-[type=info]:text-info in-data-[type=loading]:animate-spin in-data-[type=loading]:opacity-80 in-data-[type=success]:text-success in-data-[type=warning]:text-warning"
+                  weight={toast.type === "loading" ? "regular" : "duotone"}
+                />
+              </AnimatedIcon>
+            </div>
+          )}
+
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <Toast.Title
+              className="font-medium text-balance"
+              data-slot="toast-title"
+            />
+            <Toast.Description
+              className="text-pretty text-muted-foreground"
+              data-slot="toast-description"
+            />
+          </div>
+        </div>
+        <Toast.Action
+          className={buttonVariants({ size: "xs" })}
+          data-slot="toast-action"
+        />
+      </Toast.Content>
+
+      {showTimeout && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
+          data-slot="toast-timeout-track"
+        >
+          <div
+            className="absolute inset-x-0 bottom-0 h-0.5 origin-left animate-toast-timeout bg-foreground/20 rtl:origin-right"
+            data-slot="toast-timeout-indicator"
+            key={toast.updateKey ?? 0}
+          />
+        </div>
+      )}
+    </>
+  )
+}
+
 function Toasts({
   position,
   portalProps,
+  timeout,
 }: {
   position: ToastPosition
   portalProps?: React.ComponentProps<typeof Toast.Portal>
+  timeout: number
 }): React.ReactElement {
   const { toasts } = Toast.useToastManager()
-  const swipeDirection = getSwipeDirection(position)
+  const isMobile = useIsMobile()
+  const windowActive = useWindowActive()
+  const effectivePosition: ToastPosition = isMobile
+    ? (position.replace(/left|right/, "center") as ToastPosition)
+    : position
+  const swipeDirection = getSwipeDirection(effectivePosition)
   useToastSounds(toasts)
 
   return (
     <Toast.Portal data-slot="toast-portal" {...portalProps}>
       <Toast.Viewport
         className={cn(
-          "fixed z-60 mx-auto flex w-[calc(100%-var(--toast-inset)*2)] max-w-90 [--toast-inset:--spacing(4)] sm:[--toast-inset:--spacing(8)]",
+          "fixed z-60 mx-auto flex w-[calc(100%-var(--toast-inset)*2)] max-w-90 [--toast-bottom-inset:max(var(--toast-inset),env(safe-area-inset-bottom))] [--toast-inset:--spacing(4)] sm:[--toast-inset:--spacing(8)]",
           // Vertical positioning
           "data-[position*=top]:top-(--toast-inset)",
-          "data-[position*=bottom]:bottom-(--toast-inset)",
+          "data-[position*=bottom]:bottom-(--toast-bottom-inset)",
           // Horizontal positioning
           "data-[position*=left]:left-(--toast-inset)",
           "data-[position*=right]:right-(--toast-inset)",
           "data-[position*=center]:left-1/2 data-[position*=center]:-translate-x-1/2"
         )}
-        data-position={position}
+        data-window-active={windowActive}
+        data-position={effectivePosition}
         data-slot="toast-viewport"
       >
         {toasts.map((toast) => {
@@ -130,6 +234,9 @@ function Toasts({
             ? TOAST_ICONS[toast.type as keyof typeof TOAST_ICONS]
             : null
           const toastData = toast.data as ToastData | undefined
+          const showTimeout =
+            Boolean(toast.actionProps) &&
+            (toast.timeout ?? timeout) === TOAST_DEFAULT_TIMEOUT_MS
 
           return (
             <Toast.Root
@@ -177,44 +284,16 @@ function Toasts({
                 upsertReplayClassName(toast)
               )}
               {...toastData?.rootProps}
-              data-position={position}
+              data-position={effectivePosition}
+              data-slot="toast-popup"
               swipeDirection={swipeDirection}
               toast={toast}
             >
-              <Toast.Content className="pointer-events-auto flex items-center justify-between gap-1.5 overflow-hidden px-3.5 py-3 text-sm transition-opacity duration-250 data-behind:opacity-0 data-behind:not-data-expanded:pointer-events-none data-expanded:opacity-100">
-                <div className="flex gap-2">
-                  {Icon && (
-                    <div
-                      className="[&_svg]:pointer-events-none [&_svg]:shrink-0 [&>svg]:h-lh [&>svg]:w-4"
-                      data-slot="toast-icon"
-                    >
-                      <AnimatedIcon transitionKey={toast.type ?? "default"}>
-                        <Icon
-                          className="in-data-[type=error]:text-destructive in-data-[type=info]:text-info in-data-[type=loading]:animate-spin in-data-[type=loading]:opacity-80 in-data-[type=success]:text-success in-data-[type=warning]:text-warning"
-                          weight={
-                            toast.type === "loading" ? "regular" : "duotone"
-                          }
-                        />
-                      </AnimatedIcon>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col gap-0.5">
-                    <Toast.Title
-                      className="font-medium"
-                      data-slot="toast-title"
-                    />
-                    <Toast.Description
-                      className="text-muted-foreground"
-                      data-slot="toast-description"
-                    />
-                  </div>
-                </div>
-                <Toast.Action
-                  className={buttonVariants({ size: "xs" })}
-                  data-slot="toast-action"
-                />
-              </Toast.Content>
+              <ToastMessageContent
+                Icon={Icon}
+                showTimeout={showTimeout}
+                toast={toast}
+              />
             </Toast.Root>
           )
         })}
@@ -225,16 +304,20 @@ function Toasts({
 
 function AnchoredToasts({
   portalProps,
+  timeout,
 }: {
   portalProps?: React.ComponentProps<typeof Toast.Portal>
+  timeout: number
 }): React.ReactElement {
   const { toasts } = Toast.useToastManager()
+  const windowActive = useWindowActive()
   useToastSounds(toasts)
 
   return (
     <Toast.Portal data-slot="toast-portal-anchored" {...portalProps}>
       <Toast.Viewport
         className="outline-none"
+        data-window-active={windowActive}
         data-slot="toast-viewport-anchored"
       >
         {toasts.map((toast) => {
@@ -244,6 +327,9 @@ function AnchoredToasts({
           const toastData = toast.data as ToastData | undefined
           const tooltipStyle = toastData?.tooltipStyle ?? false
           const positionerProps = toast.positionerProps
+          const showTimeout =
+            Boolean(toast.actionProps) &&
+            (toast.timeout ?? timeout) === TOAST_DEFAULT_TIMEOUT_MS
 
           if (!positionerProps?.anchor) {
             return null
@@ -274,40 +360,11 @@ function AnchoredToasts({
                     <Toast.Title data-slot="toast-title" />
                   </Toast.Content>
                 ) : (
-                  <Toast.Content className="pointer-events-auto flex items-center justify-between gap-1.5 overflow-hidden px-3.5 py-3 text-sm">
-                    <div className="flex gap-2">
-                      {Icon && (
-                        <div
-                          className="[&_svg]:pointer-events-none [&_svg]:shrink-0 [&>svg]:h-lh [&>svg]:w-4"
-                          data-slot="toast-icon"
-                        >
-                          <AnimatedIcon transitionKey={toast.type ?? "default"}>
-                            <Icon
-                              className="in-data-[type=error]:text-destructive in-data-[type=info]:text-info in-data-[type=loading]:animate-spin in-data-[type=loading]:opacity-80 in-data-[type=success]:text-success in-data-[type=warning]:text-warning"
-                              weight={
-                                toast.type === "loading" ? "regular" : "duotone"
-                              }
-                            />
-                          </AnimatedIcon>
-                        </div>
-                      )}
-
-                      <div className="flex flex-col gap-0.5">
-                        <Toast.Title
-                          className="font-medium"
-                          data-slot="toast-title"
-                        />
-                        <Toast.Description
-                          className="text-muted-foreground"
-                          data-slot="toast-description"
-                        />
-                      </div>
-                    </div>
-                    <Toast.Action
-                      className={buttonVariants({ size: "xs" })}
-                      data-slot="toast-action"
-                    />
-                  </Toast.Content>
+                  <ToastMessageContent
+                    Icon={Icon}
+                    showTimeout={showTimeout}
+                    toast={toast}
+                  />
                 )}
               </Toast.Root>
             </Toast.Positioner>
@@ -341,12 +398,13 @@ export function ToastProvider({
   children,
   position = "bottom-right",
   portalProps,
+  timeout = TOAST_DEFAULT_TIMEOUT_MS,
   ...props
 }: ToastProviderProps): React.ReactElement {
   return (
-    <Toast.Provider toastManager={toastManager} {...props}>
+    <Toast.Provider timeout={timeout} toastManager={toastManager} {...props}>
       {children}
-      <Toasts portalProps={portalProps} position={position} />
+      <Toasts portalProps={portalProps} position={position} timeout={timeout} />
     </Toast.Provider>
   )
 }
@@ -358,12 +416,17 @@ export interface AnchoredToastProviderProps extends Toast.Provider.Props {
 export function AnchoredToastProvider({
   children,
   portalProps,
+  timeout = TOAST_DEFAULT_TIMEOUT_MS,
   ...props
 }: AnchoredToastProviderProps): React.ReactElement {
   return (
-    <Toast.Provider toastManager={anchoredToastManager} {...props}>
+    <Toast.Provider
+      timeout={timeout}
+      toastManager={anchoredToastManager}
+      {...props}
+    >
       {children}
-      <AnchoredToasts portalProps={portalProps} />
+      <AnchoredToasts portalProps={portalProps} timeout={timeout} />
     </Toast.Provider>
   )
 }

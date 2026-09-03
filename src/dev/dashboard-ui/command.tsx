@@ -58,15 +58,18 @@ function createCommandGroups(
   bookmarks: readonly MockBookmark[],
   collections: readonly Collection[]
 ): CommandGroupData[] {
+  const libraryBookmarks = bookmarks.filter(
+    (bookmark) => bookmark.trashedAt === undefined
+  )
   const collectionIndex = createCollectionIndex(
     collections,
-    bookmarks,
+    libraryBookmarks,
     "custom"
   )
 
   return [
     {
-      items: bookmarks.map((bookmark) => ({
+      items: libraryBookmarks.map((bookmark) => ({
         domain: bookmark.domain,
         label: bookmark.title,
         value: bookmark.id,

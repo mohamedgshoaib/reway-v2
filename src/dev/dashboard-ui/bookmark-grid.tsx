@@ -19,9 +19,14 @@ import {
   BookmarkLeadingFavicon,
   type BookmarkSelectionChangeHandler,
 } from "@/dev/dashboard-ui/bookmark-selection-control"
+import {
+  getBookmarkTrashOrigin,
+  getBookmarkTrashRecovery,
+} from "@/dev/dashboard-ui/bookmark-trash"
 import { getBookmarkUrl } from "@/dev/dashboard-ui/bookmark-url"
 import type { Collection } from "@/dev/dashboard-ui/collection-hierarchy"
 import {
+  MOCK_DASHBOARD_NOW,
   mockTags,
   type MockBookmark,
   type SortOption,
@@ -60,6 +65,7 @@ function BookmarkImage({
 
 function BookmarkGridCardSurface({
   bookmark,
+  collections,
   isDragging = false,
   isSelected,
   onSelectionChange,
@@ -69,6 +75,7 @@ function BookmarkGridCardSurface({
   visibleIds,
 }: {
   bookmark: MockBookmark
+  collections: readonly Collection[]
   isDragging?: boolean
   isSelected: boolean
   onSelectionChange?: BookmarkSelectionChangeHandler
@@ -77,11 +84,21 @@ function BookmarkGridCardSurface({
   trailing: React.ReactNode
   visibleIds: readonly string[]
 }): React.ReactElement {
+  const recovery = getBookmarkTrashRecovery(bookmark, MOCK_DASHBOARD_NOW)
+  const origin = recovery ? getBookmarkTrashOrigin(bookmark, collections) : null
+  const recoveryContext =
+    recovery && origin ? `${origin.label} · ${recovery.label}` : null
+  const recoveryAccessibleLabel =
+    recovery && origin
+      ? `${origin.label}. ${recovery.label} to restore`
+      : undefined
+  const selectionLabelId = `bookmark-selection-label-${bookmark.id}`
   const leading =
     selectionMode && onSelectionChange ? (
       <BookmarkLeadingControl
         bookmark={bookmark}
         checked={isSelected}
+        labelId={selectionLabelId}
         onSelectionChange={onSelectionChange}
         visibleIds={visibleIds}
       />
@@ -91,15 +108,25 @@ function BookmarkGridCardSurface({
         className="pointer-events-none relative z-10"
       />
     )
-  const title = (
-    <span className="pointer-events-none relative z-10 min-w-0 flex-1 truncate text-sm text-foreground">
-      {bookmark.title}
+  const details = (
+    <span className="pointer-events-none relative z-10 flex min-w-0 flex-1 flex-col">
+      <span className="truncate text-sm text-foreground" id={selectionLabelId}>
+        {bookmark.title}
+      </span>
+      {recoveryContext ? (
+        <span
+          aria-label={recoveryAccessibleLabel}
+          className="text-xs text-muted-foreground tabular-nums"
+        >
+          {recoveryContext}
+        </span>
+      ) : null}
     </span>
   )
   const footer = (
     <div className="flex min-w-0 flex-1 items-center gap-2">
       {leading}
-      {title}
+      {details}
       <span className="pointer-events-auto relative z-20">{trailing}</span>
     </div>
   )
@@ -178,6 +205,7 @@ function BookmarkGridCardSurface({
 
 function BookmarkGridCard({
   bookmark,
+  collections,
   isSelected,
   onSelectionChange,
   selectionMode,
@@ -198,6 +226,7 @@ function BookmarkGridCard({
   const surface = (
     <BookmarkGridCardSurface
       bookmark={bookmark}
+      collections={collections}
       isSelected={isSelected}
       onSelectionChange={onSelectionChange}
       selectionMode={selectionMode}
@@ -208,6 +237,7 @@ function BookmarkGridCard({
             {...actionHandlers}
             availableTags={tags}
             bookmark={bookmark}
+            collections={collections}
             isSelected={isSelected}
           />
         )
@@ -224,6 +254,7 @@ function BookmarkGridCard({
         {...actionHandlers}
         availableTags={tags}
         bookmark={bookmark}
+        collections={collections}
         isSelected={isSelected}
       >
         {surface}
@@ -234,10 +265,12 @@ function BookmarkGridCard({
 
 function SortableBookmarkGridCard({
   bookmark,
+  collections,
   index,
   showImage,
 }: {
   bookmark: MockBookmark
+  collections: readonly Collection[]
   index: number
   showImage: boolean
 }): React.ReactElement {
@@ -256,6 +289,7 @@ function SortableBookmarkGridCard({
     >
       <BookmarkGridCardSurface
         bookmark={bookmark}
+        collections={collections}
         isDragging={isDragging}
         isSelected={false}
         selectionMode={false}
@@ -274,6 +308,7 @@ function SortableBookmarkGridCard({
 
 export function BookmarkGrid({
   bookmarks,
+  collections,
   isReordering = false,
   onDirectSelectionChange,
   selectedBookmarkIds,
@@ -303,6 +338,7 @@ export function BookmarkGrid({
         isReordering ? (
           <SortableBookmarkGridCard
             bookmark={bookmark}
+            collections={collections}
             index={index}
             key={bookmark.id}
             showImage={showImage}
@@ -311,6 +347,7 @@ export function BookmarkGrid({
           <BookmarkGridCard
             {...actionHandlers}
             bookmark={bookmark}
+            collections={collections}
             isSelected={selectedBookmarkIds.has(bookmark.id)}
             key={bookmark.id}
             onSelectionChange={handleSelectionChange}
