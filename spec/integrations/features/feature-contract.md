@@ -143,6 +143,7 @@ The contract follows five interaction rules:
 - On desktop, the section menu appears when the section header receives hover or focus. It remains in a fixed trailing slot.
 - On touch surfaces, the section menu remains visible.
 - The collapsed desktop rail hides section headers, disclosure controls, create buttons, and section menus without leaving blank header space.
+- Collection and tag disclosure preferences apply only to the expanded sidebar. The collapsed rail treats both sections as open without changing their saved expanded-sidebar state.
 - The collapsed rail renders top-level and child collections as one flat icon list. Child tooltips use their full path, such as `Media / Streaming Platforms`.
 - The collapsed rail also shows colored tag icons with tooltips. A quiet divider separates collections and tags.
 - Mobile always uses the expanded navigation drawer. It keeps children visible and indented, and it keeps row menus available without hover.

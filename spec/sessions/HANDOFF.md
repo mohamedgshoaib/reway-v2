@@ -50,17 +50,29 @@
 - All overflow menus use one shared 16-pixel ellipsis icon. Parent and child
   collection rows share a 32-pixel height, and sidebar actions center without
   row-specific offsets.
+- The mock now has four tags: Engineering, Design, Product, and Research.
+  Bookmark memberships from removed tags map to those four.
+- Child collection icons keep their chosen palette color in light and dark
+  themes. Nested rows no longer replace that color with sidebar foreground.
+- The collapsed desktop rail hides collection and tag menus, create buttons,
+  and carets. It treats both groups as open without changing their saved state.
 - `src/dev/dashboard-ui/page.tsx` is a small shell. State and event handling live
   in `src/dev/dashboard-ui/dashboard-ui-controller.ts`.
 
 ## Verified
 
-- `pnpm run check` passed.
+- `pnpm run check` and the production build passed after the icon-color and
+  collapsed-control fixes, before the final derived-open rule.
 - The focused deletion, restore, toast, and navigation runs passed. The latest
   focused slice passed 43 tests across 5 files.
-- The full Vitest run passed with 148 tests across 32 files using four workers.
+- The last fully green Vitest run passed with 148 tests across 32 files using
+  four workers. A later full run passed 147 tests and found one stale tag-count
+  assertion after the mock-data reduction. The corrected focused file passed
+  9 tests; the full suite was not rerun.
 - The client and server production build and `git diff --check` passed.
-- Changed-scope React Doctor passed at 100/100 across 26 files.
+- Changed-scope React Doctor passed at 100/100 across 28 files before the final
+  derived-open rule.
+- The user asked not to test or verify the final collapsed-rail open rule.
 - Browser, touch, keyboard, screen-reader, and rendered checks were not run.
 
 ## Next

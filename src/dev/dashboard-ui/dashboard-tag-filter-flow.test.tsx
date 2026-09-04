@@ -157,17 +157,17 @@ describe("dashboard tag filtering flow", () => {
       navigation.getByRole("button", { name: "Filter by Design" })
     )
     expect(
-      navigation.getByRole("button", { name: "Show 12 bookmarks" })
+      navigation.getByRole("button", { name: "Show 13 bookmarks" })
     ).not.toBeNull()
     expect(
-      within(main).getByText("Design filter added. 12 bookmarks shown.")
+      within(main).getByText("Design filter added. 13 bookmarks shown.")
     ).not.toBeNull()
     expect(
       within(main).queryByText("Research filter added. 5 bookmarks shown.")
     ).toBeNull()
 
     fireEvent.click(
-      navigation.getByRole("button", { name: "Show 12 bookmarks" })
+      navigation.getByRole("button", { name: "Show 13 bookmarks" })
     )
 
     await waitFor(() => {

@@ -185,6 +185,21 @@ Write facts only. No plans, no advice, no narration.
   Trash, collection, tag, section, and `/ui` overflow menus. Visible button and
   hit-area sizes remain separate.
 - The latest sidebar and bookmark-action run passed with 26 tests across 3 files.
+- Reduced the mock to Engineering, Design, Product, and Research. Remapped every
+  removed tag membership to one of those four tags.
+- Removed the nested-row SVG color override so child collection icons keep their
+  selected palette color in light and dark themes.
+- Hid collection and tag menus, create buttons, and carets through explicit
+  collapsed-rail rules.
+- Made collection and tag groups render open in the collapsed rail without
+  changing their saved expanded-sidebar disclosure state.
+- The focused sidebar regressions passed with 23 tests across 2 files. Static
+  checks, the production build, and changed-scope React Doctor at 100/100 across
+  28 files passed before the final derived-open rule.
+- A later full Vitest run passed 147 of 148 tests and found one stale tag-count
+  assertion after the four-tag change. The corrected tag-filter file passed all
+  9 tests. The full suite was not rerun.
+- The user asked not to test or verify the final collapsed-rail open rule.
 
 ---
 
@@ -215,6 +230,8 @@ Write facts only. No plans, no advice, no narration.
 - Successful bookmark Undo plays one restrained semantic cue after restoration.
 - The navigation footer uses Display, Trash, then Settings. Mobile tag results
   show one compact drawer action only while a tag is active.
+- Collection and tag disclosure state applies to the expanded sidebar. The
+  collapsed rail treats both groups as open without changing the saved state.
 
 ---
 

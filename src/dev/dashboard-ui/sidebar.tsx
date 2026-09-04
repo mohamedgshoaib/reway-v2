@@ -859,7 +859,7 @@ function DashboardNavigationContent({
           bookmarks={bookmarks}
           collapsed={collapsed}
           collections={collections}
-          isOpen={disclosures.collections}
+          isOpen={collapsed || disclosures.collections}
           isReordering={reorderingSection === "collections"}
           onCreateCollection={onCreateCollection}
           onDeleteCollection={onDeleteCollection}
@@ -876,7 +876,7 @@ function DashboardNavigationContent({
           activeTagIds={activeTagIds}
           bookmarks={bookmarks}
           collapsed={collapsed}
-          isOpen={disclosures.tags}
+          isOpen={collapsed || disclosures.tags}
           isReordering={reorderingSection === "tags"}
           onCreateTag={onCreateTag}
           onDeleteTag={onDeleteTag}
