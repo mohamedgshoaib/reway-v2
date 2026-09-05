@@ -39,6 +39,21 @@ export function Alert({
   )
 }
 
+export function AlertStatus({
+  className,
+  variant,
+  ...props
+}: React.ComponentProps<"output"> &
+  VariantProps<typeof alertVariants>): React.ReactElement {
+  return (
+    <output
+      className={cn(alertVariants({ variant }), className)}
+      data-slot="alert"
+      {...props}
+    />
+  )
+}
+
 export function AlertTitle({
   className,
   ...props

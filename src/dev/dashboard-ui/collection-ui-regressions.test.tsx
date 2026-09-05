@@ -8,6 +8,8 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { SidebarProvider } from "@/components/ui/sidebar"
+import type { AppearancePaletteColor } from "@/dev/dashboard-ui/appearance-color"
+import { AppearanceColorPicker } from "@/dev/dashboard-ui/appearance-color-picker"
 import {
   CollectionDeleteDialog,
   type CollectionDraft,
@@ -133,12 +135,16 @@ describe("collection UI regressions", () => {
     })
     fireEvent.click(screen.getByRole("button", { name: "Create" }))
 
-    expect(onCreateCollection).toHaveBeenCalledWith({
-      color: { kind: "palette", value: "blue" },
-      icon: "folder",
-      name: "Dinner ideas",
-      parentId: null,
-    })
+    expect(onCreateCollection).toHaveBeenCalledWith(
+      {
+        color: { kind: "palette", value: "blue" },
+        icon: "folder",
+        name: "Dinner ideas",
+        parentId: null,
+      },
+      expect.any(Function),
+      undefined
+    )
   })
 
   it("keeps new collection names neutral until submit", () => {
@@ -187,6 +193,27 @@ describe("collection UI regressions", () => {
     expect(tagActions).not.toBeNull()
     expect(tagActions).toBe(tagAdd.parentElement)
     expect(tagActions?.className).toContain("after:min-w-0")
+  })
+
+  it("keeps palette marks compact while enlarging coarse-pointer targets", () => {
+    const { container } = render(
+      <AppearanceColorPicker
+        onValueChange={vi.fn<(color: AppearancePaletteColor) => void>()}
+        renderIcon={() => <span aria-hidden="true" />}
+        value="rose"
+      />
+    )
+
+    const group = screen.getByRole("radiogroup", { name: "Color" })
+    const option = container.querySelector<HTMLElement>(
+      '[data-slot="appearance-color-option"]'
+    )
+
+    expect(group.className).toContain("gap-3")
+    expect(group.className).toContain("pointer-coarse:gap-4")
+    expect(option?.className).toContain("size-7")
+    expect(option?.className).toContain("after:size-10")
+    expect(option?.className).toContain("pointer-coarse:after:size-11")
   })
 
   it("commits a keyboard reorder from the drag handle", () => {
@@ -302,10 +329,14 @@ describe("collection UI regressions", () => {
     fireEvent.click(roseOption)
     fireEvent.click(screen.getByRole("button", { name: "Create" }))
 
-    expect(onCreateTag).toHaveBeenCalledWith({
-      color: { kind: "palette", value: "rose" },
-      name: "Watch later",
-    })
+    expect(onCreateTag).toHaveBeenCalledWith(
+      {
+        color: { kind: "palette", value: "rose" },
+        name: "Watch later",
+      },
+      expect.any(Function),
+      undefined
+    )
   })
 
   it("keeps new tag names neutral until submit", () => {
@@ -335,8 +366,9 @@ describe("collection UI regressions", () => {
         bookmarks={[]}
         collectionId={mockCollections[0].id}
         collections={mockCollections}
-        onDelete={vi.fn<(collectionId: string) => void>()}
+        onDelete={vi.fn<() => Promise<boolean>>(async () => true)}
         onOpenChange={vi.fn<(open: boolean) => void>()}
+        onRetryRequest={vi.fn<(collectionId: string) => void>()}
       />
     )
 
@@ -350,8 +382,9 @@ describe("collection UI regressions", () => {
     render(
       <TagDeleteDialog
         bookmarks={[]}
-        onDelete={vi.fn<(tagId: string) => void>()}
+        onDelete={vi.fn<() => Promise<boolean>>(async () => true)}
         onOpenChange={vi.fn<(open: boolean) => void>()}
+        onRetryRequest={vi.fn<(tagId: string) => void>()}
         tagId={mockTags[0].id}
         tags={mockTags}
       />

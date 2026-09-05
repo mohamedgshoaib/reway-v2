@@ -56,8 +56,19 @@ export interface CollectionDraft {
 }
 
 export type CollectionEditorRequest =
-  | { mode: "create"; parentId: string | null }
-  | { collectionId: string; mode: "edit" }
+  | {
+      draft?: CollectionDraft
+      mode: "create"
+      parentId: string | null
+      retryCollectionId?: string
+      saveError?: string
+    }
+  | {
+      collectionId: string
+      draft?: CollectionDraft
+      mode: "edit"
+      saveError?: string
+    }
 
 const TOP_LEVEL_VALUE = "__top_level__"
 
@@ -73,28 +84,35 @@ function CollectionIconPickerFallback(): React.ReactElement {
 function CollectionForm({
   collection,
   collections,
+  initialDraft,
   initialParentId,
   onCancel,
+  onDirtyChange,
   onSubmit,
+  saveError,
 }: {
   collection?: Collection
   collections: readonly Collection[]
+  initialDraft?: CollectionDraft
   initialParentId: string | null
   onCancel: () => void
+  onDirtyChange: (dirty: boolean) => void
   onSubmit: (draft: CollectionDraft) => void
+  saveError?: string
 }): React.ReactElement {
   const nameInputRef = React.useRef<HTMLInputElement>(null)
-  const [name, setName] = React.useState(collection?.name ?? "")
+  const startingDraft: CollectionDraft = initialDraft ?? {
+    color: getCollectionColor(collection ?? {}),
+    icon: collection?.icon ?? "folder",
+    name: collection?.name ?? "",
+    parentId: collection?.parentId ?? initialParentId,
+  }
+  const [name, setName] = React.useState(startingDraft.name)
   const [submitAttempted, setSubmitAttempted] = React.useState(false)
-  const [icon, setIcon] = React.useState<CollectionIconName>(
-    collection?.icon ?? "folder"
-  )
-  const [color, setColor] = React.useState<CollectionColor>(() =>
-    getCollectionColor(collection ?? {})
-  )
-  const [parentId, setParentId] = React.useState(
-    collection?.parentId ?? initialParentId
-  )
+  const [icon, setIcon] = React.useState<CollectionIconName>(startingDraft.icon)
+  const [color, setColor] = React.useState<CollectionColor>(startingDraft.color)
+  const [parentId, setParentId] = React.useState(startingDraft.parentId)
+  const [saveErrorMessage, setSaveErrorMessage] = React.useState(saveError)
   const collectionHasChildren = collection
     ? collections.some((candidate) => candidate.parentId === collection.id)
     : false
@@ -110,6 +128,16 @@ function CollectionForm({
   ])
   const nameError = getCollectionNameError(collections, name, collection?.id)
   const showNameError = Boolean(nameError && submitAttempted)
+  const updateDirty = (nextDraft: CollectionDraft): void => {
+    onDirtyChange(
+      nextDraft.name !== startingDraft.name ||
+        nextDraft.icon !== startingDraft.icon ||
+        nextDraft.color.kind !== startingDraft.color.kind ||
+        nextDraft.color.value !== startingDraft.color.value ||
+        nextDraft.parentId !== startingDraft.parentId
+    )
+    setSaveErrorMessage(undefined)
+  }
 
   return (
     <form
@@ -131,6 +159,11 @@ function CollectionForm({
       }}
     >
       <DialogPanel className="grid gap-4">
+        {saveErrorMessage ? (
+          <p className="text-sm text-destructive-foreground" role="alert">
+            {saveErrorMessage}
+          </p>
+        ) : null}
         <Field invalid={showNameError}>
           <FieldLabel htmlFor="collection-name">Name</FieldLabel>
           <Input
@@ -140,7 +173,11 @@ function CollectionForm({
             aria-invalid={showNameError || undefined}
             id="collection-name"
             maxLength={24}
-            onChange={(event) => setName(event.target.value)}
+            onChange={(event) => {
+              const nextName = event.target.value
+              setName(nextName)
+              updateDirty({ color, icon, name: nextName, parentId })
+            }}
             placeholder="Collection name"
             ref={nameInputRef}
             value={name}
@@ -156,7 +193,10 @@ function CollectionForm({
           <React.Suspense fallback={<CollectionIconPickerFallback />}>
             <LazyCollectionIconPicker
               color={color}
-              onSelect={setIcon}
+              onSelect={(nextIcon) => {
+                setIcon(nextIcon)
+                updateDirty({ color, icon: nextIcon, name, parentId })
+              }}
               selectedIcon={icon}
             />
           </React.Suspense>
@@ -166,7 +206,11 @@ function CollectionForm({
             Color
           </FieldsetLegend>
           <AppearanceColorPicker
-            onValueChange={(value) => setColor({ kind: "palette", value })}
+            onValueChange={(value) => {
+              const nextColor = { kind: "palette", value } as const
+              setColor(nextColor)
+              updateDirty({ color: nextColor, icon, name, parentId })
+            }}
             renderIcon={(value) => (
               <CollectionIcon
                 className="size-6"
@@ -182,9 +226,16 @@ function CollectionForm({
           <Select
             disabled={collectionHasChildren}
             items={parentLabels}
-            onValueChange={(value) =>
-              setParentId(value === TOP_LEVEL_VALUE ? null : value)
-            }
+            onValueChange={(value) => {
+              const nextParentId = value === TOP_LEVEL_VALUE ? null : value
+              setParentId(nextParentId)
+              updateDirty({
+                color,
+                icon,
+                name,
+                parentId: nextParentId,
+              })
+            }}
             value={parentId ?? TOP_LEVEL_VALUE}
           >
             <SelectTrigger>
@@ -224,15 +275,26 @@ export function CollectionEditorDialog({
   collections,
   onCreate,
   onOpenChange,
+  onRetryRequest,
   onUpdate,
   request,
 }: {
   collections: readonly Collection[]
-  onCreate: (draft: CollectionDraft) => void
+  onCreate: (
+    draft: CollectionDraft,
+    reopenDraft?: (saveError: string, collectionId: string) => void,
+    retryCollectionId?: string
+  ) => void
   onOpenChange: (open: boolean) => void
-  onUpdate: (collectionId: string, draft: CollectionDraft) => void
+  onRetryRequest: (request: CollectionEditorRequest) => void
+  onUpdate: (
+    collectionId: string,
+    draft: CollectionDraft,
+    reopenDraft?: (saveError: string) => void
+  ) => void
   request: CollectionEditorRequest | null
 }): React.ReactElement {
+  const [dirty, setDirty] = React.useState(false)
   const collection =
     request?.mode === "edit"
       ? collections.find((candidate) => candidate.id === request.collectionId)
@@ -242,13 +304,23 @@ export function CollectionEditorDialog({
       ? request.parentId
       : (collection?.parentId ?? null)
   const overlay = useDeferredOverlayClose({
-    onClosed: () => onOpenChange(false),
+    onClosed: () => {
+      setDirty(false)
+      onOpenChange(false)
+    },
     open: request !== null,
   })
 
   return (
     <Dialog
-      onOpenChange={overlay.onOpenChange}
+      disablePointerDismissal={dirty}
+      onOpenChange={(open, eventDetails) => {
+        if (!open && dirty && eventDetails.reason === "outside-press") {
+          eventDetails.cancel()
+          return
+        }
+        overlay.onOpenChange(open)
+      }}
       onOpenChangeComplete={overlay.onOpenChangeComplete}
       open={overlay.open}
     >
@@ -262,6 +334,7 @@ export function CollectionEditorDialog({
           <CollectionForm
             collection={collection}
             collections={collections}
+            initialDraft={request.draft}
             initialParentId={initialParentId}
             key={
               request.mode === "edit"
@@ -269,14 +342,34 @@ export function CollectionEditorDialog({
                 : `create-${request.parentId ?? "root"}`
             }
             onCancel={overlay.requestClose}
+            onDirtyChange={setDirty}
             onSubmit={(draft) => {
               if (request.mode === "edit") {
-                onUpdate(request.collectionId, draft)
+                onUpdate(request.collectionId, draft, (saveError) =>
+                  onRetryRequest({
+                    collectionId: request.collectionId,
+                    draft,
+                    mode: "edit",
+                    saveError,
+                  })
+                )
               } else {
-                onCreate(draft)
+                onCreate(
+                  draft,
+                  (saveError, collectionId) =>
+                    onRetryRequest({
+                      draft,
+                      mode: "create",
+                      parentId: draft.parentId,
+                      retryCollectionId: collectionId,
+                      saveError,
+                    }),
+                  request.retryCollectionId
+                )
               }
               overlay.requestClose()
             }}
+            saveError={request.saveError}
           />
         ) : null}
       </DialogPopup>
@@ -290,35 +383,60 @@ export function CollectionDeleteDialog({
   collections,
   onDelete,
   onOpenChange,
+  onRetryRequest,
 }: {
   bookmarks: readonly MockBookmark[]
   collectionId: string | null
   collections: readonly Collection[]
-  onDelete: (collectionId: string) => void
+  onDelete: (
+    collectionId: string,
+    reopenDelete?: () => void
+  ) => Promise<boolean>
   onOpenChange: (open: boolean) => void
+  onRetryRequest: (collectionId: string) => void
 }): React.ReactElement {
-  const collection = collections.find(
-    (candidate) => candidate.id === collectionId
-  )
-  const deletion = collection
-    ? getCollectionDeletion(collections, bookmarks, collection.id)
-    : null
-  const childCount = deletion ? deletion.deletedIds.size - 1 : 0
-  const [confirmedDeleteId, setConfirmedDeleteId] = React.useState<
-    string | null
-  >(null)
-  const overlay = useDeferredOverlayClose({
-    onClosed: () => {
-      if (confirmedDeleteId) onDelete(confirmedDeleteId)
-      setConfirmedDeleteId(null)
-      onOpenChange(false)
-    },
-    open: collection !== undefined,
+  const [{ collection, deletion }] = React.useState(() => {
+    const initialCollection = collections.find(
+      (candidate) => candidate.id === collectionId
+    )
+    return {
+      collection: initialCollection,
+      deletion: initialCollection
+        ? getCollectionDeletion(collections, bookmarks, initialCollection.id)
+        : null,
+    }
   })
+  const childCount = deletion ? deletion.deletedIds.size - 1 : 0
+  const [pending, setPending] = React.useState(false)
+  const deleteRequestRef = React.useRef(0)
+  const overlay = useDeferredOverlayClose({
+    onClosed: () => onOpenChange(false),
+    open: collectionId !== null && collection !== undefined,
+  })
+  const handleDelete = async (): Promise<void> => {
+    if (!collection || pending) return
+    const requestId = deleteRequestRef.current + 1
+    deleteRequestRef.current = requestId
+    setPending(true)
+    try {
+      await onDelete(collection.id, () => onRetryRequest(collection.id))
+    } finally {
+      setPending((currentPending) =>
+        deleteRequestRef.current === requestId ? false : currentPending
+      )
+      if (deleteRequestRef.current === requestId) overlay.requestClose()
+    }
+  }
 
   return (
     <AlertDialog
-      onOpenChange={overlay.onOpenChange}
+      onOpenChange={(open, eventDetails) => {
+        if (!open && pending) {
+          eventDetails.cancel()
+          return
+        }
+        overlay.onOpenChange(open)
+      }}
       onOpenChangeComplete={overlay.onOpenChangeComplete}
       open={overlay.open}
     >
@@ -332,17 +450,19 @@ export function CollectionDeleteDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogClose render={<Button variant="ghost" />}>
+          <AlertDialogClose
+            render={<Button disabled={pending} variant="ghost" />}
+          >
             Cancel
           </AlertDialogClose>
-          <AlertDialogClose
-            onClick={() => {
-              if (collection) setConfirmedDeleteId(collection.id)
-            }}
-            render={<Button variant="destructive" />}
+          <Button
+            disabled={pending}
+            onClick={() => void handleDelete()}
+            type="button"
+            variant="destructive"
           >
-            Delete collection
-          </AlertDialogClose>
+            {pending ? "Deleting…" : "Delete collection"}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogPopup>
     </AlertDialog>

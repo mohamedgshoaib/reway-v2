@@ -1,5 +1,8 @@
 import type { Collection } from "@/dev/dashboard-ui/collection-hierarchy"
-import type { CollectionDraft } from "@/dev/dashboard-ui/collection-management"
+import type {
+  CollectionManagementHandlers,
+  TagManagementHandlers,
+} from "@/dev/dashboard-ui/dashboard-management-state"
 import {
   mockBookmarks,
   mockCollections,
@@ -10,7 +13,7 @@ import {
 } from "@/dev/dashboard-ui/mock-bookmarks"
 import type { DashboardNavigationDisclosures } from "@/dev/dashboard-ui/navigation-preferences"
 import { MobileDashboardNavigation } from "@/dev/dashboard-ui/sidebar"
-import type { Tag, TagDraft } from "@/dev/dashboard-ui/tag-model"
+import type { Tag } from "@/dev/dashboard-ui/tag-model"
 
 export function BookmarkControlsBar({
   activeTagIds,
@@ -29,6 +32,7 @@ export function BookmarkControlsBar({
   onDeleteTag,
   onMoveCollection,
   onMoveTag,
+  onOpenSettings,
   onSelectAllBookmarks,
   onSelectCollection,
   onSelectTrash,
@@ -56,16 +60,17 @@ export function BookmarkControlsBar({
   isReordering?: boolean
   mobileNavigationDisclosures: DashboardNavigationDisclosures
   onNavigate?: () => void
-  onCreateCollection?: (draft: CollectionDraft) => void
-  onCreateTag?: (draft: TagDraft) => void
-  onDeleteCollection?: (collectionId: string) => void
-  onDeleteTag?: (tagId: string) => void
+  onCreateCollection?: CollectionManagementHandlers["onCreateCollection"]
+  onCreateTag?: TagManagementHandlers["onCreateTag"]
+  onDeleteCollection?: CollectionManagementHandlers["onDeleteCollection"]
+  onDeleteTag?: TagManagementHandlers["onDeleteTag"]
   onMoveCollection?: (
     sourceId: string,
     parentId: string | null,
     index: number
   ) => void
   onMoveTag?: (sourceId: string, index: number) => void
+  onOpenSettings?: (trigger: HTMLButtonElement) => void
   onSelectAllBookmarks?: () => void
   onSelectCollection?: (collection: string) => void
   onSelectTrash?: () => void
@@ -73,8 +78,8 @@ export function BookmarkControlsBar({
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
   onTagActiveChange?: (tagId: string, active: boolean) => void
-  onUpdateCollection?: (collectionId: string, draft: CollectionDraft) => void
-  onUpdateTag?: (tagId: string, draft: TagDraft) => void
+  onUpdateCollection?: CollectionManagementHandlers["onUpdateCollection"]
+  onUpdateTag?: TagManagementHandlers["onUpdateTag"]
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
   tagFilterResultCount?: number
@@ -102,6 +107,7 @@ export function BookmarkControlsBar({
           onDeleteTag={onDeleteTag}
           onMoveCollection={onMoveCollection}
           onMoveTag={onMoveTag}
+          onOpenSettings={onOpenSettings}
           onSelectAllBookmarks={onSelectAllBookmarks}
           onSelectCollection={onSelectCollection}
           onSelectTrash={onSelectTrash}

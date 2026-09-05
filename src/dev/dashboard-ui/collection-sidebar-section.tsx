@@ -49,10 +49,10 @@ import { CollectionIcon } from "@/dev/dashboard-ui/collection-icon"
 import {
   CollectionDeleteDialog,
   CollectionEditorDialog,
-  type CollectionDraft,
   type CollectionEditorRequest,
 } from "@/dev/dashboard-ui/collection-management"
 import { CollectionReorderList } from "@/dev/dashboard-ui/collection-reorder"
+import type { CollectionManagementHandlers } from "@/dev/dashboard-ui/dashboard-management-state"
 import type { MockBookmark } from "@/dev/dashboard-ui/mock-bookmarks"
 import { cn } from "@/lib/utils"
 
@@ -62,11 +62,13 @@ function CollectionRowMenu({
   onNewNested,
   row,
 }: {
-  onDelete: () => void
-  onEdit: () => void
-  onNewNested?: () => void
+  onDelete: (trigger: HTMLElement | null) => void
+  onEdit: (trigger: HTMLElement | null) => void
+  onNewNested?: (trigger: HTMLElement | null) => void
   row: CollectionRow
 }): React.ReactElement {
+  const triggerRef = React.useRef<HTMLButtonElement>(null)
+
   return (
     <>
       <SidebarMenuBadge className="group-hover/menu-item:opacity-0 group-has-focus-visible/menu-item:opacity-0 group-has-data-popup-open/menu-item:opacity-0">
@@ -77,6 +79,7 @@ function CollectionRowMenu({
           render={
             <SidebarMenuAction
               aria-label={`Actions for ${row.collection.name}`}
+              ref={triggerRef}
               showOnHover
             />
           }
@@ -85,17 +88,20 @@ function CollectionRowMenu({
         </MenuTrigger>
         <MenuPopup align="start" side="right">
           {onNewNested ? (
-            <MenuItem onClick={onNewNested}>
+            <MenuItem onClick={() => onNewNested(triggerRef.current)}>
               <PlusIcon aria-hidden="true" weight="regular" />
               New nested collection
             </MenuItem>
           ) : null}
-          <MenuItem onClick={onEdit}>
+          <MenuItem onClick={() => onEdit(triggerRef.current)}>
             <PencilSimpleIcon aria-hidden="true" weight="duotone" />
             Edit
           </MenuItem>
           <MenuSeparator />
-          <MenuItem onClick={onDelete} variant="destructive">
+          <MenuItem
+            onClick={() => onDelete(triggerRef.current)}
+            variant="destructive"
+          >
             <TrashIcon aria-hidden="true" weight="duotone" />
             Delete
           </MenuItem>
@@ -117,10 +123,10 @@ function CollectionNavigationRow({
 }: {
   activeCollection: string | null
   nested?: boolean
-  onDelete: () => void
-  onEdit: () => void
+  onDelete: (trigger: HTMLElement | null) => void
+  onEdit: (trigger: HTMLElement | null) => void
   onNavigate?: () => void
-  onNewNested?: () => void
+  onNewNested?: (trigger: HTMLElement | null) => void
   onSelectCollection?: (collectionId: string) => void
   row: CollectionRow
 }): React.ReactElement {
@@ -187,10 +193,10 @@ function CollectionRows({
   bookmarks: readonly MockBookmark[]
   collapsed: boolean
   collections: readonly Collection[]
-  onDelete: (collectionId: string) => void
-  onEdit: (collectionId: string) => void
+  onDelete: (collectionId: string, trigger: HTMLElement | null) => void
+  onEdit: (collectionId: string, trigger: HTMLElement | null) => void
   onNavigate?: () => void
-  onNewNested: (parentId: string) => void
+  onNewNested: (parentId: string, trigger: HTMLElement | null) => void
   onSelectCollection?: (collectionId: string) => void
   orderMode: CollectionOrderMode
 }): React.ReactElement {
@@ -215,11 +221,13 @@ function CollectionRows({
         <React.Fragment key={row.collection.id}>
           <CollectionNavigationRow
             activeCollection={activeCollection}
-            onDelete={() => onDelete(row.collection.id)}
-            onEdit={() => onEdit(row.collection.id)}
+            onDelete={(trigger) => onDelete(row.collection.id, trigger)}
+            onEdit={(trigger) => onEdit(row.collection.id, trigger)}
             onNavigate={onNavigate}
             onNewNested={
-              row.depth === 0 ? () => onNewNested(row.collection.id) : undefined
+              row.depth === 0
+                ? (trigger) => onNewNested(row.collection.id, trigger)
+                : undefined
             }
             onSelectCollection={onSelectCollection}
             row={row}
@@ -236,8 +244,10 @@ function CollectionRows({
                     activeCollection={activeCollection}
                     key={child.collection.id}
                     nested
-                    onDelete={() => onDelete(child.collection.id)}
-                    onEdit={() => onEdit(child.collection.id)}
+                    onDelete={(trigger) =>
+                      onDelete(child.collection.id, trigger)
+                    }
+                    onEdit={(trigger) => onEdit(child.collection.id, trigger)}
                     onNavigate={onNavigate}
                     onSelectCollection={onSelectCollection}
                     row={childRow}
@@ -274,8 +284,8 @@ export function CollectionSidebarSection({
   collections: readonly Collection[]
   isOpen: boolean
   isReordering?: boolean
-  onCreateCollection?: (draft: CollectionDraft) => void
-  onDeleteCollection?: (collectionId: string) => void
+  onCreateCollection?: CollectionManagementHandlers["onCreateCollection"]
+  onDeleteCollection?: CollectionManagementHandlers["onDeleteCollection"]
   onMoveCollection?: (
     sourceId: string,
     parentId: string | null,
@@ -285,7 +295,7 @@ export function CollectionSidebarSection({
   onOpenChange: (open: boolean) => void
   onReorderingChange?: (reordering: boolean) => void
   onSelectCollection?: (collectionId: string) => void
-  onUpdateCollection?: (collectionId: string, draft: CollectionDraft) => void
+  onUpdateCollection?: CollectionManagementHandlers["onUpdateCollection"]
 }): React.ReactElement {
   const [orderMode, setOrderMode] =
     React.useState<CollectionOrderMode>("newest")
@@ -299,6 +309,12 @@ export function CollectionSidebarSection({
     null
   )
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
+  const createButtonRef = React.useRef<HTMLButtonElement>(null)
+  const sectionHeaderRef = React.useRef<HTMLButtonElement>(null)
+  const returnFocusRef = React.useRef<HTMLElement | null>(null)
+  const restoreFocus = (): void => {
+    requestAnimationFrame(() => returnFocusRef.current?.focus())
+  }
 
   return (
     <>
@@ -317,7 +333,13 @@ export function CollectionSidebarSection({
               render={
                 <SidebarGroupLabel
                   className="min-w-0 flex-1 gap-1 px-2 data-panel-open:*:data-[slot=collections-indicator]:rotate-180"
-                  render={<button aria-label="Collections" type="button" />}
+                  render={
+                    <button
+                      aria-label="Collections"
+                      ref={sectionHeaderRef}
+                      type="button"
+                    />
+                  }
                 />
               }
             >
@@ -390,9 +412,11 @@ export function CollectionSidebarSection({
                   </Menu>
                   <Button
                     aria-label="New collection"
-                    onClick={() =>
+                    onClick={() => {
+                      returnFocusRef.current = createButtonRef.current
                       setEditor({ mode: "create", parentId: null })
-                    }
+                    }}
+                    ref={createButtonRef}
                     size="icon-xs"
                     variant="ghost"
                   >
@@ -417,14 +441,19 @@ export function CollectionSidebarSection({
                   bookmarks={bookmarks}
                   collapsed={collapsed}
                   collections={collections}
-                  onDelete={setDeletingId}
-                  onEdit={(collectionId) =>
+                  onDelete={(collectionId) => {
+                    returnFocusRef.current = sectionHeaderRef.current
+                    setDeletingId(collectionId)
+                  }}
+                  onEdit={(collectionId, trigger) => {
+                    returnFocusRef.current = trigger
                     setEditor({ collectionId, mode: "edit" })
-                  }
+                  }}
                   onNavigate={onNavigate}
-                  onNewNested={(parentId) =>
+                  onNewNested={(parentId, trigger) => {
+                    returnFocusRef.current = trigger
                     setEditor({ mode: "create", parentId })
-                  }
+                  }}
                   onSelectCollection={onSelectCollection}
                   orderMode={orderMode}
                 />
@@ -435,12 +464,18 @@ export function CollectionSidebarSection({
       </SidebarGroup>
       <CollectionEditorDialog
         collections={collections}
-        onCreate={(draft) => onCreateCollection?.(draft)}
+        onCreate={(draft, reopenDraft, retryCollectionId) =>
+          onCreateCollection?.(draft, reopenDraft, retryCollectionId)
+        }
         onOpenChange={(open) => {
-          if (!open) setEditor(null)
+          if (!open) {
+            setEditor(null)
+            restoreFocus()
+          }
         }}
-        onUpdate={(collectionId, draft) =>
-          onUpdateCollection?.(collectionId, draft)
+        onRetryRequest={setEditor}
+        onUpdate={(collectionId, draft, reopenDraft) =>
+          onUpdateCollection?.(collectionId, draft, reopenDraft)
         }
         request={editor}
       />
@@ -448,10 +483,18 @@ export function CollectionSidebarSection({
         bookmarks={bookmarks}
         collectionId={deletingId}
         collections={collections}
-        onDelete={(collectionId) => onDeleteCollection?.(collectionId)}
+        key={deletingId ?? "no-collection-delete"}
+        onDelete={(collectionId, reopenDelete) =>
+          onDeleteCollection?.(collectionId, reopenDelete) ??
+          Promise.resolve(false)
+        }
         onOpenChange={(open) => {
-          if (!open) setDeletingId(null)
+          if (!open) {
+            setDeletingId(null)
+            restoreFocus()
+          }
         }}
+        onRetryRequest={setDeletingId}
       />
     </>
   )

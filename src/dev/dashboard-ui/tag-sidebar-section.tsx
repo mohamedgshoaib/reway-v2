@@ -35,6 +35,7 @@ import {
   SidebarMenuButtonLabel,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import type { TagManagementHandlers } from "@/dev/dashboard-ui/dashboard-management-state"
 import type { MockBookmark } from "@/dev/dashboard-ui/mock-bookmarks"
 import { TagIcon } from "@/dev/dashboard-ui/tag-icon"
 import {
@@ -45,7 +46,6 @@ import {
 import {
   sortTags,
   type Tag,
-  type TagDraft,
   type TagOrderMode,
 } from "@/dev/dashboard-ui/tag-model"
 import { TagReorderList } from "@/dev/dashboard-ui/tag-reorder"
@@ -59,11 +59,13 @@ function TagRow({
   tag,
 }: {
   active: boolean
-  onDelete: () => void
-  onEdit: () => void
+  onDelete: (trigger: HTMLElement | null) => void
+  onEdit: (trigger: HTMLElement | null) => void
   onTagActiveChange: (active: boolean) => void
   tag: Tag
 }): React.ReactElement {
+  const triggerRef = React.useRef<HTMLButtonElement>(null)
+
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
@@ -81,6 +83,7 @@ function TagRow({
           render={
             <SidebarMenuAction
               aria-label={`Actions for ${tag.name}`}
+              ref={triggerRef}
               showOnHover
             />
           }
@@ -88,12 +91,15 @@ function TagRow({
           <OverflowMenuIcon />
         </MenuTrigger>
         <MenuPopup align="start" side="right">
-          <MenuItem onClick={onEdit}>
+          <MenuItem onClick={() => onEdit(triggerRef.current)}>
             <PencilSimpleIcon aria-hidden="true" weight="duotone" />
             Edit
           </MenuItem>
           <MenuSeparator />
-          <MenuItem onClick={onDelete} variant="destructive">
+          <MenuItem
+            onClick={() => onDelete(triggerRef.current)}
+            variant="destructive"
+          >
             <TrashIcon aria-hidden="true" weight="duotone" />
             Delete
           </MenuItem>
@@ -123,13 +129,13 @@ export function TagSidebarSection({
   collapsed: boolean
   isOpen: boolean
   isReordering?: boolean
-  onCreateTag?: (draft: TagDraft) => void
-  onDeleteTag?: (tagId: string) => void
+  onCreateTag?: TagManagementHandlers["onCreateTag"]
+  onDeleteTag?: TagManagementHandlers["onDeleteTag"]
   onMoveTag?: (sourceId: string, index: number) => void
   onOpenChange: (open: boolean) => void
   onReorderingChange?: (reordering: boolean) => void
   onTagActiveChange: (tagId: string, active: boolean) => void
-  onUpdateTag?: (tagId: string, draft: TagDraft) => void
+  onUpdateTag?: TagManagementHandlers["onUpdateTag"]
   tags: readonly Tag[]
 }): React.ReactElement {
   const [orderMode, setOrderMode] = React.useState<TagOrderMode>("alpha")
@@ -141,6 +147,12 @@ export function TagSidebarSection({
   }
   const [editor, setEditor] = React.useState<TagEditorRequest | null>(null)
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
+  const createButtonRef = React.useRef<HTMLButtonElement>(null)
+  const sectionHeaderRef = React.useRef<HTMLButtonElement>(null)
+  const returnFocusRef = React.useRef<HTMLElement | null>(null)
+  const restoreFocus = (): void => {
+    requestAnimationFrame(() => returnFocusRef.current?.focus())
+  }
   const orderedTags = sortTags(tags, orderMode)
 
   return (
@@ -160,7 +172,13 @@ export function TagSidebarSection({
               render={
                 <SidebarGroupLabel
                   className="min-w-0 flex-1 gap-1 px-2 data-panel-open:*:data-[slot=tags-indicator]:rotate-180"
-                  render={<button aria-label="Tags" type="button" />}
+                  render={
+                    <button
+                      aria-label="Tags"
+                      ref={sectionHeaderRef}
+                      type="button"
+                    />
+                  }
                 />
               }
             >
@@ -233,7 +251,11 @@ export function TagSidebarSection({
                   </Menu>
                   <Button
                     aria-label="New tag"
-                    onClick={() => setEditor({ mode: "create" })}
+                    onClick={() => {
+                      returnFocusRef.current = createButtonRef.current
+                      setEditor({ mode: "create" })
+                    }}
+                    ref={createButtonRef}
                     size="icon-xs"
                     variant="ghost"
                   >
@@ -256,8 +278,14 @@ export function TagSidebarSection({
                     <TagRow
                       active={activeTagIds.has(tag.id)}
                       key={tag.id}
-                      onDelete={() => setDeletingId(tag.id)}
-                      onEdit={() => setEditor({ mode: "edit", tagId: tag.id })}
+                      onDelete={() => {
+                        returnFocusRef.current = sectionHeaderRef.current
+                        setDeletingId(tag.id)
+                      }}
+                      onEdit={(trigger) => {
+                        returnFocusRef.current = trigger
+                        setEditor({ mode: "edit", tagId: tag.id })
+                      }}
                       onTagActiveChange={(active) =>
                         onTagActiveChange(tag.id, active)
                       }
@@ -279,20 +307,35 @@ export function TagSidebarSection({
         </Collapsible>
       </SidebarGroup>
       <TagEditorDialog
-        onCreate={(draft) => onCreateTag?.(draft)}
+        onCreate={(draft, reopenDraft, retryTagId) =>
+          onCreateTag?.(draft, reopenDraft, retryTagId)
+        }
         onOpenChange={(open) => {
-          if (!open) setEditor(null)
+          if (!open) {
+            setEditor(null)
+            restoreFocus()
+          }
         }}
-        onUpdate={(tagId, draft) => onUpdateTag?.(tagId, draft)}
+        onRetryRequest={setEditor}
+        onUpdate={(tagId, draft, reopenDraft) =>
+          onUpdateTag?.(tagId, draft, reopenDraft)
+        }
         request={editor}
         tags={tags}
       />
       <TagDeleteDialog
         bookmarks={bookmarks}
-        onDelete={(tagId) => onDeleteTag?.(tagId)}
+        key={deletingId ?? "no-tag-delete"}
+        onDelete={(tagId, reopenDelete) =>
+          onDeleteTag?.(tagId, reopenDelete) ?? Promise.resolve(false)
+        }
         onOpenChange={(open) => {
-          if (!open) setDeletingId(null)
+          if (!open) {
+            setDeletingId(null)
+            restoreFocus()
+          }
         }}
+        onRetryRequest={setDeletingId}
         tagId={deletingId}
         tags={tags}
       />

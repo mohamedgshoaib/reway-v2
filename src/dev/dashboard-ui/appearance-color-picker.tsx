@@ -21,7 +21,7 @@ export function AppearanceColorPicker({
   return (
     <RadioGroup
       aria-label="Color"
-      className="flex flex-row flex-wrap gap-3"
+      className="flex flex-row flex-wrap gap-3 pointer-coarse:gap-4"
       onValueChange={(nextValue) =>
         onValueChange(nextValue as AppearancePaletteColor)
       }
@@ -32,7 +32,7 @@ export function AppearanceColorPicker({
 
         return (
           <Label
-            className="relative flex size-7 items-center justify-center gap-0 rounded-md bg-transparent outline-none after:absolute after:top-1/2 after:left-1/2 after:size-10 after:-translate-1/2 hover:bg-accent/50 has-data-checked:bg-accent has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+            className="relative flex size-7 items-center justify-center gap-0 rounded-md bg-transparent outline-none after:absolute after:top-1/2 after:left-1/2 after:size-10 after:-translate-1/2 hover:bg-accent/50 has-data-checked:bg-accent has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring pointer-coarse:after:size-11"
             data-slot="appearance-color-option"
             key={color}
           >

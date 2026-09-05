@@ -38,30 +38,53 @@ import {
 } from "@/dev/dashboard-ui/tag-model"
 
 export type TagEditorRequest =
-  | { mode: "create" }
-  | { mode: "edit"; tagId: string }
+  | {
+      draft?: TagDraft
+      mode: "create"
+      retryTagId?: string
+      saveError?: string
+    }
+  | { draft?: TagDraft; mode: "edit"; saveError?: string; tagId: string }
 
 function TagForm({
+  initialDraft,
   onCancel,
+  onDirtyChange,
   onSubmit,
+  saveError,
   tag,
   tags,
 }: {
+  initialDraft?: TagDraft
   onCancel: () => void
+  onDirtyChange: (dirty: boolean) => void
   onSubmit: (draft: TagDraft) => void
+  saveError?: string
   tag?: Tag
   tags: readonly Tag[]
 }): React.ReactElement {
   const nameInputRef = React.useRef<HTMLInputElement>(null)
-  const defaultColor: TagColor = tag?.color ?? {
-    kind: "palette",
-    value: getLeastUsedTagColor(tags),
+  const startingDraft: TagDraft = initialDraft ?? {
+    color: tag?.color ?? {
+      kind: "palette",
+      value: getLeastUsedTagColor(tags),
+    },
+    name: tag?.name ?? "",
   }
-  const [name, setName] = React.useState(tag?.name ?? "")
+  const [name, setName] = React.useState(startingDraft.name)
   const [submitAttempted, setSubmitAttempted] = React.useState(false)
-  const [color, setColor] = React.useState<TagColor>(defaultColor)
+  const [color, setColor] = React.useState<TagColor>(startingDraft.color)
+  const [saveErrorMessage, setSaveErrorMessage] = React.useState(saveError)
   const nameError = getTagNameError(tags, name, tag?.id)
   const showNameError = Boolean(nameError && submitAttempted)
+  const updateDirty = (nextDraft: TagDraft): void => {
+    onDirtyChange(
+      nextDraft.name !== startingDraft.name ||
+        nextDraft.color.kind !== startingDraft.color.kind ||
+        nextDraft.color.value !== startingDraft.color.value
+    )
+    setSaveErrorMessage(undefined)
+  }
 
   return (
     <form
@@ -78,6 +101,11 @@ function TagForm({
       }}
     >
       <DialogPanel className="grid gap-4">
+        {saveErrorMessage ? (
+          <p className="text-sm text-destructive-foreground" role="alert">
+            {saveErrorMessage}
+          </p>
+        ) : null}
         <Field invalid={showNameError}>
           <FieldLabel htmlFor="tag-name">Name</FieldLabel>
           <Input
@@ -85,7 +113,11 @@ function TagForm({
             aria-invalid={showNameError || undefined}
             id="tag-name"
             maxLength={24}
-            onChange={(event) => setName(event.target.value)}
+            onChange={(event) => {
+              const nextName = event.target.value
+              setName(nextName)
+              updateDirty({ color, name: nextName })
+            }}
             placeholder="Tag name"
             ref={nameInputRef}
             value={name}
@@ -101,9 +133,11 @@ function TagForm({
             Color
           </FieldsetLegend>
           <AppearanceColorPicker
-            onValueChange={(value: TagPaletteColor) =>
-              setColor({ kind: "palette", value })
-            }
+            onValueChange={(value: TagPaletteColor) => {
+              const nextColor = { kind: "palette", value } as const
+              setColor(nextColor)
+              updateDirty({ color: nextColor, name })
+            }}
             renderIcon={(value) => (
               <TagIcon className="size-5" color={{ kind: "palette", value }} />
             )}
@@ -124,28 +158,49 @@ function TagForm({
 export function TagEditorDialog({
   onCreate,
   onOpenChange,
+  onRetryRequest,
   onUpdate,
   request,
   tags,
 }: {
-  onCreate: (draft: TagDraft) => void
+  onCreate: (
+    draft: TagDraft,
+    reopenDraft?: (saveError: string, tagId: string) => void,
+    retryTagId?: string
+  ) => void
   onOpenChange: (open: boolean) => void
-  onUpdate: (tagId: string, draft: TagDraft) => void
+  onRetryRequest: (request: TagEditorRequest) => void
+  onUpdate: (
+    tagId: string,
+    draft: TagDraft,
+    reopenDraft?: (saveError: string) => void
+  ) => void
   request: TagEditorRequest | null
   tags: readonly Tag[]
 }): React.ReactElement {
+  const [dirty, setDirty] = React.useState(false)
   const tag =
     request?.mode === "edit"
       ? tags.find((candidate) => candidate.id === request.tagId)
       : undefined
   const overlay = useDeferredOverlayClose({
-    onClosed: () => onOpenChange(false),
+    onClosed: () => {
+      setDirty(false)
+      onOpenChange(false)
+    },
     open: request !== null,
   })
 
   return (
     <Dialog
-      onOpenChange={overlay.onOpenChange}
+      disablePointerDismissal={dirty}
+      onOpenChange={(open, eventDetails) => {
+        if (!open && dirty && eventDetails.reason === "outside-press") {
+          eventDetails.cancel()
+          return
+        }
+        overlay.onOpenChange(open)
+      }}
       onOpenChangeComplete={overlay.onOpenChangeComplete}
       open={overlay.open}
     >
@@ -155,13 +210,36 @@ export function TagEditorDialog({
         </DialogHeader>
         {request ? (
           <TagForm
+            initialDraft={request.draft}
             key={request.mode === "edit" ? request.tagId : "create"}
             onCancel={overlay.requestClose}
+            onDirtyChange={setDirty}
             onSubmit={(draft) => {
-              if (request.mode === "edit") onUpdate(request.tagId, draft)
-              else onCreate(draft)
+              if (request.mode === "edit") {
+                onUpdate(request.tagId, draft, (saveError) =>
+                  onRetryRequest({
+                    draft,
+                    mode: "edit",
+                    saveError,
+                    tagId: request.tagId,
+                  })
+                )
+              } else {
+                onCreate(
+                  draft,
+                  (saveError, tagId) =>
+                    onRetryRequest({
+                      draft,
+                      mode: "create",
+                      retryTagId: tagId,
+                      saveError,
+                    }),
+                  request.retryTagId
+                )
+              }
               overlay.requestClose()
             }}
+            saveError={request.saveError}
             tag={tag}
             tags={tags}
           />
@@ -175,34 +253,57 @@ export function TagDeleteDialog({
   bookmarks,
   onDelete,
   onOpenChange,
+  onRetryRequest,
   tagId,
   tags,
 }: {
   bookmarks: readonly MockBookmark[]
-  onDelete: (tagId: string) => void
+  onDelete: (tagId: string, reopenDelete?: () => void) => Promise<boolean>
   onOpenChange: (open: boolean) => void
+  onRetryRequest: (tagId: string) => void
   tagId: string | null
   tags: readonly Tag[]
 }): React.ReactElement {
-  const tag = tags.find((candidate) => candidate.id === tagId)
-  const bookmarkCount = tag
-    ? bookmarks.filter((bookmark) => bookmark.tags?.includes(tag.id)).length
-    : 0
-  const [confirmedDeleteId, setConfirmedDeleteId] = React.useState<
-    string | null
-  >(null)
-  const overlay = useDeferredOverlayClose({
-    onClosed: () => {
-      if (confirmedDeleteId) onDelete(confirmedDeleteId)
-      setConfirmedDeleteId(null)
-      onOpenChange(false)
-    },
-    open: tag !== undefined,
+  const [{ bookmarkCount, tag }] = React.useState(() => {
+    const initialTag = tags.find((candidate) => candidate.id === tagId)
+    return {
+      bookmarkCount: initialTag
+        ? bookmarks.filter((bookmark) => bookmark.tags?.includes(initialTag.id))
+            .length
+        : 0,
+      tag: initialTag,
+    }
   })
+  const [pending, setPending] = React.useState(false)
+  const deleteRequestRef = React.useRef(0)
+  const overlay = useDeferredOverlayClose({
+    onClosed: () => onOpenChange(false),
+    open: tagId !== null && tag !== undefined,
+  })
+  const handleDelete = async (): Promise<void> => {
+    if (!tag || pending) return
+    const requestId = deleteRequestRef.current + 1
+    deleteRequestRef.current = requestId
+    setPending(true)
+    try {
+      await onDelete(tag.id, () => onRetryRequest(tag.id))
+    } finally {
+      setPending((currentPending) =>
+        deleteRequestRef.current === requestId ? false : currentPending
+      )
+      if (deleteRequestRef.current === requestId) overlay.requestClose()
+    }
+  }
 
   return (
     <AlertDialog
-      onOpenChange={overlay.onOpenChange}
+      onOpenChange={(open, eventDetails) => {
+        if (!open && pending) {
+          eventDetails.cancel()
+          return
+        }
+        overlay.onOpenChange(open)
+      }}
       onOpenChangeComplete={overlay.onOpenChangeComplete}
       open={overlay.open}
     >
@@ -216,17 +317,19 @@ export function TagDeleteDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogClose render={<Button variant="ghost" />}>
+          <AlertDialogClose
+            render={<Button disabled={pending} variant="ghost" />}
+          >
             Cancel
           </AlertDialogClose>
-          <AlertDialogClose
-            onClick={() => {
-              if (tag) setConfirmedDeleteId(tag.id)
-            }}
-            render={<Button variant="destructive" />}
+          <Button
+            disabled={pending}
+            onClick={() => void handleDelete()}
+            type="button"
+            variant="destructive"
           >
-            Delete tag
-          </AlertDialogClose>
+            {pending ? "Deleting…" : "Delete tag"}
+          </Button>
         </AlertDialogFooter>
       </AlertDialogPopup>
     </AlertDialog>

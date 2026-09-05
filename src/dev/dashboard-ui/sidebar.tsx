@@ -63,12 +63,15 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import type { Collection } from "@/dev/dashboard-ui/collection-hierarchy"
-import type { CollectionDraft } from "@/dev/dashboard-ui/collection-management"
 import { CollectionSidebarSection } from "@/dev/dashboard-ui/collection-sidebar-section"
 import {
   DashboardCommand,
   DashboardCommandButton,
 } from "@/dev/dashboard-ui/command"
+import type {
+  CollectionManagementHandlers,
+  TagManagementHandlers,
+} from "@/dev/dashboard-ui/dashboard-management-state"
 import {
   mockBookmarks,
   mockCollections,
@@ -83,7 +86,7 @@ import {
   type DashboardNavigationSection,
   type DashboardNavigationSurface,
 } from "@/dev/dashboard-ui/navigation-preferences"
-import type { Tag, TagDraft } from "@/dev/dashboard-ui/tag-model"
+import type { Tag } from "@/dev/dashboard-ui/tag-model"
 import { TagSidebarSection } from "@/dev/dashboard-ui/tag-sidebar-section"
 import { easeOutStrong } from "@/lib/motion"
 import { cn } from "@/lib/utils"
@@ -123,6 +126,7 @@ export function DashboardSidebar({
   onDeleteTag,
   onMoveCollection,
   onMoveTag,
+  onOpenSettings,
   onSelectAllBookmarks,
   onSelectCollection,
   onSelectTrash,
@@ -149,16 +153,17 @@ export function DashboardSidebar({
   tags?: readonly Tag[]
   isReordering?: boolean
   onNavigate?: () => void
-  onCreateCollection?: (draft: CollectionDraft) => void
-  onCreateTag?: (draft: TagDraft) => void
-  onDeleteCollection?: (collectionId: string) => void
-  onDeleteTag?: (tagId: string) => void
+  onCreateCollection?: CollectionManagementHandlers["onCreateCollection"]
+  onCreateTag?: TagManagementHandlers["onCreateTag"]
+  onDeleteCollection?: CollectionManagementHandlers["onDeleteCollection"]
+  onDeleteTag?: TagManagementHandlers["onDeleteTag"]
   onMoveCollection?: (
     sourceId: string,
     parentId: string | null,
     index: number
   ) => void
   onMoveTag?: (sourceId: string, index: number) => void
+  onOpenSettings?: (trigger: HTMLButtonElement) => void
   onSelectAllBookmarks?: () => void
   onSelectCollection?: (collection: string) => void
   onSelectTrash?: () => void
@@ -166,8 +171,8 @@ export function DashboardSidebar({
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
   onTagActiveChange?: (tagId: string, active: boolean) => void
-  onUpdateCollection?: (collectionId: string, draft: CollectionDraft) => void
-  onUpdateTag?: (tagId: string, draft: TagDraft) => void
+  onUpdateCollection?: CollectionManagementHandlers["onUpdateCollection"]
+  onUpdateTag?: TagManagementHandlers["onUpdateTag"]
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
   tagFilterResultCount?: number
@@ -255,6 +260,7 @@ export function DashboardSidebar({
         onDeleteTag={onDeleteTag}
         onMoveCollection={onMoveCollection}
         onMoveTag={onMoveTag}
+        onOpenSettings={onOpenSettings}
         onSelectAllBookmarks={onSelectAllBookmarks}
         onSelectCollection={onSelectCollection}
         onSelectTrash={onSelectTrash}
@@ -294,6 +300,7 @@ export function MobileDashboardNavigation({
   onDeleteTag,
   onMoveCollection,
   onMoveTag,
+  onOpenSettings,
   onSelectAllBookmarks,
   onSelectCollection,
   onSelectTrash,
@@ -320,16 +327,17 @@ export function MobileDashboardNavigation({
   tags?: readonly Tag[]
   isReordering?: boolean
   onNavigate?: () => void
-  onCreateCollection?: (draft: CollectionDraft) => void
-  onDeleteCollection?: (collectionId: string) => void
-  onCreateTag?: (draft: TagDraft) => void
-  onDeleteTag?: (tagId: string) => void
+  onCreateCollection?: CollectionManagementHandlers["onCreateCollection"]
+  onDeleteCollection?: CollectionManagementHandlers["onDeleteCollection"]
+  onCreateTag?: TagManagementHandlers["onCreateTag"]
+  onDeleteTag?: TagManagementHandlers["onDeleteTag"]
   onMoveCollection?: (
     sourceId: string,
     parentId: string | null,
     index: number
   ) => void
   onMoveTag?: (sourceId: string, index: number) => void
+  onOpenSettings?: (trigger: HTMLButtonElement) => void
   onSelectAllBookmarks?: () => void
   onSelectCollection?: (collection: string) => void
   onSelectTrash?: () => void
@@ -337,8 +345,8 @@ export function MobileDashboardNavigation({
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
   onTagActiveChange?: (tagId: string, active: boolean) => void
-  onUpdateCollection?: (collectionId: string, draft: CollectionDraft) => void
-  onUpdateTag?: (tagId: string, draft: TagDraft) => void
+  onUpdateCollection?: CollectionManagementHandlers["onUpdateCollection"]
+  onUpdateTag?: TagManagementHandlers["onUpdateTag"]
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
   tagFilterResultCount?: number
@@ -419,6 +427,7 @@ export function MobileDashboardNavigation({
             onMoveTag={onMoveTag}
             onOpenCommand={() => setCommandOpen(true)}
             onOpenDisplay={() => setDisplayOpen(true)}
+            onOpenSettings={onOpenSettings}
             onSelectAllBookmarks={onSelectAllBookmarks}
             onSelectCollection={onSelectCollection}
             onSelectTrash={onSelectTrash}
@@ -559,6 +568,7 @@ function MobileDisplayDialog({
 interface DashboardNavigationFooterActions {
   onNavigate: () => void
   onOpenDisplay?: () => void
+  onOpenSettings?: (trigger: HTMLButtonElement) => void
   onSelectTrash?: () => void
   onSortChange: (sort: SortOption) => void
   onStartReorder?: () => void
@@ -696,7 +706,10 @@ function DashboardNavigationFooter({
           </SidebarMenuButton>
         </SidebarMenuItem>
         <SidebarMenuItem>
-          <SidebarMenuButton onClick={actions.onNavigate} tooltip="Settings">
+          <SidebarMenuButton
+            onClick={(event) => actions.onOpenSettings?.(event.currentTarget)}
+            tooltip="Settings"
+          >
             <GearIcon weight="duotone" />
             <SidebarMenuButtonLabel>Settings</SidebarMenuButtonLabel>
           </SidebarMenuButton>
@@ -726,6 +739,7 @@ function DashboardNavigationContent({
   onNavigate,
   onOpenCommand,
   onOpenDisplay,
+  onOpenSettings,
   onSelectAllBookmarks,
   onSelectCollection,
   onSelectTrash,
@@ -759,10 +773,10 @@ function DashboardNavigationContent({
     section: DashboardNavigationSection,
     open: boolean
   ) => void
-  onCreateCollection?: (draft: CollectionDraft) => void
-  onCreateTag?: (draft: TagDraft) => void
-  onDeleteCollection?: (collectionId: string) => void
-  onDeleteTag?: (tagId: string) => void
+  onCreateCollection?: CollectionManagementHandlers["onCreateCollection"]
+  onCreateTag?: TagManagementHandlers["onCreateTag"]
+  onDeleteCollection?: CollectionManagementHandlers["onDeleteCollection"]
+  onDeleteTag?: TagManagementHandlers["onDeleteTag"]
   onMoveCollection?: (
     sourceId: string,
     parentId: string | null,
@@ -772,6 +786,7 @@ function DashboardNavigationContent({
   onNavigate?: () => void
   onOpenCommand?: () => void
   onOpenDisplay?: () => void
+  onOpenSettings?: (trigger: HTMLButtonElement) => void
   onSelectAllBookmarks?: () => void
   onSelectCollection?: (collection: string) => void
   onSelectTrash?: () => void
@@ -780,8 +795,8 @@ function DashboardNavigationContent({
   onStartReorder?: () => void
   onTagActiveChange?: (tagId: string, active: boolean) => void
   onShowTagResults?: () => void
-  onUpdateCollection?: (collectionId: string, draft: CollectionDraft) => void
-  onUpdateTag?: (tagId: string, draft: TagDraft) => void
+  onUpdateCollection?: CollectionManagementHandlers["onUpdateCollection"]
+  onUpdateTag?: TagManagementHandlers["onUpdateTag"]
   onViewModeChange: (viewMode: ViewMode) => void
   sort: SortOption
   surface: DashboardNavigationSurface
@@ -903,6 +918,7 @@ function DashboardNavigationContent({
         actions={{
           onNavigate: handleNavigate,
           onOpenDisplay,
+          onOpenSettings,
           onSelectTrash,
           onSortChange,
           onStartReorder,

@@ -175,7 +175,7 @@ The contract follows five interaction rules:
 - Creating from a bookmark picker keeps the user in the current workflow and returns the new item selected or applied.
 - A tag picker remains open after creation. Add-to-collection and Move-to-collection close after applying the new collection and return focus to the bookmark action.
 - Mobile management actions keep the navigation drawer open. Normal navigation still closes the drawer.
-- The navigation footer uses Display, Trash, then Settings on desktop and mobile. Display keeps its sliders icon and adds a trailing Up/Down caret to show that it opens more controls. On a fine pointer, the caret appears on hover, while its menu is open, or when keyboard focus is visible. Touch keeps it visible.
+- The navigation footer uses Display, Trash, then Settings on desktop and mobile. Display keeps its sliders icon and adds a trailing Up/Down caret to show that it opens more controls. On a fine pointer, the caret appears on hover, while its menu is open, or when keyboard focus is visible. Touch keeps it visible. Settings opens a modal dialog without changing the active library destination.
 - Mobile shows a compact `Show [count] bookmarks` action only while at least one tag filter is active. The action closes the drawer and returns focus to the navigation trigger.
 
 ### Collection and Tag Menus
@@ -257,7 +257,7 @@ The contract follows five interaction rules:
 - Deleting an active tag removes it from the OR tag filter, keeps any remaining tag filters, and returns to All Bookmarks when no tag filter remains.
 - Focus returns to the relevant section header after deletion.
 - Deletion shows a four-second named toast without Undo. A tag deletion names the tag and the number of bookmarks changed. A collection deletion names the collection; parent deletion also states the number of nested collections deleted and the number of exclusive bookmarks moved to Trash.
-- User collections and tags support management. All Bookmarks, Uncollected, Settings, Display, Trash, and other system destinations do not.
+- User collections and tags support management. All Bookmarks, Uncollected, Trash, and other system destinations do not. Settings and Display are utility dialogs rather than managed destinations.
 
 ### Multi-Select & Bulk Actions
 
@@ -378,6 +378,21 @@ The contract follows five interaction rules:
 - Google usernames default to the Google first name, falling back to the email prefix when no first name is available.
 - Overriding a Google avatar with a custom avatar does not delete the Google avatar. Deleting the custom avatar restores the Google avatar.
 
+### Settings and Profile UI
+
+- Settings opens as a large modal dialog over the current library. Closing it preserves the active library destination and returns focus to the Settings button. On mobile, it opens above the navigation drawer and returns to that drawer when it closes.
+- Desktop Settings uses a persistent left navigation for Profile, Account, and Demo. These are page buttons, not tabs: normal Tab order moves through them, the current button uses `aria-current="page"`, and activation replaces the content page. Mobile opens to a Settings page list in the full-screen dialog, then drills into one page at a time with a clear Back action. Neither layout uses tab-list, tab, or tab-panel semantics.
+- Demo is visually separate from the account settings. The whole section is mock-only and must be removed when real authentication and profile data replace its fixture adapter.
+- A username trims outer whitespace, must contain 1 to 40 characters, may use Unicode, and does not simulate uniqueness in the mock.
+- Username and avatar changes share one `Save changes` action. A valid avatar selection shows a square cover preview at once but remains part of the draft until save.
+- The avatar picker accepts JPEG, PNG, and WebP files no larger than 2 MB. It reports type or size errors before creating a local preview. The mock does not include an image crop editor.
+- Profile changes remain available while the user moves between Settings pages. A failed save preserves every field, the chosen avatar source, and any valid local preview so Retry uses the same draft.
+- While a fixture save is pending, the form shows an indeterminate local status and blocks repeat submission. It does not show a percentage.
+- Outside press cannot close Settings while the profile draft is dirty. The close button and Escape ask the user to save or discard the draft. Saving or discarding closes without another prompt.
+- Email profile fixtures begin with an email-derived username and generated avatar. Removing an uploaded avatar restores a generated avatar. Google profile fixtures begin with the Google first name or email-prefix fallback and keep the Google avatar available beneath a custom upload.
+- The onboarding editor reuses the profile fields and remains skippable. Closing an untouched editor uses the defaults. Closing or skipping after a draft change asks whether to use the defaults instead. Outside press never discards a changed onboarding draft.
+- Demo controls provide Email defaults, Google defaults, the next profile-save result, the next account-deletion result, `Preview profile setup`, and `Reset demo`. Changing the profile fixture or resetting the demo asks for confirmation when a profile draft is dirty.
+
 ### Account Deletion
 
 - Account deletion uses a two-step confirmation. The user must type `delete` before the destructive action becomes available.
@@ -386,6 +401,9 @@ The contract follows five interaction rules:
 - On its next Supabase 401, the extension clears `chrome.storage.session` and `chrome.storage.local`.
 - The extension then shows: "Log in at reway.page to use the extension."
 - This action is permanent, unrecoverable, and has no grace period or soft delete.
+- The Account page starts deletion with a warning that names the library data at risk. Continuing opens a second confirmation that requires the exact text `delete` before enabling the destructive action.
+- Pending deletion blocks repeat submission and dialog dismissal. A fixture error remains visible in the confirmation until the user retries or corrects it.
+- A successful mock deletion closes the confirmation and shows a persistent result in Settings. It states that the mock did not delete an account or end a session. `Reset demo` acknowledges the result and restores the profile fixture.
 
 ## Chrome Extension
 

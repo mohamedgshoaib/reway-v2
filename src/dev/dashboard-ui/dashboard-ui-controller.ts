@@ -25,12 +25,12 @@ import {
   getBookmarkRestoreSummary,
   type BookmarkTrashAction,
 } from "@/dev/dashboard-ui/bookmark-trash"
-import {
-  getCollectionDeletion,
-  moveCollection,
-  type Collection,
-} from "@/dev/dashboard-ui/collection-hierarchy"
-import type { CollectionDraft } from "@/dev/dashboard-ui/collection-management"
+import { type Collection } from "@/dev/dashboard-ui/collection-hierarchy"
+import type {
+  DashboardAccountMutationAdapter,
+  DashboardProfileFixture,
+} from "@/dev/dashboard-ui/dashboard-account"
+import { useDashboardAccountState } from "@/dev/dashboard-ui/dashboard-account-state"
 import {
   deriveDashboardDestination,
   getDashboardDestinationKey,
@@ -40,17 +40,19 @@ import {
 } from "@/dev/dashboard-ui/dashboard-destination"
 import type { DashboardMainPanel } from "@/dev/dashboard-ui/dashboard-main-panel"
 import {
+  useDashboardManagementState,
+  type DashboardManagementMutationFixture,
+} from "@/dev/dashboard-ui/dashboard-management-state"
+import type { DashboardSettingsDialog } from "@/dev/dashboard-ui/dashboard-settings"
+import {
   MOCK_DASHBOARD_NOW,
   mockBookmarks,
-  mockCollections,
-  mockTags,
   type MockBookmark,
   type SortOption,
   type ViewMode,
 } from "@/dev/dashboard-ui/mock-bookmarks"
 import type { DashboardNavigationPreferences } from "@/dev/dashboard-ui/navigation-preferences"
 import type { DashboardSidebar } from "@/dev/dashboard-ui/sidebar"
-import { moveTag, type Tag, type TagDraft } from "@/dev/dashboard-ui/tag-model"
 import { useIsMobile } from "@/hooks/use-media-query"
 
 const INITIAL_DESTINATION = {
@@ -102,294 +104,37 @@ function getBulkErrorTitle(action: BookmarkBulkAction): string {
   return "Could not move bookmarks to Trash"
 }
 
-function useBookmarkWireframeState(): {
-  actionHandlers: Omit<
-    BookmarkActionHandlers,
-    "onDeleteForever" | "onRestore" | "onSelectChange"
-  >
-  bookmarks: MockBookmark[]
-  setBookmarks: React.Dispatch<React.SetStateAction<MockBookmark[]>>
-} {
-  const [bookmarks, setBookmarks] =
-    React.useState<MockBookmark[]>(mockBookmarks)
-
-  const updateBookmark = (
-    bookmarkId: string,
-    update: (bookmark: MockBookmark) => MockBookmark
-  ): void => {
-    setBookmarks((currentBookmarks) =>
-      currentBookmarks.map((bookmark) =>
-        bookmark.id === bookmarkId ? update(bookmark) : bookmark
-      )
-    )
-  }
-
-  const actionHandlers: Omit<
-    BookmarkActionHandlers,
-    "onDeleteForever" | "onRestore" | "onSelectChange"
-  > = {
-    onAddToCollection: (bookmarkId, collection) => {
-      updateBookmark(bookmarkId, (bookmark) => ({
-        ...bookmark,
-        collections: Array.from(
-          new Set([...(bookmark.collections ?? []), collection])
-        ),
-      }))
-    },
-    onDelete: (bookmarkId) => {
-      setBookmarks((currentBookmarks) =>
-        currentBookmarks.map((bookmark) =>
-          bookmark.id === bookmarkId
-            ? { ...bookmark, trashedAt: MOCK_DASHBOARD_NOW }
-            : bookmark
-        )
-      )
-    },
-    onMoveToCollection: (bookmarkId, collection) => {
-      updateBookmark(bookmarkId, (bookmark) => ({
-        ...bookmark,
-        collections: [collection],
-      }))
-    },
-    onReenrich: (bookmarkId) => {
-      updateBookmark(bookmarkId, (bookmark) => ({
-        ...bookmark,
-        metadataStatus: "pending",
-      }))
-    },
-    onTagsChange: (bookmarkId, tags) => {
-      updateBookmark(bookmarkId, (bookmark) => ({ ...bookmark, tags }))
-    },
-    onTitleChange: (bookmarkId, title) => {
-      updateBookmark(bookmarkId, (bookmark) => ({ ...bookmark, title }))
-    },
-  }
-
-  return {
-    actionHandlers,
-    bookmarks,
-    setBookmarks,
-  }
-}
-
-function useTagWireframeState(
-  bookmarks: readonly MockBookmark[],
-  setBookmarks: React.Dispatch<React.SetStateAction<MockBookmark[]>>
-): {
-  tags: Tag[]
-  onCreateTag: (draft: TagDraft) => void
-  onDeleteTag: (tagId: string) => void
-  onMoveTag: (sourceId: string, index: number) => void
-  onUpdateTag: (tagId: string, draft: TagDraft) => void
-} {
-  const [tags, setTags] = React.useState(mockTags)
-
-  const onCreateTag = (draft: TagDraft): void => {
-    setTags((currentTags) => [
-      {
-        ...draft,
-        createdAt: Date.now(),
-        id: `tag-${crypto.randomUUID()}`,
-        order: 0,
-      },
-      ...currentTags.map((tag) => ({ ...tag, order: tag.order + 1 })),
-    ])
-  }
-
-  const onUpdateTag = (tagId: string, draft: TagDraft): void => {
-    setTags((currentTags) =>
-      currentTags.map((tag) => (tag.id === tagId ? { ...tag, ...draft } : tag))
-    )
-  }
-
-  const onDeleteTag = (tagId: string): void => {
-    const tag = tags.find((item) => item.id === tagId)
-    const affectedCount = bookmarks.filter((bookmark) =>
-      bookmark.tags?.includes(tagId)
-    ).length
-
-    setTags((currentTags) => currentTags.filter((tag) => tag.id !== tagId))
-    setBookmarks((currentBookmarks) =>
-      currentBookmarks.map((bookmark) => ({
-        ...bookmark,
-        tags: bookmark.tags?.filter((bookmarkTagId) => bookmarkTagId !== tagId),
-      }))
-    )
-
-    if (tag) {
-      toastManager.add({
-        description: `Removed from ${bookmarkCountLabel(affectedCount)}.`,
-        id: `dashboard-tag-${tagId}`,
-        priority: "low",
-        timeout: TOAST_DEFAULT_TIMEOUT_MS,
-        title: `Deleted ${tag.name}`,
-        type: "success",
-      })
-    }
-  }
-
-  const onMoveTag = (sourceId: string, index: number): void => {
-    setTags((currentTags) => moveTag(currentTags, sourceId, index))
-  }
-
-  return { tags, onCreateTag, onDeleteTag, onMoveTag, onUpdateTag }
-}
-
-function useCollectionWireframeState(
-  bookmarks: readonly MockBookmark[],
-  setBookmarks: React.Dispatch<React.SetStateAction<MockBookmark[]>>,
-  destination: DashboardDestination,
-  onActiveCollectionDeleted: () => void
-): {
-  collections: typeof mockCollections
-  onCreateCollection: (draft: CollectionDraft) => void
-  onDeleteCollection: (collectionId: string) => void
-  onMoveCollection: (
-    sourceId: string,
-    parentId: string | null,
-    index: number
-  ) => void
-  onUpdateCollection: (collectionId: string, draft: CollectionDraft) => void
-} {
-  const [collections, setCollections] = React.useState(mockCollections)
-
-  const onCreateCollection = (draft: CollectionDraft): void => {
-    const collectionId = `collection-${crypto.randomUUID()}`
-
-    setCollections((currentCollections) => [
-      {
-        ...draft,
-        createdAt: Date.now(),
-        id: collectionId,
-        order: 0,
-      },
-      ...currentCollections.map((collection) =>
-        collection.parentId === draft.parentId
-          ? { ...collection, order: collection.order + 1 }
-          : collection
-      ),
-    ])
-  }
-
-  const onUpdateCollection = (
-    collectionId: string,
-    draft: CollectionDraft
-  ): void => {
-    setCollections((currentCollections) => {
-      const currentCollection = currentCollections.find(
-        (collection) => collection.id === collectionId
-      )
-      if (!currentCollection) return currentCollections
-
-      const parentChanged = currentCollection.parentId !== draft.parentId
-      const movedCollections = parentChanged
-        ? moveCollection(currentCollections, collectionId, draft.parentId, 0)
-        : { collections: [...currentCollections], ok: true as const }
-
-      if (!movedCollections.ok) return currentCollections
-      return movedCollections.collections.map((collection) =>
-        collection.id === collectionId
-          ? { ...collection, ...draft }
-          : collection
-      )
-    })
-  }
-
-  const onDeleteCollection = (collectionId: string): void => {
-    const collection = collections.find((item) => item.id === collectionId)
-    const deletion = getCollectionDeletion(collections, bookmarks, collectionId)
-
-    setCollections(deletion.remainingCollections)
-    setBookmarks((currentBookmarks) =>
-      currentBookmarks.map((bookmark) => {
-        const currentMemberships = bookmark.collections ?? []
-        const remainingMemberships = currentMemberships.filter(
-          (membership) => !deletion.deletedIds.has(membership)
-        )
-        const movedToTrash =
-          currentMemberships.length > 0 &&
-          remainingMemberships.length === 0 &&
-          currentMemberships.every((membership) =>
-            deletion.deletedIds.has(membership)
-          )
-
-        return {
-          ...bookmark,
-          collections: remainingMemberships,
-          trashedAt:
-            movedToTrash && bookmark.trashedAt === undefined
-              ? MOCK_DASHBOARD_NOW
-              : bookmark.trashedAt,
-        }
-      })
-    )
-
-    if (
-      destination.kind === "collection" &&
-      deletion.deletedIds.has(destination.collectionId)
-    ) {
-      onActiveCollectionDeleted()
-    }
-
-    if (collection) {
-      const nestedCollectionCount = deletion.deletedIds.size - 1
-      toastManager.add({
-        description:
-          deletion.exclusiveBookmarkCount === 0
-            ? "No bookmarks moved to Trash."
-            : `${bookmarkCountLabel(deletion.exclusiveBookmarkCount)} moved to Trash.`,
-        id: `dashboard-collection-${collectionId}`,
-        priority: "low",
-        timeout: TOAST_DEFAULT_TIMEOUT_MS,
-        title:
-          nestedCollectionCount === 0
-            ? `Deleted ${collection.name}`
-            : `Deleted ${collection.name} and ${nestedCollectionCount} nested ${nestedCollectionCount === 1 ? "collection" : "collections"}`,
-        type: "success",
-      })
-    }
-  }
-
-  const onMoveCollection = (
-    sourceId: string,
-    parentId: string | null,
-    index: number
-  ): void => {
-    setCollections((currentCollections) => {
-      const result = moveCollection(
-        currentCollections,
-        sourceId,
-        parentId,
-        index
-      )
-      return result.ok ? result.collections : currentCollections
-    })
-  }
-
-  return {
-    collections,
-    onCreateCollection,
-    onDeleteCollection,
-    onMoveCollection,
-    onUpdateCollection,
-  }
-}
-
 export interface DashboardUiController {
   mainPanelProps: React.ComponentProps<typeof DashboardMainPanel>
   onSidebarOpenChange: (open: boolean) => void
+  settingsDialogProps: React.ComponentProps<typeof DashboardSettingsDialog>
   sidebarOpen: boolean
   sidebarProps: React.ComponentProps<typeof DashboardSidebar>
 }
 
 export function useDashboardUiController({
+  accountMutationAdapter,
   initialNavigationPreferences,
+  initialOnboardingOpen,
+  initialProfileFixture,
   bulkMutationFixture = runDefaultBulkMutationFixture,
+  managementMutationFixture,
 }: {
+  accountMutationAdapter?: DashboardAccountMutationAdapter
   initialNavigationPreferences: DashboardNavigationPreferences
+  initialOnboardingOpen?: boolean
+  initialProfileFixture?: DashboardProfileFixture
   bulkMutationFixture?: BookmarkBulkMutationFixture
+  managementMutationFixture?: DashboardManagementMutationFixture
 }): DashboardUiController {
   const playUndo = useSound(minimal.undo)
+  const account = useDashboardAccountState({
+    initialOnboardingOpen,
+    initialProfileFixture,
+    mutationAdapter: accountMutationAdapter,
+  })
+  const [settingsOpen, setSettingsOpen] = React.useState(false)
+  const settingsTriggerRef = React.useRef<HTMLElement | null>(null)
   const [destination, setDestination] =
     React.useState<DashboardDestination>(INITIAL_DESTINATION)
   const [selectionState, dispatchSelection] = React.useReducer(
@@ -437,28 +182,32 @@ export function useDashboardUiController({
     updateSelection(bookmarkId, selected, false, [bookmarkId])
   }
   const {
-    actionHandlers: bookmarkActionHandlers,
+    bookmarkHandlers: bookmarkActionHandlers,
     bookmarks,
-    setBookmarks,
-  } = useBookmarkWireframeState()
-  const {
-    tags,
-    onCreateTag: handleCreateTag,
-    onDeleteTag: deleteTag,
-    onMoveTag: handleMoveTag,
-    onUpdateTag: handleUpdateTag,
-  } = useTagWireframeState(bookmarks, setBookmarks)
-  const {
+    collectionHandlers: {
+      onCreateCollection: handleCreateCollection,
+      onDeleteCollection: handleDeleteCollection,
+      onMoveCollection: handleMoveCollection,
+      onUpdateCollection: handleUpdateCollection,
+    },
     collections,
-    onCreateCollection: handleCreateCollection,
-    onDeleteCollection: handleDeleteCollection,
-    onMoveCollection: handleMoveCollection,
-    onUpdateCollection: handleUpdateCollection,
-  } = useCollectionWireframeState(bookmarks, setBookmarks, destination, () => {
-    setDestination({ kind: "all" })
-    dispatchSelection({ destinationKey: "all", type: "destination-changed" })
-    setIsReordering(false)
-    setSort("date")
+    setBookmarks,
+    tagHandlers: {
+      onCreateTag: handleCreateTag,
+      onDeleteTag: deleteTag,
+      onMoveTag: handleMoveTag,
+      onUpdateTag: handleUpdateTag,
+    },
+    tags,
+  } = useDashboardManagementState({
+    destination,
+    mutationFixture: managementMutationFixture,
+    onActiveCollectionDeleted: () => {
+      setDestination({ kind: "all" })
+      dispatchSelection({ destinationKey: "all", type: "destination-changed" })
+      setIsReordering(false)
+      setSort("date")
+    },
   })
 
   const restoreBookmarkSnapshot = (
@@ -875,10 +624,14 @@ export function useDashboardUiController({
     navigateToDestination({ kind: "all" })
   }
 
-  const handleDeleteTag = (tagId: string): void => {
+  const handleDeleteTag = async (
+    tagId: string,
+    reopenDelete?: () => void
+  ): Promise<boolean> => {
     const wasActive = destinationView.sidebar.tagIds.has(tagId)
-    deleteTag(tagId)
-    if (wasActive) handleTagActiveChange(tagId, false)
+    const deleted = await deleteTag(tagId, reopenDelete)
+    if (deleted && wasActive) handleTagActiveChange(tagId, false)
+    return deleted
   }
 
   const handleSortChange = (nextSort: SortOption): void => {
@@ -890,6 +643,11 @@ export function useDashboardUiController({
 
   const handleViewModeChange = (nextViewMode: ViewMode): void => {
     if (!isReordering) setViewMode(nextViewMode)
+  }
+
+  const handleOpenSettings = (trigger: HTMLButtonElement): void => {
+    settingsTriggerRef.current = trigger
+    setSettingsOpen(true)
   }
 
   const handleStartReorder = (): void => {
@@ -940,6 +698,7 @@ export function useDashboardUiController({
         onDeleteTag: handleDeleteTag,
         onMoveCollection: handleMoveCollection,
         onMoveTag: handleMoveTag,
+        onOpenSettings: handleOpenSettings,
         onSelectAllBookmarks: handleSelectAllBookmarks,
         onSelectCollection: handleSelectCollection,
         onSelectTrash: handleSelectTrash,
@@ -994,6 +753,12 @@ export function useDashboardUiController({
       visibleBookmarks,
     },
     onSidebarOpenChange: setSidebarOpen,
+    settingsDialogProps: {
+      account,
+      finalFocus: settingsTriggerRef,
+      onOpenChange: setSettingsOpen,
+      open: settingsOpen,
+    },
     sidebarOpen,
     sidebarProps: {
       activeCollection: activeCollectionId,
@@ -1010,6 +775,7 @@ export function useDashboardUiController({
       onDeleteTag: handleDeleteTag,
       onMoveCollection: handleMoveCollection,
       onMoveTag: handleMoveTag,
+      onOpenSettings: handleOpenSettings,
       onSelectAllBookmarks: handleSelectAllBookmarks,
       onSelectCollection: handleSelectCollection,
       onSelectTrash: handleSelectTrash,

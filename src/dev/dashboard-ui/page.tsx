@@ -4,7 +4,13 @@ import type React from "react"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { SkipLink } from "@/components/ui/skip-link"
 import { ToastProvider } from "@/components/ui/toast"
+import type {
+  DashboardAccountMutationAdapter,
+  DashboardProfileFixture,
+} from "@/dev/dashboard-ui/dashboard-account"
 import { DashboardMainPanel } from "@/dev/dashboard-ui/dashboard-main-panel"
+import type { DashboardManagementMutationFixture } from "@/dev/dashboard-ui/dashboard-management-state"
+import { DashboardSettingsDialog } from "@/dev/dashboard-ui/dashboard-settings"
 import {
   useDashboardUiController,
   type BookmarkBulkMutationFixture,
@@ -12,7 +18,12 @@ import {
 import type { DashboardNavigationPreferences } from "@/dev/dashboard-ui/navigation-preferences"
 import { DashboardSidebar } from "@/dev/dashboard-ui/sidebar"
 
-export type { BookmarkBulkMutationFixture }
+export type {
+  BookmarkBulkMutationFixture,
+  DashboardAccountMutationAdapter,
+  DashboardManagementMutationFixture,
+  DashboardProfileFixture,
+}
 
 /**
  * Disposable dashboard shell wireframe. Not linked from product navigation.
@@ -22,17 +33,34 @@ export type { BookmarkBulkMutationFixture }
  * src/routeTree.gen.ts drops the /dashboard-ui route.
  */
 export function DashboardUiPage({
+  accountMutationAdapter,
   initialNavigationPreferences,
+  initialOnboardingOpen,
+  initialProfileFixture,
   bulkMutationFixture,
+  managementMutationFixture,
 }: {
+  accountMutationAdapter?: DashboardAccountMutationAdapter
   initialNavigationPreferences: DashboardNavigationPreferences
+  initialOnboardingOpen?: boolean
+  initialProfileFixture?: DashboardProfileFixture
   bulkMutationFixture?: BookmarkBulkMutationFixture
+  managementMutationFixture?: DashboardManagementMutationFixture
 }): React.ReactElement {
-  const { mainPanelProps, onSidebarOpenChange, sidebarOpen, sidebarProps } =
-    useDashboardUiController({
-      bulkMutationFixture,
-      initialNavigationPreferences,
-    })
+  const {
+    mainPanelProps,
+    onSidebarOpenChange,
+    settingsDialogProps,
+    sidebarOpen,
+    sidebarProps,
+  } = useDashboardUiController({
+    accountMutationAdapter,
+    bulkMutationFixture,
+    initialNavigationPreferences,
+    initialOnboardingOpen,
+    initialProfileFixture,
+    managementMutationFixture,
+  })
 
   return (
     <ToastProvider>
@@ -47,6 +75,7 @@ export function DashboardUiPage({
             >
               <DashboardSidebar {...sidebarProps} />
               <DashboardMainPanel {...mainPanelProps} />
+              <DashboardSettingsDialog {...settingsDialogProps} />
             </SidebarProvider>
           </LayoutGroup>
         </div>

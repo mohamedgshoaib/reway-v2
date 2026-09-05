@@ -95,19 +95,15 @@ import {
   type Collection,
 } from "@/dev/dashboard-ui/collection-hierarchy"
 import { CollectionIcon } from "@/dev/dashboard-ui/collection-icon"
+import type { BookmarkManagementHandlers } from "@/dev/dashboard-ui/dashboard-management-state"
 import type { MockBookmark, MockTag } from "@/dev/dashboard-ui/mock-bookmarks"
 import { TagIcon } from "@/dev/dashboard-ui/tag-icon"
 import type { Tag } from "@/dev/dashboard-ui/tag-model"
 import { useIsMobile } from "@/hooks/use-media-query"
 
-export interface BookmarkActionHandlers extends BookmarkTrashActionHandlers {
-  onAddToCollection: (bookmarkId: string, collection: string) => void
-  onDelete: (bookmarkId: string) => void
-  onMoveToCollection: (bookmarkId: string, collection: string) => void
-  onReenrich: (bookmarkId: string) => void
+export interface BookmarkActionHandlers
+  extends BookmarkTrashActionHandlers, BookmarkManagementHandlers {
   onSelectChange: (bookmarkId: string, selected: boolean) => void
-  onTagsChange: (bookmarkId: string, tags: string[]) => void
-  onTitleChange: (bookmarkId: string, title: string) => void
 }
 
 export type BookmarkActionsProps = BookmarkActionHandlers & {
@@ -406,30 +402,44 @@ function BookmarkActionDialogs({
   bookmark,
   deleteOpen,
   editOpen,
+  editSaveError,
   editTitle,
   onDelete,
+  onDialogClosed,
   onTagsChange,
   onTitleChange,
+  setEditSaveError,
   setDeleteOpen,
   setEditOpen,
   setEditTitle,
   setTagsOpen,
-  tags,
+  setTagsSaveError,
+  setTagDraft,
+  showTagsDialog,
+  tagDraft,
+  tagsSaveError,
   tagsOpen,
 }: {
   availableTags: readonly Tag[]
   bookmark: MockBookmark
   deleteOpen: boolean
   editOpen: boolean
+  editSaveError: string | null
   editTitle: string
   onDelete: (bookmarkId: string) => void
-  onTagsChange: (bookmarkId: string, tags: string[]) => void
-  onTitleChange: (bookmarkId: string, title: string) => void
+  onDialogClosed: () => void
+  onTagsChange: BookmarkManagementHandlers["onTagsChange"]
+  onTitleChange: BookmarkManagementHandlers["onTitleChange"]
+  setEditSaveError: React.Dispatch<React.SetStateAction<string | null>>
   setDeleteOpen: React.Dispatch<React.SetStateAction<boolean>>
   setEditOpen: React.Dispatch<React.SetStateAction<boolean>>
   setEditTitle: React.Dispatch<React.SetStateAction<string>>
   setTagsOpen: React.Dispatch<React.SetStateAction<boolean>>
-  tags: string[]
+  setTagsSaveError: React.Dispatch<React.SetStateAction<string | null>>
+  setTagDraft: React.Dispatch<React.SetStateAction<string[]>>
+  showTagsDialog: boolean
+  tagDraft: string[]
+  tagsSaveError: string | null
   tagsOpen: boolean
 }): React.ReactElement {
   const editTitleErrorId = `bookmark-title-error-${bookmark.id}`
@@ -446,19 +456,30 @@ function BookmarkActionDialogs({
       return
     }
 
-    onTitleChange(bookmark.id, title)
+    onTitleChange(bookmark.id, title, (saveError) => {
+      setEditTitle(title)
+      setEditSaveError(saveError)
+      setEditOpen(true)
+    })
     setEditTitleError(null)
+    setEditSaveError(null)
     setEditOpen(false)
   }
 
   return (
     <>
-      <AlertDialog onOpenChange={setDeleteOpen} open={deleteOpen}>
+      <AlertDialog
+        onOpenChange={setDeleteOpen}
+        onOpenChangeComplete={(open) => {
+          if (!open) onDialogClosed()
+        }}
+        open={deleteOpen}
+      >
         <AlertDialogPopup>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete bookmark?</AlertDialogTitle>
             <AlertDialogDescription>
-              “{bookmark.title}” will move to Trash. You can restore it for 30
+              "{bookmark.title}" will move to Trash. You can restore it for 30
               days.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -476,9 +497,24 @@ function BookmarkActionDialogs({
         </AlertDialogPopup>
       </AlertDialog>
       <Dialog
-        onOpenChange={(open) => {
+        disablePointerDismissal={editTitle.trim() !== bookmark.title}
+        onOpenChange={(open, eventDetails) => {
+          if (
+            !open &&
+            editTitle.trim() !== bookmark.title &&
+            eventDetails.reason === "outside-press"
+          ) {
+            eventDetails.cancel()
+            return
+          }
           setEditOpen(open)
-          if (!open) setEditTitleError(null)
+          if (!open) {
+            setEditTitleError(null)
+            setEditSaveError(null)
+          }
+        }}
+        onOpenChangeComplete={(open) => {
+          if (!open) onDialogClosed()
         }}
         open={editOpen}
       >
@@ -494,6 +530,14 @@ function BookmarkActionDialogs({
             }}
           >
             <DialogPanel>
+              {editSaveError ? (
+                <p
+                  className="mb-4 text-sm text-destructive-foreground"
+                  role="alert"
+                >
+                  {editSaveError}
+                </p>
+              ) : null}
               <label
                 className="grid gap-2 text-sm font-medium text-foreground"
                 htmlFor={`bookmark-title-${bookmark.id}`}
@@ -508,6 +552,7 @@ function BookmarkActionDialogs({
                   name="title"
                   onChange={(event) => {
                     setEditTitle(event.target.value)
+                    setEditSaveError(null)
                     if (editTitleError && event.target.value.trim()) {
                       setEditTitleError(null)
                     }
@@ -534,217 +579,223 @@ function BookmarkActionDialogs({
           </form>
         </DialogPopup>
       </Dialog>
-      <Dialog onOpenChange={setTagsOpen} open={tagsOpen}>
-        <DialogPopup className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Tags</DialogTitle>
-          </DialogHeader>
-          <DialogPanel>
-            <TagEditor
-              availableTags={availableTags}
-              onChange={(nextTags) => onTagsChange(bookmark.id, nextTags)}
-              tags={tags}
-            />
-          </DialogPanel>
-          <DialogFooter>
-            <DialogClose render={<Button />}>Done</DialogClose>
-          </DialogFooter>
-        </DialogPopup>
-      </Dialog>
+      {showTagsDialog ? (
+        <Dialog
+          onOpenChange={(open) => {
+            setTagsOpen(open)
+            if (!open) setTagsSaveError(null)
+          }}
+          onOpenChangeComplete={(open) => {
+            if (!open) onDialogClosed()
+          }}
+          open={tagsOpen}
+        >
+          <DialogPopup className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Tags</DialogTitle>
+            </DialogHeader>
+            <DialogPanel>
+              {tagsSaveError ? (
+                <p
+                  className="mb-4 text-sm text-destructive-foreground"
+                  role="alert"
+                >
+                  {tagsSaveError}
+                </p>
+              ) : null}
+              <TagEditor
+                availableTags={availableTags}
+                onChange={(nextTags) => {
+                  setTagDraft(nextTags)
+                  setTagsSaveError(null)
+                  onTagsChange(
+                    bookmark.id,
+                    nextTags,
+                    (retryTags, saveError) => {
+                      setTagDraft([...retryTags])
+                      setTagsSaveError(saveError)
+                      setTagsOpen(true)
+                    }
+                  )
+                }}
+                tags={tagDraft}
+              />
+            </DialogPanel>
+            <DialogFooter>
+              <DialogClose render={<Button />}>Done</DialogClose>
+            </DialogFooter>
+          </DialogPopup>
+        </Dialog>
+      ) : null}
     </>
   )
 }
 
-export function BookmarkActions({
-  availableTags,
-  bookmark,
-  collections,
-  isSelected,
-  onAddToCollection,
-  onDelete,
-  onDeleteForever,
-  onMoveToCollection,
-  onReenrich,
-  onRestore,
-  onSelectChange,
-  onTagsChange,
-  onTitleChange,
-}: BookmarkActionsProps): React.ReactElement {
-  const isMobile = useIsMobile()
-  const [deleteOpen, setDeleteOpen] = React.useState(false)
-  const [editOpen, setEditOpen] = React.useState(false)
-  const [editTitle, setEditTitle] = React.useState(bookmark.title)
-  const [tagsOpen, setTagsOpen] = React.useState(false)
-  const tags = bookmark.tags ?? []
+interface BookmarkActionVariantProps {
+  actions: BookmarkActionsProps
+  dialogs: React.ReactNode
+  onOpenDelete: () => void
+  onOpenEdit: () => void
+  onOpenTags: () => void
+  trigger: React.ReactElement
+}
 
-  const openEdit = () => {
-    setEditTitle(bookmark.title)
-    setEditOpen(true)
-  }
+interface MobileBookmarkActionsProps extends BookmarkActionVariantProps {
+  onTagsOpenChange: (open: boolean) => void
+  tagEditor: React.ReactNode
+  tagsOpen: boolean
+}
 
-  const openBookmark = () => {
+function MobileBookmarkActions({
+  actions,
+  dialogs,
+  onOpenDelete,
+  onOpenEdit,
+  onTagsOpenChange,
+  tagEditor,
+  tagsOpen,
+  trigger,
+}: MobileBookmarkActionsProps): React.ReactElement {
+  const {
+    bookmark,
+    collections,
+    isSelected,
+    onAddToCollection,
+    onMoveToCollection,
+    onReenrich,
+    onSelectChange,
+  } = actions
+
+  const openBookmark = (): void => {
     window.open(getBookmarkUrl(bookmark), "_blank", "noopener,noreferrer")
   }
-
-  const copyLink = () => {
+  const copyLink = (): void => {
     void navigator.clipboard?.writeText(getBookmarkUrl(bookmark))
   }
 
-  const dialogs = (
-    <BookmarkActionDialogs
-      availableTags={availableTags}
-      bookmark={bookmark}
-      deleteOpen={deleteOpen}
-      editOpen={editOpen}
-      editTitle={editTitle}
-      onDelete={onDelete}
-      onTagsChange={onTagsChange}
-      onTitleChange={onTitleChange}
-      setDeleteOpen={setDeleteOpen}
-      setEditOpen={setEditOpen}
-      setEditTitle={setEditTitle}
-      setTagsOpen={setTagsOpen}
-      tags={tags}
-      tagsOpen={tagsOpen}
-    />
-  )
-
-  const trigger = (
-    <Button
-      aria-label={`Actions for ${bookmark.title}${isSelected ? ", selected" : ""}`}
-      className="transition-opacity duration-100 data-popup-open:opacity-100 min-[800px]:pointer-fine:opacity-0 min-[800px]:pointer-fine:group-hover/bookmark:opacity-100 min-[800px]:pointer-fine:group-has-focus-visible/bookmark:opacity-100"
-      data-bookmark-actions={bookmark.id}
-      size="icon-xs"
-      variant="ghost"
-    >
-      <OverflowMenuIcon />
-    </Button>
-  )
-
-  if (bookmark.trashedAt !== undefined) {
-    return (
-      <BookmarkTrashActions
-        bookmark={bookmark}
-        isSelected={isSelected}
-        onDeleteForever={onDeleteForever}
-        onRestore={onRestore}
-        onSelectChange={onSelectChange}
-      />
-    )
-  }
-
-  if (isMobile) {
-    return (
-      <>
-        <Drawer>
-          <DrawerTrigger render={trigger} />
-          <DrawerPopup showBar>
-            <DrawerPanel>
-              <DrawerMenu>
-                <DrawerMenuGroup>
-                  <DrawerMenuGroupLabel>Bookmark</DrawerMenuGroupLabel>
-                  <DrawerClose
-                    render={<DrawerMenuItem onClick={openBookmark} />}
-                  >
-                    <ArrowUpRightIcon aria-hidden="true" weight="regular" />
-                    Open in new tab
-                  </DrawerClose>
-                  <DrawerClose render={<DrawerMenuItem onClick={copyLink} />}>
-                    <CopyIcon aria-hidden="true" weight="duotone" />
-                    Copy link
-                  </DrawerClose>
-                  <DrawerClose render={<DrawerMenuItem onClick={openEdit} />}>
-                    <PencilSimpleIcon aria-hidden="true" weight="duotone" />
-                    Edit
-                  </DrawerClose>
-                </DrawerMenuGroup>
-                <DrawerMenuSeparator />
-                <DrawerMenuGroup>
-                  <DrawerMenuGroupLabel>Organize</DrawerMenuGroupLabel>
-                  <Drawer>
-                    <DrawerMenuTrigger>
-                      <TagChevronIcon aria-hidden="true" weight="duotone" />
-                      Tags
-                    </DrawerMenuTrigger>
-                    <DrawerPopup showBar>
-                      <DrawerHeader>
-                        <DrawerTitle>Tags</DrawerTitle>
-                      </DrawerHeader>
-                      <DrawerPanel>
-                        <TagEditor
-                          availableTags={availableTags}
-                          onChange={(nextTags) =>
-                            onTagsChange(bookmark.id, nextTags)
-                          }
-                          tags={tags}
-                        />
-                      </DrawerPanel>
-                      <DrawerFooter>
-                        <DrawerClose render={<Button />}>Done</DrawerClose>
-                      </DrawerFooter>
-                    </DrawerPopup>
-                  </Drawer>
-                  <CollectionDrawer
-                    collections={collections}
-                    label="Add to collection"
-                    onSelect={(collection) =>
-                      onAddToCollection(bookmark.id, collection)
-                    }
-                  />
-                  <CollectionDrawer
-                    collections={collections}
-                    label="Move to collection"
-                    onSelect={(collection) =>
-                      onMoveToCollection(bookmark.id, collection)
-                    }
-                  />
-                </DrawerMenuGroup>
-                <DrawerMenuSeparator />
-                <DrawerMenuGroup>
-                  <DrawerClose
-                    render={
-                      <DrawerMenuItem
-                        onClick={() => onSelectChange(bookmark.id, !isSelected)}
-                      />
-                    }
-                  >
-                    <CheckSquareOffsetIcon
-                      aria-hidden="true"
-                      weight="regular"
+  return (
+    <>
+      <Drawer>
+        <DrawerTrigger render={trigger} />
+        <DrawerPopup showBar>
+          <DrawerPanel>
+            <DrawerMenu>
+              <DrawerMenuGroup>
+                <DrawerMenuGroupLabel>Bookmark</DrawerMenuGroupLabel>
+                <DrawerClose render={<DrawerMenuItem onClick={openBookmark} />}>
+                  <ArrowUpRightIcon aria-hidden="true" weight="regular" />
+                  Open in new tab
+                </DrawerClose>
+                <DrawerClose render={<DrawerMenuItem onClick={copyLink} />}>
+                  <CopyIcon aria-hidden="true" weight="duotone" />
+                  Copy link
+                </DrawerClose>
+                <DrawerClose render={<DrawerMenuItem onClick={onOpenEdit} />}>
+                  <PencilSimpleIcon aria-hidden="true" weight="duotone" />
+                  Edit
+                </DrawerClose>
+              </DrawerMenuGroup>
+              <DrawerMenuSeparator />
+              <DrawerMenuGroup>
+                <DrawerMenuGroupLabel>Organize</DrawerMenuGroupLabel>
+                <Drawer onOpenChange={onTagsOpenChange} open={tagsOpen}>
+                  <DrawerMenuTrigger>
+                    <TagChevronIcon aria-hidden="true" weight="duotone" />
+                    Tags
+                  </DrawerMenuTrigger>
+                  <DrawerPopup showBar>
+                    <DrawerHeader>
+                      <DrawerTitle>Tags</DrawerTitle>
+                    </DrawerHeader>
+                    <DrawerPanel>{tagEditor}</DrawerPanel>
+                    <DrawerFooter>
+                      <DrawerClose render={<Button />}>Done</DrawerClose>
+                    </DrawerFooter>
+                  </DrawerPopup>
+                </Drawer>
+                <CollectionDrawer
+                  collections={collections}
+                  label="Add to collection"
+                  onSelect={(collectionId) =>
+                    onAddToCollection(bookmark.id, collectionId)
+                  }
+                />
+                <CollectionDrawer
+                  collections={collections}
+                  label="Move to collection"
+                  onSelect={(collectionId) =>
+                    onMoveToCollection(bookmark.id, collectionId)
+                  }
+                />
+              </DrawerMenuGroup>
+              <DrawerMenuSeparator />
+              <DrawerMenuGroup>
+                <DrawerClose
+                  render={
+                    <DrawerMenuItem
+                      onClick={() => onSelectChange(bookmark.id, !isSelected)}
                     />
-                    {isSelected ? "Remove from selection" : "Select"}
-                  </DrawerClose>
-                  <DrawerClose
-                    render={
-                      <DrawerMenuItem onClick={() => onReenrich(bookmark.id)} />
-                    }
-                  >
-                    <ArrowClockwiseIcon aria-hidden="true" weight="duotone" />
-                    Re-enrich
-                  </DrawerClose>
-                </DrawerMenuGroup>
-                <DrawerMenuSeparator />
-                <DrawerMenuGroup>
-                  <DrawerMenuGroupLabel>Danger</DrawerMenuGroupLabel>
-                  <DrawerClose
-                    render={
-                      <DrawerMenuItem
-                        onClick={() => setDeleteOpen(true)}
-                        variant="destructive"
-                      />
-                    }
-                  >
-                    <TrashIcon aria-hidden="true" weight="duotone" />
-                    Delete
-                  </DrawerClose>
-                </DrawerMenuGroup>
-              </DrawerMenu>
-            </DrawerPanel>
-          </DrawerPopup>
-        </Drawer>
-        {dialogs}
-      </>
-    )
+                  }
+                >
+                  <CheckSquareOffsetIcon aria-hidden="true" weight="regular" />
+                  {isSelected ? "Remove from selection" : "Select"}
+                </DrawerClose>
+                <DrawerClose
+                  render={
+                    <DrawerMenuItem onClick={() => onReenrich(bookmark.id)} />
+                  }
+                >
+                  <ArrowClockwiseIcon aria-hidden="true" weight="duotone" />
+                  Re-enrich
+                </DrawerClose>
+              </DrawerMenuGroup>
+              <DrawerMenuSeparator />
+              <DrawerMenuGroup>
+                <DrawerMenuGroupLabel>Danger</DrawerMenuGroupLabel>
+                <DrawerClose
+                  render={
+                    <DrawerMenuItem
+                      onClick={onOpenDelete}
+                      variant="destructive"
+                    />
+                  }
+                >
+                  <TrashIcon aria-hidden="true" weight="duotone" />
+                  Delete
+                </DrawerClose>
+              </DrawerMenuGroup>
+            </DrawerMenu>
+          </DrawerPanel>
+        </DrawerPopup>
+      </Drawer>
+      {dialogs}
+    </>
+  )
+}
+
+function DesktopBookmarkActions({
+  actions,
+  dialogs,
+  onOpenDelete,
+  onOpenEdit,
+  onOpenTags,
+  trigger,
+}: BookmarkActionVariantProps): React.ReactElement {
+  const {
+    bookmark,
+    collections,
+    isSelected,
+    onAddToCollection,
+    onMoveToCollection,
+    onReenrich,
+    onSelectChange,
+  } = actions
+
+  const openBookmark = (): void => {
+    window.open(getBookmarkUrl(bookmark), "_blank", "noopener,noreferrer")
+  }
+  const copyLink = (): void => {
+    void navigator.clipboard?.writeText(getBookmarkUrl(bookmark))
   }
 
   return (
@@ -762,7 +813,7 @@ export function BookmarkActions({
               <CopyIcon aria-hidden="true" weight="duotone" />
               Copy link
             </MenuItem>
-            <MenuItem onClick={openEdit}>
+            <MenuItem onClick={onOpenEdit}>
               <PencilSimpleIcon aria-hidden="true" weight="duotone" />
               Edit
             </MenuItem>
@@ -770,7 +821,7 @@ export function BookmarkActions({
           <MenuSeparator />
           <MenuGroup>
             <MenuGroupLabel>Organize</MenuGroupLabel>
-            <MenuItem onClick={() => setTagsOpen(true)}>
+            <MenuItem onClick={onOpenTags}>
               <TagChevronIcon aria-hidden="true" weight="duotone" />
               Tags
             </MenuItem>
@@ -819,7 +870,7 @@ export function BookmarkActions({
           <MenuSeparator />
           <MenuGroup>
             <MenuGroupLabel>Danger</MenuGroupLabel>
-            <MenuItem onClick={() => setDeleteOpen(true)} variant="destructive">
+            <MenuItem onClick={onOpenDelete} variant="destructive">
               <TrashIcon aria-hidden="true" weight="duotone" />
               Delete
             </MenuItem>
@@ -828,6 +879,177 @@ export function BookmarkActions({
       </Menu>
       {dialogs}
     </>
+  )
+}
+
+export function BookmarkActions({
+  availableTags,
+  bookmark,
+  collections,
+  isSelected,
+  onAddToCollection,
+  onDelete,
+  onDeleteForever,
+  onMoveToCollection,
+  onReenrich,
+  onRestore,
+  onSelectChange,
+  onTagsChange,
+  onTitleChange,
+}: BookmarkActionsProps): React.ReactElement {
+  const isMobile = useIsMobile()
+  const [deleteOpen, setDeleteOpen] = React.useState(false)
+  const [editOpen, setEditOpen] = React.useState(false)
+  const [editSaveError, setEditSaveError] = React.useState<string | null>(null)
+  const [editTitle, setEditTitle] = React.useState(bookmark.title)
+  const [tagsOpen, setTagsOpen] = React.useState(false)
+  const [tagDraft, setTagDraft] = React.useState(bookmark.tags ?? [])
+  const [tagsSaveError, setTagsSaveError] = React.useState<string | null>(null)
+  const triggerRef = React.useRef<HTMLButtonElement>(null)
+  const tags = bookmark.tags ?? []
+
+  const restoreActionFocus = (): void => {
+    requestAnimationFrame(() => triggerRef.current?.focus())
+  }
+
+  const openEdit = () => {
+    setEditTitle(bookmark.title)
+    setEditSaveError(null)
+    setEditOpen(true)
+  }
+
+  const openTags = () => {
+    setTagDraft(tags)
+    setTagsSaveError(null)
+    setTagsOpen(true)
+  }
+
+  const dialogs = (
+    <BookmarkActionDialogs
+      availableTags={availableTags}
+      bookmark={bookmark}
+      deleteOpen={deleteOpen}
+      editOpen={editOpen}
+      editSaveError={editSaveError}
+      editTitle={editTitle}
+      onDelete={onDelete}
+      onDialogClosed={restoreActionFocus}
+      onTagsChange={onTagsChange}
+      onTitleChange={onTitleChange}
+      setEditSaveError={setEditSaveError}
+      setDeleteOpen={setDeleteOpen}
+      setEditOpen={setEditOpen}
+      setEditTitle={setEditTitle}
+      setTagsOpen={setTagsOpen}
+      setTagsSaveError={setTagsSaveError}
+      setTagDraft={setTagDraft}
+      showTagsDialog={!isMobile}
+      tagDraft={tagDraft}
+      tagsSaveError={tagsSaveError}
+      tagsOpen={tagsOpen}
+    />
+  )
+
+  const trigger = (
+    <Button
+      aria-label={`Actions for ${bookmark.title}${isSelected ? ", selected" : ""}`}
+      className="transition-opacity duration-100 data-popup-open:opacity-100 min-[800px]:pointer-fine:opacity-0 min-[800px]:pointer-fine:group-hover/bookmark:opacity-100 min-[800px]:pointer-fine:group-has-focus-visible/bookmark:opacity-100"
+      data-bookmark-actions={bookmark.id}
+      ref={triggerRef}
+      size="icon-xs"
+      variant="ghost"
+    >
+      <OverflowMenuIcon />
+    </Button>
+  )
+
+  if (bookmark.trashedAt !== undefined) {
+    return (
+      <BookmarkTrashActions
+        bookmark={bookmark}
+        isSelected={isSelected}
+        onDeleteForever={onDeleteForever}
+        onRestore={onRestore}
+        onSelectChange={onSelectChange}
+      />
+    )
+  }
+
+  const actions: BookmarkActionsProps = {
+    availableTags,
+    bookmark,
+    collections,
+    isSelected,
+    onAddToCollection,
+    onDelete,
+    onDeleteForever,
+    onMoveToCollection,
+    onReenrich,
+    onRestore,
+    onSelectChange,
+    onTagsChange,
+    onTitleChange,
+  }
+  const onTagsOpenChange = (open: boolean): void => {
+    if (open) {
+      setTagDraft(tags)
+      setTagsSaveError(null)
+    } else {
+      restoreActionFocus()
+    }
+    setTagsOpen(open)
+  }
+  const tagEditor = (
+    <>
+      {tagsSaveError ? (
+        <p
+          className="px-4 pb-3 text-sm text-destructive-foreground"
+          role="alert"
+        >
+          {tagsSaveError}
+        </p>
+      ) : null}
+      <TagEditor
+        availableTags={availableTags}
+        onChange={(nextTags) => {
+          setTagDraft(nextTags)
+          setTagsSaveError(null)
+          onTagsChange(bookmark.id, nextTags, (retryTags, saveError) => {
+            setTagDraft([...retryTags])
+            setTagsSaveError(saveError)
+            setTagsOpen(true)
+          })
+        }}
+        tags={tagDraft}
+      />
+    </>
+  )
+
+  if (isMobile) {
+    return (
+      <MobileBookmarkActions
+        actions={actions}
+        dialogs={dialogs}
+        onOpenDelete={() => setDeleteOpen(true)}
+        onOpenEdit={openEdit}
+        onOpenTags={openTags}
+        onTagsOpenChange={onTagsOpenChange}
+        tagEditor={tagEditor}
+        tagsOpen={tagsOpen}
+        trigger={trigger}
+      />
+    )
+  }
+
+  return (
+    <DesktopBookmarkActions
+      actions={actions}
+      dialogs={dialogs}
+      onOpenDelete={() => setDeleteOpen(true)}
+      onOpenEdit={openEdit}
+      onOpenTags={openTags}
+      trigger={trigger}
+    />
   )
 }
 
@@ -852,9 +1074,22 @@ export function BookmarkContextMenu({
   const isMobile = useIsMobile()
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [editOpen, setEditOpen] = React.useState(false)
+  const [editSaveError, setEditSaveError] = React.useState<string | null>(null)
   const [editTitle, setEditTitle] = React.useState(bookmark.title)
   const [tagsOpen, setTagsOpen] = React.useState(false)
+  const [tagDraft, setTagDraft] = React.useState(bookmark.tags ?? [])
+  const [tagsSaveError, setTagsSaveError] = React.useState<string | null>(null)
   const tags = bookmark.tags ?? []
+
+  const restoreActionFocus = (): void => {
+    requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>(
+          `[data-bookmark-actions="${CSS.escape(bookmark.id)}"]`
+        )
+        ?.focus()
+    })
+  }
 
   if (bookmark.trashedAt !== undefined) {
     return (
@@ -898,6 +1133,7 @@ export function BookmarkContextMenu({
             <ContextMenuItem
               onClick={() => {
                 setEditTitle(bookmark.title)
+                setEditSaveError(null)
                 setEditOpen(true)
               }}
             >
@@ -908,7 +1144,13 @@ export function BookmarkContextMenu({
           <ContextMenuSeparator />
           <ContextMenuGroup>
             <ContextMenuGroupLabel>Organize</ContextMenuGroupLabel>
-            <ContextMenuItem onClick={() => setTagsOpen(true)}>
+            <ContextMenuItem
+              onClick={() => {
+                setTagDraft(tags)
+                setTagsSaveError(null)
+                setTagsOpen(true)
+              }}
+            >
               <TagChevronIcon aria-hidden="true" weight="duotone" />
               Tags
             </ContextMenuItem>
@@ -974,15 +1216,22 @@ export function BookmarkContextMenu({
         bookmark={bookmark}
         deleteOpen={deleteOpen}
         editOpen={editOpen}
+        editSaveError={editSaveError}
         editTitle={editTitle}
         onDelete={onDelete}
+        onDialogClosed={restoreActionFocus}
         onTagsChange={onTagsChange}
         onTitleChange={onTitleChange}
+        setEditSaveError={setEditSaveError}
         setDeleteOpen={setDeleteOpen}
         setEditOpen={setEditOpen}
         setEditTitle={setEditTitle}
         setTagsOpen={setTagsOpen}
-        tags={tags}
+        setTagsSaveError={setTagsSaveError}
+        setTagDraft={setTagDraft}
+        showTagsDialog
+        tagDraft={tagDraft}
+        tagsSaveError={tagsSaveError}
         tagsOpen={tagsOpen}
       />
     </>

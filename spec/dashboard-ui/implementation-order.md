@@ -41,7 +41,7 @@ Excluded for now:
 
 ## Current baseline
 
-As of 2026-09-02, the mock has a strong UI base:
+As of 2026-09-05, the mock has a strong UI base:
 
 - Responsive desktop and mobile navigation.
 - List, compact grid, and image-grid bookmark views.
@@ -63,13 +63,14 @@ As of 2026-09-02, the mock has a strong UI base:
   sorts, selection rules, and membership-driven updates.
 - A working Trash recovery view with fixed recovery windows, Restore, Delete
   forever, item actions, Trash-specific bulk actions, rollback, and Retry.
+- Complete local management feedback with named success, pending, failure,
+  Retry, rollback, and Undo states.
+- Responsive Settings with page navigation, profile and avatar editing,
+  onboarding, Demo fixtures, and account deletion.
 
 The following parts are incomplete:
 
-- Settings is visible but does not open a working view.
 - Command search says a pasted URL can be saved, but the mock does not add it.
-- Several approved optimistic, failure, retry, undo, and toast states remain
-  absent from local collection and tag management.
 
 Browser, keyboard, screen-reader, responsive, and rendered contrast checks remain
 unverified until the user gives explicit browser permission.
@@ -101,6 +102,15 @@ unverified until the user gives explicit browser permission.
   navigation refinements passed the latest 43-test focused run, the full
   148-test suite, `pnpm run check`, the production build, `git diff --check`,
   and changed-scope React Doctor at 100/100 across 26 files.
+- Phase 5 is complete. The final focused management run passed 32 tests across
+  four suites. `pnpm run check`, the production build, `git diff --check`, and
+  changed-scope React Doctor at 91/100 with no findings passed.
+- Phase 6 is complete. The final focused account, Settings, navigation,
+  management, controls, and Trash run passed 45 tests across six suites.
+  `pnpm run check`, the production build, `git diff --check`, and changed-scope
+  React Doctor at 91/100 with no findings across 14 files passed.
+- Browser, touch, keyboard, screen-reader, and rendered checks remain unverified
+  after Phase 6.
 
 ## What counts as a complete mock
 
@@ -520,7 +530,7 @@ Turn the existing Trash row into a complete recovery view.
 Do not run a real expiry timer in the visual components. A mock clock or fixed
 fixture date should produce stable output and tests.
 
-## Phase 5: finish management feedback
+## Phase 5: finish management feedback [complete]
 
 Complete the interaction states already required for collection and tag work:
 
@@ -555,26 +565,54 @@ plays one semantic cue.
 Apply the same rules to bookmark edit and organization actions where the feature
 contract requires them. Keep enrichment failures card-level with no toast.
 
-## Phase 6: Settings, profile, onboarding, and account deletion
+## Phase 6: Settings, profile, onboarding, and account deletion [complete]
 
 Build these as local UI flows without implementing authentication.
 
-- Make Settings a real destination.
-- Mock username editing and generated, uploaded, Google, and restored avatar
-  states.
-- Validate JPEG, PNG, WebP, and the 2 MB limit before showing a local preview.
-- Build the skippable profile-setup flow and its default values.
-- Preserve the serious two-step account-deletion flow with typed `delete`.
-- Use clear fixture resets rather than pretending that local actions changed a
-  real account or session.
-- Preserve every field and selected avatar when a mock save fails.
+- Open Settings as a large modal dialog without changing the active library
+  destination. Closing returns focus to the Settings button.
+- Use a persistent left navigation for Profile, Account, and Demo on desktop.
+  These are normal page buttons with `aria-current="page"`, not tabs. On mobile,
+  open to a Settings page list, drill into one full-screen page, and provide a
+  clear Back action. Do not use tab-list, tab, or tab-panel semantics.
+- Keep the mobile navigation drawer open behind Settings so closing returns to
+  the same navigation context.
+- Keep Demo visually separate and label it as mock-only. Remove this section
+  when real authentication and profile data replace its fixture adapter.
+- Mock Email defaults and Google defaults. Cover email-prefix and Google-first-
+  name username rules, generated avatars, Google avatars, uploaded avatars, and
+  the correct avatar restored after an upload is removed.
+- Trim username whitespace, require 1 to 40 Unicode characters, and do not mock
+  uniqueness.
+- Save username and avatar changes together. Keep valid avatar previews in the
+  draft until save.
+- Validate JPEG, PNG, WebP, and the 2 MB limit before showing a square local
+  preview. Do not add an image crop editor.
+- Preserve the profile draft across Settings pages. If the draft is dirty,
+  outside press cannot close Settings and close or Escape asks whether to save
+  or discard it.
+- Preserve every field, selected avatar source, and valid local preview when a
+  mock save fails. Retry uses the same draft.
 - Use an indeterminate local status for fixture delays with no known percentage.
   Do not show fake upload progress.
-- Keep account-deletion feedback persistent until the user acknowledges success
-  or corrects an error.
+- Build the skippable profile-setup flow from the shared profile fields. Untouched
+  close uses the defaults. Changed drafts require confirmation before Skip or
+  close replaces them with defaults.
+- Add deterministic Demo controls for the profile fixture, next save result,
+  next deletion result, profile-setup preview, and full fixture reset.
+- Preserve the serious two-step account-deletion flow. The second confirmation
+  requires the exact text `delete` before the destructive action becomes
+  available.
+- Block repeat submission and dismissal while deletion is pending. Keep errors
+  in the confirmation until the user retries or corrects them.
+- Keep a successful mock-deletion result visible in Settings until `Reset demo`
+  acknowledges it. State that the mock did not delete an account or end a
+  session.
 
-Keep login and provider integration out of this phase. The goal is to settle the
-dashboard and account UI states that authentication will later enter.
+Keep login and provider integration out of this phase. Do not implement Storage,
+cascade deletion, session invalidation, or extension cleanup. The goal is to
+settle every user-visible account and profile state that later phases do not
+cover. Real backend work will replace the fixture adapter and remove Demo.
 
 ## Phase 7: import UI
 
