@@ -25,14 +25,17 @@ import type { DashboardAccountState } from "@/dev/dashboard-ui/dashboard-account
 import { DashboardDemoPanel } from "@/dev/dashboard-ui/dashboard-demo-panel"
 import { DashboardProfilePanel } from "@/dev/dashboard-ui/dashboard-profile-panel"
 import { DashboardProfileSetupDialog } from "@/dev/dashboard-ui/dashboard-profile-setup"
+import { DashboardXImportPanel } from "@/dev/dashboard-ui/dashboard-x-import-panel"
+import type { DashboardXImportState } from "@/dev/dashboard-ui/dashboard-x-import-state"
 import { useIsMobile } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
 
-type SettingsPage = "profile" | "account" | "demo"
+export type SettingsPage = "profile" | "account" | "import" | "demo"
 
 const SETTINGS_PAGES = [
   { label: "Profile", value: "profile" },
   { label: "Account", value: "account" },
+  { label: "Import", value: "import" },
   { label: "Demo", value: "demo" },
 ] as const satisfies ReadonlyArray<{
   label: string
@@ -42,23 +45,36 @@ const SETTINGS_PAGES = [
 const SETTINGS_PAGE_HEADING_IDS: Record<SettingsPage, string> = {
   account: "account-settings-title",
   demo: "demo-settings-title",
+  import: "import-settings-title",
   profile: "profile-settings-title",
 }
 
 export function DashboardSettingsDialog({
   account,
+  activePage,
   finalFocus,
+  importState,
+  mobileIndexOpen,
   onOpenChange,
+  onMobileIndexOpenChange,
+  onPageChange,
+  onResetDemo,
+  onViewImported,
   open,
 }: {
   account: DashboardAccountState
+  activePage: SettingsPage
   finalFocus: React.RefObject<HTMLElement | null>
+  importState: DashboardXImportState
+  mobileIndexOpen: boolean
   onOpenChange: (open: boolean) => void
+  onMobileIndexOpenChange: (open: boolean) => void
+  onPageChange: (page: SettingsPage) => void
+  onResetDemo: () => void
+  onViewImported: () => void
   open: boolean
 }): React.ReactElement {
   const isMobile = useIsMobile()
-  const [activePage, setActivePage] = React.useState<SettingsPage>("profile")
-  const [mobileIndexOpen, setMobileIndexOpen] = React.useState(true)
   const [discardOpen, setDiscardOpen] = React.useState(false)
   const pageContentRef = React.useRef<HTMLDivElement>(null)
   const mobileNavigationRefs = React.useRef<
@@ -67,7 +83,7 @@ export function DashboardSettingsDialog({
   const profilePending = account.profile.status === "pending"
 
   const closeSettings = (): void => {
-    setMobileIndexOpen(true)
+    onMobileIndexOpenChange(true)
     onOpenChange(false)
   }
 
@@ -81,14 +97,14 @@ export function DashboardSettingsDialog({
   }
 
   const openSettingsPage = (page: SettingsPage): void => {
-    setActivePage(page)
+    onPageChange(page)
     if (!isMobile) return
-    setMobileIndexOpen(false)
+    onMobileIndexOpenChange(false)
     queueMicrotask(() => pageContentRef.current?.focus())
   }
 
   const openMobileIndex = (): void => {
-    setMobileIndexOpen(true)
+    onMobileIndexOpenChange(true)
     queueMicrotask(() => mobileNavigationRefs.current[activePage]?.focus())
   }
 
@@ -114,6 +130,9 @@ export function DashboardSettingsDialog({
           bottomStickOnMobile={false}
           className="h-[min(40rem,calc(100svh-2rem))] max-w-3xl max-[799px]:row-start-1 max-[799px]:h-svh max-[799px]:max-h-none max-[799px]:rounded-none max-[799px]:border-0 max-[799px]:before:hidden"
           finalFocus={finalFocus}
+          initialFocus={
+            isMobile && !mobileIndexOpen ? pageContentRef : undefined
+          }
           viewportProps={{
             className: "max-[799px]:grid-rows-[1fr] max-[799px]:p-0",
           }}
@@ -121,7 +140,7 @@ export function DashboardSettingsDialog({
           <DialogHeader className="sr-only">
             <DialogTitle>Settings</DialogTitle>
             <DialogDescription>
-              Manage your profile and review account controls.
+              Manage your profile, imports, and account controls.
             </DialogDescription>
           </DialogHeader>
           {isMobile ? (
@@ -132,7 +151,7 @@ export function DashboardSettingsDialog({
                     Settings
                   </p>
                   <p className="mt-2 text-sm text-pretty text-muted-foreground">
-                    Manage your profile and account.
+                    Manage your profile, imports, and account.
                   </p>
                 </div>
                 <SettingsNavigation
@@ -160,6 +179,9 @@ export function DashboardSettingsDialog({
                 <SettingsPageContent
                   account={account}
                   contentRef={pageContentRef}
+                  importState={importState}
+                  onResetDemo={onResetDemo}
+                  onViewImported={onViewImported}
                   page={activePage}
                 />
               </div>
@@ -172,7 +194,7 @@ export function DashboardSettingsDialog({
                     Settings
                   </p>
                   <p className="mt-2 text-xs text-pretty text-muted-foreground">
-                    Profile and account controls.
+                    Profile, import, and account controls.
                   </p>
                 </div>
                 <SettingsNavigation
@@ -184,6 +206,9 @@ export function DashboardSettingsDialog({
               <SettingsPageContent
                 account={account}
                 contentRef={pageContentRef}
+                importState={importState}
+                onResetDemo={onResetDemo}
+                onViewImported={onViewImported}
                 page={activePage}
               />
             </div>
@@ -238,8 +263,8 @@ export function DashboardSettingsDialog({
                   return
                 }
                 setDiscardOpen(false)
-                setActivePage("profile")
-                setMobileIndexOpen(false)
+                onPageChange("profile")
+                onMobileIndexOpenChange(false)
               }}
               type="button"
             >
@@ -312,10 +337,16 @@ function SettingsNavigation({
 function SettingsPageContent({
   account,
   contentRef,
+  importState,
+  onResetDemo,
+  onViewImported,
   page,
 }: {
   account: DashboardAccountState
   contentRef: React.RefObject<HTMLDivElement | null>
+  importState: DashboardXImportState
+  onResetDemo: () => void
+  onViewImported: () => void
   page: SettingsPage
 }): React.ReactElement {
   return (
@@ -334,7 +365,19 @@ function SettingsPageContent({
           {page === "account" ? (
             <DashboardAccountPanel account={account} />
           ) : null}
-          {page === "demo" ? <DashboardDemoPanel account={account} /> : null}
+          {page === "import" ? (
+            <DashboardXImportPanel
+              importState={importState}
+              onViewImported={onViewImported}
+            />
+          ) : null}
+          {page === "demo" ? (
+            <DashboardDemoPanel
+              account={account}
+              importState={importState}
+              onResetDemo={onResetDemo}
+            />
+          ) : null}
         </div>
       </section>
     </ScrollArea>

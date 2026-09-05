@@ -158,6 +158,7 @@ export interface MockBookmark {
   title: string
   domain: string | null
   ogImage: string | null
+  url?: string
   createdAt: number
   visitCount: number
   metadataStatus: "pending" | "enriched" | "failed"

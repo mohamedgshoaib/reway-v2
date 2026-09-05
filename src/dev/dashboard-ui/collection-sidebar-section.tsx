@@ -4,6 +4,7 @@ import {
   PencilSimpleIcon,
   PlusIcon,
   TrashIcon,
+  UploadSimpleIcon,
 } from "@phosphor-icons/react"
 import * as React from "react"
 
@@ -274,6 +275,7 @@ export function CollectionSidebarSection({
   onMoveCollection,
   onNavigate,
   onOpenChange,
+  onOpenImport,
   onReorderingChange,
   onSelectCollection,
   onUpdateCollection,
@@ -293,6 +295,7 @@ export function CollectionSidebarSection({
   ) => void
   onNavigate?: () => void
   onOpenChange: (open: boolean) => void
+  onOpenImport?: (trigger: HTMLButtonElement) => void
   onReorderingChange?: (reordering: boolean) => void
   onSelectCollection?: (collectionId: string) => void
   onUpdateCollection?: CollectionManagementHandlers["onUpdateCollection"]
@@ -310,6 +313,7 @@ export function CollectionSidebarSection({
   )
   const [deletingId, setDeletingId] = React.useState<string | null>(null)
   const createButtonRef = React.useRef<HTMLButtonElement>(null)
+  const optionsButtonRef = React.useRef<HTMLButtonElement>(null)
   const sectionHeaderRef = React.useRef<HTMLButtonElement>(null)
   const returnFocusRef = React.useRef<HTMLElement | null>(null)
   const restoreFocus = (): void => {
@@ -379,6 +383,7 @@ export function CollectionSidebarSection({
                       render={
                         <Button
                           aria-label="Collection options"
+                          ref={optionsButtonRef}
                           size="icon-xs"
                           variant="ghost"
                         />
@@ -401,6 +406,17 @@ export function CollectionSidebarSection({
                         <MenuRadioItem value="custom">Custom</MenuRadioItem>
                       </MenuRadioGroup>
                       <MenuSeparator />
+                      <MenuItem
+                        closeOnClick
+                        onClick={() => {
+                          if (optionsButtonRef.current) {
+                            onOpenImport?.(optionsButtonRef.current)
+                          }
+                        }}
+                      >
+                        <UploadSimpleIcon aria-hidden="true" weight="duotone" />
+                        Import from X
+                      </MenuItem>
                       <MenuItem
                         disabled={orderMode !== "custom"}
                         onClick={() => setIsReordering(true)}

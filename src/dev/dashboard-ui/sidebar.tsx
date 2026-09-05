@@ -126,6 +126,7 @@ export function DashboardSidebar({
   onDeleteTag,
   onMoveCollection,
   onMoveTag,
+  onOpenImport,
   onOpenSettings,
   onSelectAllBookmarks,
   onSelectCollection,
@@ -163,6 +164,7 @@ export function DashboardSidebar({
     index: number
   ) => void
   onMoveTag?: (sourceId: string, index: number) => void
+  onOpenImport?: (trigger: HTMLButtonElement) => void
   onOpenSettings?: (trigger: HTMLButtonElement) => void
   onSelectAllBookmarks?: () => void
   onSelectCollection?: (collection: string) => void
@@ -260,6 +262,7 @@ export function DashboardSidebar({
         onDeleteTag={onDeleteTag}
         onMoveCollection={onMoveCollection}
         onMoveTag={onMoveTag}
+        onOpenImport={onOpenImport}
         onOpenSettings={onOpenSettings}
         onSelectAllBookmarks={onSelectAllBookmarks}
         onSelectCollection={onSelectCollection}
@@ -300,6 +303,7 @@ export function MobileDashboardNavigation({
   onDeleteTag,
   onMoveCollection,
   onMoveTag,
+  onOpenImport,
   onOpenSettings,
   onSelectAllBookmarks,
   onSelectCollection,
@@ -337,6 +341,7 @@ export function MobileDashboardNavigation({
     index: number
   ) => void
   onMoveTag?: (sourceId: string, index: number) => void
+  onOpenImport?: (trigger: HTMLButtonElement) => void
   onOpenSettings?: (trigger: HTMLButtonElement) => void
   onSelectAllBookmarks?: () => void
   onSelectCollection?: (collection: string) => void
@@ -427,6 +432,7 @@ export function MobileDashboardNavigation({
             onMoveTag={onMoveTag}
             onOpenCommand={() => setCommandOpen(true)}
             onOpenDisplay={() => setDisplayOpen(true)}
+            onOpenImport={onOpenImport}
             onOpenSettings={onOpenSettings}
             onSelectAllBookmarks={onSelectAllBookmarks}
             onSelectCollection={onSelectCollection}
@@ -739,6 +745,7 @@ function DashboardNavigationContent({
   onNavigate,
   onOpenCommand,
   onOpenDisplay,
+  onOpenImport,
   onOpenSettings,
   onSelectAllBookmarks,
   onSelectCollection,
@@ -786,6 +793,7 @@ function DashboardNavigationContent({
   onNavigate?: () => void
   onOpenCommand?: () => void
   onOpenDisplay?: () => void
+  onOpenImport?: (trigger: HTMLButtonElement) => void
   onOpenSettings?: (trigger: HTMLButtonElement) => void
   onSelectAllBookmarks?: () => void
   onSelectCollection?: (collection: string) => void
@@ -881,6 +889,7 @@ function DashboardNavigationContent({
           onMoveCollection={onMoveCollection}
           onNavigate={handleNavigate}
           onOpenChange={(open) => onDisclosureChange("collections", open)}
+          onOpenImport={onOpenImport}
           onReorderingChange={(reordering) =>
             setReorderingSection(reordering ? "collections" : null)
           }

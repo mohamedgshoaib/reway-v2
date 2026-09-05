@@ -15,6 +15,7 @@ import {
   useDashboardUiController,
   type BookmarkBulkMutationFixture,
 } from "@/dev/dashboard-ui/dashboard-ui-controller"
+import type { DashboardXImportMutationAdapter } from "@/dev/dashboard-ui/dashboard-x-import-state"
 import type { DashboardNavigationPreferences } from "@/dev/dashboard-ui/navigation-preferences"
 import { DashboardSidebar } from "@/dev/dashboard-ui/sidebar"
 
@@ -23,6 +24,7 @@ export type {
   DashboardAccountMutationAdapter,
   DashboardManagementMutationFixture,
   DashboardProfileFixture,
+  DashboardXImportMutationAdapter,
 }
 
 /**
@@ -39,6 +41,7 @@ export function DashboardUiPage({
   initialProfileFixture,
   bulkMutationFixture,
   managementMutationFixture,
+  xImportMutationAdapter,
 }: {
   accountMutationAdapter?: DashboardAccountMutationAdapter
   initialNavigationPreferences: DashboardNavigationPreferences
@@ -46,6 +49,7 @@ export function DashboardUiPage({
   initialProfileFixture?: DashboardProfileFixture
   bulkMutationFixture?: BookmarkBulkMutationFixture
   managementMutationFixture?: DashboardManagementMutationFixture
+  xImportMutationAdapter?: DashboardXImportMutationAdapter
 }): React.ReactElement {
   const {
     mainPanelProps,
@@ -60,6 +64,7 @@ export function DashboardUiPage({
     initialOnboardingOpen,
     initialProfileFixture,
     managementMutationFixture,
+    xImportMutationAdapter,
   })
 
   return (

@@ -32,6 +32,7 @@ export function BookmarkControlsBar({
   onDeleteTag,
   onMoveCollection,
   onMoveTag,
+  onOpenImport,
   onOpenSettings,
   onSelectAllBookmarks,
   onSelectCollection,
@@ -70,6 +71,7 @@ export function BookmarkControlsBar({
     index: number
   ) => void
   onMoveTag?: (sourceId: string, index: number) => void
+  onOpenImport?: (trigger: HTMLButtonElement) => void
   onOpenSettings?: (trigger: HTMLButtonElement) => void
   onSelectAllBookmarks?: () => void
   onSelectCollection?: (collection: string) => void
@@ -107,6 +109,7 @@ export function BookmarkControlsBar({
           onDeleteTag={onDeleteTag}
           onMoveCollection={onMoveCollection}
           onMoveTag={onMoveTag}
+          onOpenImport={onOpenImport}
           onOpenSettings={onOpenSettings}
           onSelectAllBookmarks={onSelectAllBookmarks}
           onSelectCollection={onSelectCollection}

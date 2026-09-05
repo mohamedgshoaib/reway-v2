@@ -25,6 +25,7 @@ import {
   getBookmarkRestoreSummary,
   type BookmarkTrashAction,
 } from "@/dev/dashboard-ui/bookmark-trash"
+import { getBookmarkUrl } from "@/dev/dashboard-ui/bookmark-url"
 import { type Collection } from "@/dev/dashboard-ui/collection-hierarchy"
 import type {
   DashboardAccountMutationAdapter,
@@ -43,7 +44,22 @@ import {
   useDashboardManagementState,
   type DashboardManagementMutationFixture,
 } from "@/dev/dashboard-ui/dashboard-management-state"
-import type { DashboardSettingsDialog } from "@/dev/dashboard-ui/dashboard-settings"
+import type {
+  DashboardSettingsDialog,
+  SettingsPage,
+} from "@/dev/dashboard-ui/dashboard-settings"
+import {
+  createImportedXBookmark,
+  ensureXBookmarksCollection,
+  X_BOOKMARKS_COLLECTION_ID,
+  X_BOOKMARKS_COLLECTION_NAME,
+  type XImportPost,
+} from "@/dev/dashboard-ui/dashboard-x-import"
+import {
+  useDashboardXImportState,
+  type DashboardXImportMutationAdapter,
+  type XImportResultSummary,
+} from "@/dev/dashboard-ui/dashboard-x-import-state"
 import {
   MOCK_DASHBOARD_NOW,
   mockBookmarks,
@@ -119,6 +135,7 @@ export function useDashboardUiController({
   initialProfileFixture,
   bulkMutationFixture = runDefaultBulkMutationFixture,
   managementMutationFixture,
+  xImportMutationAdapter,
 }: {
   accountMutationAdapter?: DashboardAccountMutationAdapter
   initialNavigationPreferences: DashboardNavigationPreferences
@@ -126,6 +143,7 @@ export function useDashboardUiController({
   initialProfileFixture?: DashboardProfileFixture
   bulkMutationFixture?: BookmarkBulkMutationFixture
   managementMutationFixture?: DashboardManagementMutationFixture
+  xImportMutationAdapter?: DashboardXImportMutationAdapter
 }): DashboardUiController {
   const playUndo = useSound(minimal.undo)
   const account = useDashboardAccountState({
@@ -134,7 +152,16 @@ export function useDashboardUiController({
     mutationAdapter: accountMutationAdapter,
   })
   const [settingsOpen, setSettingsOpen] = React.useState(false)
+  const [settingsPage, setSettingsPage] =
+    React.useState<SettingsPage>("profile")
+  const [settingsMobileIndexOpen, setSettingsMobileIndexOpen] =
+    React.useState(true)
   const settingsTriggerRef = React.useRef<HTMLElement | null>(null)
+  const settingsOpenRef = React.useRef(false)
+  const handleSettingsOpenChange = (open: boolean): void => {
+    settingsOpenRef.current = open
+    setSettingsOpen(open)
+  }
   const [destination, setDestination] =
     React.useState<DashboardDestination>(INITIAL_DESTINATION)
   const [selectionState, dispatchSelection] = React.useReducer(
@@ -191,7 +218,9 @@ export function useDashboardUiController({
       onUpdateCollection: handleUpdateCollection,
     },
     collections,
+    resetDemo: resetManagementDemo,
     setBookmarks,
+    setCollections,
     tagHandlers: {
       onCreateTag: handleCreateTag,
       onDeleteTag: deleteTag,
@@ -208,6 +237,61 @@ export function useDashboardUiController({
       setIsReordering(false)
       setSort("date")
     },
+  })
+
+  const existingBookmarkUrls = React.useMemo(
+    () => new Set(bookmarks.map((bookmark) => getBookmarkUrl(bookmark))),
+    [bookmarks]
+  )
+  const handleXPostImported = (post: XImportPost, importId: string): void => {
+    const existingXCollection = collections.find(
+      (collection) =>
+        collection.name.toLocaleLowerCase() ===
+        X_BOOKMARKS_COLLECTION_NAME.toLocaleLowerCase()
+    )
+    const collectionId = existingXCollection?.id ?? X_BOOKMARKS_COLLECTION_ID
+
+    setCollections((currentCollections) => {
+      const result = ensureXBookmarksCollection(currentCollections, Date.now())
+      return result.created ? result.collections : currentCollections
+    })
+    setBookmarks((currentBookmarks) => [
+      createImportedXBookmark({
+        collectionId,
+        createdAt: Date.now(),
+        importId,
+        post,
+      }),
+      ...currentBookmarks,
+    ])
+  }
+  const announceXImportResult = (summary: XImportResultSummary): void => {
+    if (settingsOpenRef.current) return
+
+    const totalFailure = summary.importedCount === 0 && summary.failedCount > 0
+    const partialFailure = summary.importedCount > 0 && summary.failedCount > 0
+    toastManager.add({
+      description: totalFailure
+        ? "Open Settings to retry. Your review is still there."
+        : partialFailure
+          ? `${bookmarkCountLabel(summary.failedCount)} still need attention.`
+          : `Added ${bookmarkCountLabel(summary.importedCount)} to X Bookmarks.`,
+      id: "dashboard-x-import-result",
+      priority: totalFailure ? "high" : "low",
+      timeout: totalFailure ? 0 : TOAST_DEFAULT_TIMEOUT_MS,
+      title: totalFailure
+        ? "X import failed"
+        : partialFailure
+          ? "X import finished with issues"
+          : "X import complete",
+      type: totalFailure ? "error" : partialFailure ? "warning" : "success",
+    })
+  }
+  const xImport = useDashboardXImportState({
+    existingUrls: existingBookmarkUrls,
+    mutationAdapter: xImportMutationAdapter,
+    onPostImported: handleXPostImported,
+    onResult: announceXImportResult,
   })
 
   const restoreBookmarkSnapshot = (
@@ -647,7 +731,15 @@ export function useDashboardUiController({
 
   const handleOpenSettings = (trigger: HTMLButtonElement): void => {
     settingsTriggerRef.current = trigger
-    setSettingsOpen(true)
+    setSettingsMobileIndexOpen(true)
+    handleSettingsOpenChange(true)
+  }
+
+  const handleOpenImport = (trigger: HTMLButtonElement): void => {
+    settingsTriggerRef.current = trigger
+    setSettingsPage("import")
+    setSettingsMobileIndexOpen(false)
+    handleSettingsOpenChange(true)
   }
 
   const handleStartReorder = (): void => {
@@ -677,6 +769,34 @@ export function useDashboardUiController({
     })
   }
 
+  const handleViewImported = (): void => {
+    const collectionId =
+      collections.find(
+        (collection) =>
+          collection.name.toLocaleLowerCase() ===
+          X_BOOKMARKS_COLLECTION_NAME.toLocaleLowerCase()
+      )?.id ?? X_BOOKMARKS_COLLECTION_ID
+    navigateToDestination({ collectionId, kind: "collection" })
+    handleSettingsOpenChange(false)
+  }
+
+  const handleResetDemo = (): void => {
+    account.actions.resetDemo()
+    xImport.actions.resetDemo()
+    resetManagementDemo()
+    setDestination(INITIAL_DESTINATION)
+    dispatchSelection({
+      destinationKey: getDashboardDestinationKey(INITIAL_DESTINATION),
+      type: "destination-changed",
+    })
+    setCollectionOrders(createCollectionOrders(mockBookmarks))
+    setIsReordering(false)
+    setSelectionAnnouncement("")
+    setTagFilterAnnouncement("")
+    setSort("date")
+    setViewMode("list")
+  }
+
   return {
     mainPanelProps: {
       actionHandlers,
@@ -698,6 +818,7 @@ export function useDashboardUiController({
         onDeleteTag: handleDeleteTag,
         onMoveCollection: handleMoveCollection,
         onMoveTag: handleMoveTag,
+        onOpenImport: handleOpenImport,
         onOpenSettings: handleOpenSettings,
         onSelectAllBookmarks: handleSelectAllBookmarks,
         onSelectCollection: handleSelectCollection,
@@ -755,8 +876,15 @@ export function useDashboardUiController({
     onSidebarOpenChange: setSidebarOpen,
     settingsDialogProps: {
       account,
+      activePage: settingsPage,
       finalFocus: settingsTriggerRef,
-      onOpenChange: setSettingsOpen,
+      importState: xImport,
+      mobileIndexOpen: settingsMobileIndexOpen,
+      onMobileIndexOpenChange: setSettingsMobileIndexOpen,
+      onOpenChange: handleSettingsOpenChange,
+      onPageChange: setSettingsPage,
+      onResetDemo: handleResetDemo,
+      onViewImported: handleViewImported,
       open: settingsOpen,
     },
     sidebarOpen,
@@ -775,6 +903,7 @@ export function useDashboardUiController({
       onDeleteTag: handleDeleteTag,
       onMoveCollection: handleMoveCollection,
       onMoveTag: handleMoveTag,
+      onOpenImport: handleOpenImport,
       onOpenSettings: handleOpenSettings,
       onSelectAllBookmarks: handleSelectAllBookmarks,
       onSelectCollection: handleSelectCollection,

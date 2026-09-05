@@ -107,7 +107,9 @@ interface DashboardManagementState {
   bookmarks: MockBookmark[]
   collectionHandlers: CollectionManagementHandlers
   collections: Collection[]
+  resetDemo: () => void
   setBookmarks: React.Dispatch<React.SetStateAction<MockBookmark[]>>
+  setCollections: React.Dispatch<React.SetStateAction<Collection[]>>
   tagHandlers: TagManagementHandlers
   tags: Tag[]
 }
@@ -800,7 +802,14 @@ export function useDashboardManagementState({
       onUpdateCollection,
     },
     collections,
+    resetDemo: () => {
+      mutationTokensRef.current.clear()
+      setBookmarks([...mockBookmarks])
+      setCollections([...mockCollections])
+      setTags([...mockTags])
+    },
     setBookmarks,
+    setCollections,
     tagHandlers: {
       onCreateTag,
       onDeleteTag,

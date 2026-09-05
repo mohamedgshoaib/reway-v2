@@ -619,17 +619,55 @@ cover. Real backend work will replace the fixture adapter and remove Demo.
 Mock the dashboard side of the approved X archive import before any parser or
 backend work.
 
-- File selection accepts the expected `bookmarks.js` path in the mock.
-- Provide explicit disclosure before import.
-- Mock valid, invalid, empty, duplicate, name-conflict, and over-depth inputs.
-- Show the flattening summary required by the collection hierarchy contract.
-- Keep the scroll-capture path clearly separate because it belongs to the
-  extension and requires user initiation at `x.com/i/bookmarks`.
-- Model import as explicit Choose, Review, Importing, Complete, and Error states.
-- Preserve the selected fixture and review results on error so Retry does not
-  restart the flow.
-- Use step status rather than a fake percentage unless the fixture defines a
-  known item count. Completion reports one total and one flattening summary.
+- Add one Import page to Settings. `Import from X` in the Collections section
+  menu opens Settings on that page. Both entry points use the same flow.
+- Use a native file picker and accept `bookmark.js` or `bookmarks.js`. State
+  before selection that this mock does not read or upload the chosen file.
+- Keep the scroll-capture path separate. It belongs to the extension, requires
+  user action at `x.com/i/bookmarks`, and is not part of this dashboard phase.
+- Put temporary archive-content, initial-result, retry-result, and speed
+  controls on the existing Demo page. Keep the Import page free of fixture
+  controls.
+- Mock valid, empty, malformed, mixed-validity, and duplicate archives. Do not
+  add generic folder-depth or collection-name-conflict fixtures to this
+  X-specific flow.
+- Model the flow as explicit Choose, Review, Importing, Complete, and Error
+  states.
+- Review rows use mocked lookup results with author, handle, excerpt, and post
+  URL. Fall back to the URL and post ID when preview data is unavailable. A
+  failed preview never blocks saving a valid post URL.
+- Select every eligible post by default. Let the user select or clear one row,
+  select all rows, or clear the full selection before import. Lock selection
+  when import starts and put the selected count in the Import button label.
+- Keep duplicate URLs eligible and selected. Label posts already in the library
+  and repeated inside the archive. The library-wide allow-duplicates rule still
+  applies.
+- Stop a malformed archive before Review and explain the error. Show a calm
+  empty result for a valid archive with no bookmarks. For mixed input, skip
+  malformed records, report the skipped count, and review the valid posts.
+- Start Importing feedback at once. Show the current step and the processed
+  count because Review establishes the selected total. The normal fixture
+  finishes after a short readable delay; the slow fixture keeps progress visible
+  for testing. Do not show imported state before a mock save succeeds.
+- Let Settings close while an import runs. Keep the state in the dashboard
+  controller, block a second import, and restore the current progress or result
+  when the user returns. Do not offer Cancel after processing starts.
+- Import successful posts into `X Bookmarks`. Reuse that collection when it
+  exists. Otherwise create it with the X icon and Neutral color. Update the
+  mock library and collection count after each successful save.
+- When every post succeeds, Complete reports the imported count and duplicate
+  count. When some fail, keep the successful posts, list the failures, and offer
+  `Retry failed bookmarks`. When every post fails, commit nothing and offer
+  `Retry import`.
+- Keep separate deterministic initial and retry outcomes so Retry can succeed,
+  partly fail, or fail again. Retry never imports a successful post twice.
+- Keep the chosen archive, review selection, progress, and result when the user
+  changes Settings pages or closes Settings. `Choose another file` resets the
+  review. `Reset demo` clears the import state along with the other fixtures.
+- On completion, offer `View imported bookmarks` and `Import another file`.
+  Viewing the imported posts closes Settings and opens `X Bookmarks`.
+- Announce completion once with a success, partial-failure, or error toast when
+  Settings is closed. Do not repeat the toast when the user reopens Import.
 
 Do not imply that the current mock reads or uploads a real archive unless that
 behavior has been implemented and verified.

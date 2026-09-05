@@ -351,9 +351,22 @@ The contract follows five interaction rules:
 #### Bookmark import
 
 - V1 ships two locked paths.
-- **File upload:** the user downloads their X data archive and uploads `bookmarks.js`. This has zero X Terms-of-Service exposure.
+- **File upload:** the user downloads their X data archive and uploads `bookmark.js` or `bookmarks.js`. This has zero X Terms-of-Service exposure.
 - **Scroll capture:** opt-in, user-initiated only. A content script at `x.com/i/bookmarks` reads tweet URLs from the DOM as the user scrolls naturally.
 - Scroll capture shows explicit disclosure and sends URLs only to the backend.
+- The dashboard exposes one Import page in Settings. `Import from X` in the Collections section menu opens the same page.
+- The file flow uses Choose, Review, Importing, Complete, and Error states.
+- Review selects every valid post by default and supports individual selection, Select all, and Clear selection. Importing locks the selection.
+- Review may show author, handle, excerpt, and URL after lookup. If lookup fails, the row falls back to its URL and post ID. A missing preview does not block importing a valid URL.
+- Duplicate URLs remain eligible because Reway allows duplicates. Review labels posts already in the library and posts repeated in the selected archive.
+- A malformed archive stops before Review. An empty archive shows an empty result. If an archive mixes valid and malformed records, Review excludes the malformed records and reports how many it skipped.
+- Import is not optimistic. It reports the current step and processed count, then adds each post to the library only after that post succeeds.
+- Successful posts go to `X Bookmarks`. Reway creates the collection with the X icon and Neutral color when needed, or reuses the existing collection.
+- Settings may close while an import runs. Reopening Import restores its current state, and Reway blocks a second import until the first one finishes.
+- Partial failure keeps successful posts and retries only failed posts. Total failure adds nothing. Retry keeps the chosen archive, selection, and review results.
+- Complete links to `X Bookmarks` and lets the user choose another file.
+- The dashboard mock keeps archive contents, initial result, retry result, and speed as temporary Demo fixtures. It does not parse or upload the selected file.
+- Folder flattening and imported collection-name conflicts belong to future imports that contain folders. They do not appear in the X archive flow.
 
 ## Account & Onboarding
 
