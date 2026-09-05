@@ -63,8 +63,8 @@ This project is not meant to become:
 ### Non-Negotiable Principles
 
 1. No unscoped data mutations. Every bookmark, collection, tag, preference, and destructive action is bound to the authenticated user and enforced by Supabase.
-2. No blocking saves on enrichment. Metadata fetch is a single fire-and-forget server-side attempt after insertion; failures appear only as a small card-level indicator, never a toast.
-3. No automatic enrichment retries. Users may manually re-enrich a bookmark from its overflow menu.
+2. No blocking saves on enrichment. Bookmark insertion and durable enrichment queueing complete before metadata work starts; failures appear only as a small card-level indicator, never a toast.
+3. No unbounded enrichment retries. Reway makes at most three attempts for transient delivery or fetch failures, with bounded backoff and jitter. Permanent failures stop at once. Users may manually re-enrich a bookmark from its overflow menu.
 4. No misleading collaboration, AI, or workspace positioning. Reway is a personal library.
 5. No stack-first messaging on broad website surfaces. Tools are proof only after the outcome is clear.
 
@@ -83,7 +83,7 @@ This project is not meant to become:
 - Supabase authentication boundaries are non-negotiable; every mutation is user-scoped.
 - Dashboard preferences are cookie-backed, validated against defaults, scoped to the `_dashboard` layout route, and never leak to the public site.
 - Enrichment is secondary. New bookmarks may begin with minimal metadata.
-- A Supabase Edge Function, triggered by a database webhook on bookmark insertion, performs enrichment independently of the browser. SSRF protection lives inside that function before every fetch.
+- A bookmark insert creates its enrichment request and Supabase Queue message in the same database transaction. Batched Edge Function consumers perform enrichment independently of the browser. SSRF protection lives inside the worker before every connection and redirect.
 - The dashboard receives extension saves and enrichment updates through Supabase Realtime subscriptions filtered by `user_id`.
 - Chrome extension support targets Manifest V3 only.
 - X bookmark import ships in V1 through archive-file upload and opt-in, user-initiated scroll capture. Both are explicitly disclosed and send only URLs to the backend.

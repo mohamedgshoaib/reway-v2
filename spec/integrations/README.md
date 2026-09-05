@@ -4,6 +4,7 @@ Start here for third-party integration specs and durable feature contracts.
 
 - `audio/` — `@web-kits/audio` UI sound feedback
 - `features/` — Reway's current product feature contract and technical behaviour boundaries
+- `supabase/` — Phase 8 backend, durability, capture, transfer, and Realtime plan
 
 Each third-party integration gets its own subfolder with a `README.md` router. Feature contracts may live under `features/` when they need an authoritative technical and product record before a dedicated domain spec exists.
 

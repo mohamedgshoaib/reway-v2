@@ -2,8 +2,9 @@
 
 ## Purpose
 
-This file sets the build order for the UI-only dashboard mock at `/dashboard-ui`.
-It turns the approved behavior in
+This file sets the dashboard build order at `/dashboard-ui`. Phases 0 through 7
+produced the UI-only mock. Phase 8 begins the bottom-up backend work. This file
+turns the approved behavior in
 `spec/integrations/features/feature-contract.md` into small implementation phases.
 
 The feature contract remains the source of truth for product behavior. This file
@@ -16,12 +17,15 @@ This UI order and the interaction decisions inside it were locked on 2026-08-31.
 Implementation may improve code shape, but it must not change the named user
 behavior without an explicit product decision and a matching spec update.
 
-There are no open interaction decisions in this file. Backend work remains
-deferred until the complete dashboard mock passes its final review.
+The Phase 8 direction changed by explicit product decision on 2026-09-05. The
+backend will now replace mock adapters in gated slices instead of waiting for a
+separate final mock pass. The full technical order lives in
+`spec/integrations/supabase/phase-08-backend-plan.md`.
 
 ## Scope
 
-Build the dashboard as a complete local mock before connecting it to live data.
+Phases 0 through 7 built the dashboard as a local mock. Phase 8 adds the backend
+from the database upward while preserving the approved UI behavior.
 
 Included:
 
@@ -30,10 +34,10 @@ Included:
 - Desktop, touch, keyboard, loading, empty, success, and error states.
 - Deterministic local fixtures for operations that will later use a backend.
 
-Excluded for now:
+Excluded until its Phase 8 slice starts:
 
-- Supabase setup, authentication implementation, schema, migrations, RLS,
-  Realtime, Storage, and Edge Functions.
+- Supabase setup, authentication, schema, migrations, RLS, Realtime, Storage,
+  and Edge Functions outside the order in the Phase 8 backend plan.
 - The Chrome extension implementation.
 - Production persistence or deployment.
 - Planned but uncommitted New Tab and floating browser-button work.
@@ -672,28 +676,28 @@ backend work.
 Do not imply that the current mock reads or uploads a real archive unless that
 behavior has been implemented and verified.
 
-## Phase 8: command quick save and enrichment states
+## Phase 8: backend, capture, transfer, and durability
 
-Build this after the main dashboard management UI is complete.
+Build the backend from the database upward. Use
+`spec/integrations/supabase/phase-08-backend-plan.md` as the implementation
+order and stop after each verified slice.
 
-- Detect a valid pasted or typed URL in the command surface.
-- Enter saves immediately with no required fields and no collection picker.
-- Add a local Uncollected bookmark with `metadata_status = "pending"`.
-- Allow duplicate URLs.
-- Use deterministic fixture controls to resolve the item as enriched or failed.
-- Successful enrichment updates title, favicon, and OG image across every view.
-- Failure remains a quiet card-level state.
-- Re-enrich resets the item to pending before the mock outcome resolves.
-- Keyboard submission closes the command immediately without decorative motion.
-- The new pending bookmark and its accessible status provide save feedback. Do
-  not add a second success toast.
-- Re-enrich ignores repeated input while the same bookmark is already pending.
-- Pending, enriched, and failed states use text or an accessible label in
-  addition to any icon or color.
+Phase 8 includes:
 
-One mock bookmark-lifecycle module owns these transitions. Command, bookmark
-cards, and action menus consume its small interface. Do not scatter timeouts or
-fixture outcomes across visual components.
+- Supabase connection, migration, generated-type, client, auth, RLS, and core
+  schema work.
+- Small domain interfaces shared by mock and Supabase adapters.
+- Durable job records and separate interactive and bulk queues.
+- Command quick save and complete bookmark enrichment states.
+- General browser HTML import, portable HTML export, lossless Reway JSON backup,
+  and staged restore.
+- Realtime notifications with authoritative refetch after gaps.
+- Failure injection, load tests, observability, and mock replacement one feature
+  at a time.
+
+Do not add a broad backend change. Complete and verify Phase 8A before 8B, then
+continue in the recorded order. Keep each mock path until its live adapter passes
+the same contract tests.
 
 ## Phase 9: completion and stress pass
 
@@ -734,7 +738,7 @@ Audit the complete mock as one product:
 6. Finish management feedback.
 7. Settings, profile, onboarding, and account deletion.
 8. X archive import UI.
-9. Command quick save and enrichment states.
+9. Backend, capture, transfer, and durability.
 10. Completion and stress pass.
 
 Do not skip ahead because a later screen looks easier. Each phase relies on state
@@ -742,7 +746,8 @@ and interaction rules established by the phases before it.
 
 ## Final lock gates
 
-The dashboard mock is ready for backend planning only when:
+The dashboard and backend are ready for extension integration or production
+planning only when:
 
 - Every phase above is complete in order.
 - No primary dashboard action is inert, misleading, or available only through an

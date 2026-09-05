@@ -2,95 +2,101 @@
 
 ## Purpose
 
-- Continue the dashboard UI-only mock from Phase 8 while Session 05 remains open.
+- Start Phase 8 from the database upward after the user prepares the Supabase
+  environment and MCP connection.
+
+## Current scope
+
+- Phase 8 now covers the Supabase backend, core data, durable jobs, capture,
+  enrichment, browser import, export, restore, Realtime, and gated mock
+  replacement.
+- This session produced research and documentation only. No backend code or
+  package installation has started.
 
 ## Current state
 
-- Dashboard UI phases 0 through 7 are complete.
-- Settings opens as a responsive modal and preserves the active library
-  destination. Desktop uses persistent left page navigation. Mobile uses a page
-  list and drill-in view with Back. Neither layout uses tab semantics.
-- The profile and onboarding flows cover email and Google defaults, generated
-  and uploaded avatars, validation, source restoration, failure, and Retry.
-- Account deletion uses two confirmations, exact typed `delete`, pending locks,
-  failure recovery, and a persistent mock result.
-- Visible Demo controls are temporary mock tools. Real authentication and
-  profile data will replace their fixture adapter and remove the controls.
-- Each active Settings page has one labeled region. Mobile drill-in moves focus
-  to that region, and Back returns focus to the selected page button.
-- Appearance marks and fixture radios keep their compact visual size. Their
-  coarse-pointer targets expand without overlapping nearby controls.
-- Settings now includes Import. `Import from X` in the Collections section menu
-  opens the same page directly.
-- The X archive mock accepts `bookmark.js` and `bookmarks.js`, reviews valid
-  posts, lets the user change selection, labels duplicates, and handles empty,
-  malformed, and mixed input.
-- Import progress uses a named step and processed count. Settings may close
-  while it runs, and reopening restores the current state.
-- Full, partial, and total failure outcomes are deterministic. Partial results
-  keep successful posts, and Retry processes failed posts only.
-- Successful posts create or reuse `X Bookmarks` and update the local library
-  after each confirmed save.
-- Session 04 ended after Phase 5; Session 05 is open.
+- Dashboard phases 0 through 7 are complete.
+- Session 05 remains open.
+- The feature contract and project DNA now use transactional queueing and
+  batched consumers instead of one direct enrichment webhook per bookmark.
+- Transient enrichment failures receive at most three bounded attempts.
+  Permanent failures stop at once. Manual Re-enrich starts a new request.
+- Browser import completion is separate from metadata enrichment completion.
+- Browser HTML import merges. Browser HTML export is portable. Reway JSON backup
+  and staged replacement restore are lossless.
+- The capacity target is 100,000 bookmarks per account, with 10,000 as the
+  routine large-import benchmark and 50 MB as the initial configurable file
+  limit.
+- The full work order, job rules, edge cases, security rules, and tests are in
+  `spec/integrations/supabase/phase-08-backend-plan.md`.
 
-## Verified
+## What's next
 
-- Phase 7 has 20 passing tests across three import files. The final related
-  Settings and management run passed 38 tests across five files.
-- The full four-worker Vitest run passed 192 tests across 38 files.
-- `pnpm run check`, the client and server production build, and
-  `git diff --check` passed after the final Reset demo correction.
-- Changed-scope React Doctor scored 82/100. Its three warnings are unchanged
-  code in profile and management files; Phase 7 code produced no diagnostic.
-- Browser, touch, keyboard, screen-reader, and rendered checks were not run.
+1. Follow the session start sequence and read the Phase 8 backend plan.
+2. Confirm that the Supabase MCP target and environment variable names exist
+   without printing their values.
+3. Verify that `VITE_SUPABASE_KEY` contains a publishable key. Prefer the current
+   official name `VITE_SUPABASE_PUBLISHABLE_KEY` or add one validated alias.
+4. Start Phase 8A only. Verify the project identity, migration history, client
+   and secret-key split, dependencies, and generated-type path before Phase 8B.
 
-## Next
+## Expected environment names
 
-1. Run the required new-feature grilling pass for Phase 8.
-2. Confirm the command quick-save and bookmark-enrichment fixtures from the
-   feature contract.
-3. Implement the command and card lifecycle without backend work.
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_KEY`, expected to contain a publishable key
+- `VITE_SITE_URL`
+- `SUPABASE_SECRET_KEY`, server-only
 
-## Scope
-
-- Phase 7 is complete. Phase 8 covers command quick save and bookmark
-  enrichment states.
-- Keep real persistence, metadata fetches, Supabase, and extension work out of
-  scope.
-- Do not use browser or Playwright tools without explicit permission.
+Never print, copy into documentation, or expose the values. The Supabase secret
+key must not appear in `import.meta.env`, a browser module, or a client bundle.
 
 ## Suggested skills
 
-- `grilling` before Phase 8 code because it is a new feature.
-- `codebase-design` for the bookmark-lifecycle module and adapter seam.
-- `interface-design` and `coss` for command and card-level pending or failure
-  feedback.
-- `tanstack-hotkeys` if the quick-save keyboard path changes.
-- `no-use-effect` and `vercel-react-best-practices` for React implementation.
-- `vitest` for quick save, duplicate input, stale results, and Retry behavior.
-- `react-doctor` after the React implementation.
+- `supabase` for current platform guidance, key safety, migrations, and MCP work.
+- `supabase-postgres-best-practices` and `postgresql-table-design` for schema,
+  RLS, indexes, constraints, jobs, and queue access.
+- `codebase-design` for the domain interfaces and mock or Supabase adapter seams.
+- `tanstack-start` and `find-docs` before framework-specific server or auth code.
+- `no-use-effect` and `vercel-react-best-practices` when React wiring starts.
+- `vitest` for contract, RLS, queue, import, export, and failure tests.
+- `react-doctor` after React implementation.
 - `unslop` for interface and spec text.
 
 ## Established workflow
 
-- Follow `AGENTS.md` and load skills just before the work that needs them.
-- Use focused tests for important behavior, then run lint, formatting, type
-  checks, the production build, and diff hygiene.
-- Keep all mock outcomes deterministic and do not imply that local actions
-  changed a real account or session.
+- Follow `AGENTS.md` and load skills only when their phase begins.
+- Build Phase 8A through 8J in order. Stop and verify each slice before the next.
+- Keep a mock path until its Supabase adapter passes the same contract tests.
+- Run focused risk-based tests during a slice. Run normal lint, format, and type
+  checks, then the broader gates at the end of a coherent change.
+- Do not use browser or Playwright checks without explicit permission.
+- Do not close Session 05 unless the user explicitly ends it.
 
-## References
+## Key references
 
-- `spec/dashboard-ui/implementation-order.md`
-- `spec/integrations/features/feature-contract.md`
-- `spec/sessions/session-05.md`
-- `src/dev/dashboard-ui/dashboard-ui-controller.ts`
-- `src/dev/dashboard-ui/command.tsx`
-- `src/dev/dashboard-ui/dashboard-x-import.ts`
-- `src/dev/dashboard-ui/dashboard-x-import-state.ts`
-- `src/dev/dashboard-ui/dashboard-x-import-panel.tsx`
+- `spec/integrations/supabase/phase-08-backend-plan.md` for the Phase 8 order and
+  acceptance rules.
+- `spec/integrations/features/feature-contract.md` for approved product behavior.
+- `spec/identity/project-dna.md` for capture, retry, privacy, and queue rules.
+- `spec/dashboard-ui/implementation-order.md` for phase routing and UI history.
+- `spec/sessions/session-05.md` for verified continuity.
 
 ## Open questions
 
-- Decide where general browser bookmark import belongs in a later phase. This
-  does not block Phase 8.
+- Phase 8A has no open product question. Start it after the environment and MCP
+  checks. Do not carry an unresolved product choice into Phase 8B or later.
+- Use the ordered grilling queue in
+  `spec/integrations/supabase/phase-08-backend-plan.md`. It covers production
+  auth rules, recent authentication for deletion, username uniqueness, offline
+  quick save, bulk enrichment coverage, favicon and OG-image delivery, import
+  concurrency, pause and cancel behavior, root-folder placement, export scope,
+  restore drift and recovery, retention, and JSON compatibility.
+- Ask one question at a time and include the recommended answer. Update the
+  contract after each confirmed choice.
+- Set latency budgets only after local and hosted load runs provide p50, p95,
+  and p99 results. This is a later evidence gate, not a preflight question.
+
+## Redaction rule
+
+- Never record environment values, keys, access tokens, project IDs, imported
+  URLs, or user file contents in specs, logs, test snapshots, or handoffs.

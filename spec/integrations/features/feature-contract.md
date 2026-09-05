@@ -29,18 +29,26 @@ This is the authoritative record of Reway's approved feature behaviour and techn
 
 ### Enrichment pipeline
 
-- A Supabase Edge Function is triggered by a DB webhook on `INSERT` into `bookmarks`.
-- Enrichment runs server-side and independently of the browser session. It completes even if the user closes the tab immediately after saving.
-- On completion, the Edge Function writes title, favicon, OG image, and `metadata_status = 'enriched'`.
-- On failure, the Edge Function sets `metadata_status = 'failed'`.
-- There are no automatic retries.
-- A user may manually trigger re-enrichment from the bookmark overflow menu. It re-invokes the Edge Function for that bookmark ID.
+- Bookmark insertion, creation of an enrichment request, and queueing happen in one database transaction. A committed bookmark cannot lose its enrichment request between those steps.
+- Supabase Queues is the durable record of pending delivery. Database webhooks may wake a consumer, but they are never the only record that work exists.
+- Batched Edge Function consumers perform enrichment independently of the browser session. Work continues if the user closes Settings, changes tabs, reloads, or closes the browser.
+- Quick saves and manual re-enrichment use an interactive queue. Imported bookmarks use a bulk queue with reserved worker capacity. Interactive work may pass bulk work, but bulk work must continue to make progress.
+- Enrichment fetches and extracts title, favicon, and OG-image metadata as one bounded operation regardless of the current view. A missing OG image is a valid enriched result with a null image.
+- On completion, the worker writes title, favicon, OG image, and `metadata_status = 'enriched'`.
+- Re-enrichment preserves the last good metadata while it is pending. Success replaces it. Failure keeps it and sets `metadata_status = 'failed'`.
+- A new bookmark that fails enrichment keeps its URL-derived title and domain fallback.
+- Queue consumers assume a message may arrive more than once. A stable request ID, idempotency key, and request generation prevent duplicate or stale writes.
+- Reway retries transient worker, network, DNS, timeout, rate-limit, and selected server failures at most three times with bounded exponential backoff and jitter. It respects `Retry-After` when present.
+- Reway does not retry permanent URL, security, content, authorization, or validation failures.
+- After the attempt limit, the worker stores a failed result. A user may start a new re-enrichment request from the bookmark overflow menu with a new request generation and attempt budget.
 - Before manual re-enrichment, the client resets `metadata_status` to `pending` so the card immediately shows the in-progress state.
 
 #### SSRF protection
 
 - SSRF protection lives inside the Edge Function, in one place for every save path including the extension.
-- Before any fetch, enforce scheme validation for `https` and `http` only, parse the hostname, and block private and localhost IP ranges.
+- Before any connection, enforce `https` and `http` only, reject embedded credentials, parse the hostname, resolve and pin the destination, and block local, private, link-local, multicast, reserved, and cloud-metadata addresses for IPv4 and IPv6.
+- Disable automatic redirects. Resolve and validate every redirect target before following it.
+- Apply DNS, connection, response-header, response-body, redirect-count, content-type, and total-duration limits.
 
 #### Why enrichment is not a TanStack server function
 
@@ -57,6 +65,7 @@ This is the authoritative record of Reway's approved feature behaviour and techn
   2. `UPDATE`: the Edge Function completes enrichment and writes back. The card updates with title, favicon, OG image, and `metadata_status = 'enriched'` or `failed`.
 
 - No polling and no manual refresh.
+- Realtime is a fast notification path, not the source of truth. After subscription, reconnect, tab focus, or a known gap, the client queries the current user-scoped rows and rejects stale events by row version or update time.
 
 #### Required setup
 
@@ -308,11 +317,39 @@ The contract follows five interaction rules:
 - Top-level collection results use the collection name. Child collection results use the full path, such as `Media / Streaming Platforms`.
 - Collection search matches a child name and its parent path. Selecting a result opens that exact collection.
 - Typing or pasting a URL into the command palette and pressing Enter saves it immediately with `metadata_status = 'pending'`.
+- The command accepts complete `http://` and `https://` URLs and clear scheme-less public web addresses. It trims outer whitespace and prefixes a scheme-less address with `https://`.
+- URL recognition does not make a network request. Malformed input, unsupported schemes, localhost, and private-network targets remain search text and do not save by surprise.
+- A valid address takes the quick-save path on Enter even when the library already contains the same URL. Duplicate URLs remain allowed.
 - Quick add has no collection picker. The user can organize later.
+- Quick add creates an Uncollected bookmark and keeps the current destination. When the current view cannot show the new bookmark, announce `Saved to Uncollected. Metadata pending.`
+- Keyboard save closes the command at once without decorative motion or a success toast.
 - Database full-text search uses a `tsvector` over `(title, url, tags)` with a GIN index.
 - The command palette queries Supabase directly and never loads the full library into memory.
 - Client-side filtering applies only to an already-loaded current view, such as a visible collection; it never substitutes for full-library search.
 - Add `pg_trgm` for fuzzy, typo-tolerant matching.
+
+### Browser import, export, and restore
+
+- General browser import accepts Netscape-style bookmark HTML exported by current browsers.
+- Browser import merges into the current library. It preserves valid source titles and creation times where the file provides them.
+- The first capacity target is 100,000 bookmarks per account. A 10,000-bookmark file is the routine large-import benchmark. The initial configurable file limit is 50 MB.
+- Use resumable upload above 6 MB or when a prior upload was interrupted. Uploads use private, user-scoped temporary object paths.
+- Parse every import as untrusted data. Never execute scripts or JavaScript wrappers from an uploaded file.
+- Review reports bookmarks, folders, invalid rows, duplicates, flattened paths, and collection-name conflicts before commit.
+- Valid bookmarks start selected. Duplicate URLs remain eligible.
+- Import does not merge a conflicting source folder into an existing Reway collection without approval. It proposes a unique imported name and lets the user choose an existing collection explicitly. `Use suggested names for all` resolves a large set of safe rename proposals at once.
+- Unresolved collection-name conflicts block commit. Excluded folders and bookmarks remain excluded instead of moving to Uncollected.
+- Import keeps the first two collection tiers. It assigns deeper descendants to the nearest retained child and reports every flattened source path.
+- An import is complete when every selected bookmark and collection record has a durable result. Metadata enrichment continues through the bulk queue and does not change import success into partial failure.
+- Import Retry processes only records that failed to commit. Re-enrich handles later metadata failures.
+- Closing Settings, changing tabs, reloading, losing the client connection, or closing the browser does not stop a durable import job.
+- Import progress comes from stored job and item state. The client refetches that state after reconnect instead of relying only on missed Realtime events.
+- Reway exports browser-compatible bookmark HTML for portability. It escapes every user-controlled HTML field and omits unsafe URL schemes.
+- Browser HTML cannot represent Reway's full data model. Multi-collection bookmarks may appear more than once. Tags, Trash state, visit counts, and Reway-only ordering are not guaranteed to survive.
+- Reway also exports a versioned JSON backup for a lossless library restore. It includes user-owned bookmarks, collections, tags, memberships, ordering, and preferences, but excludes secrets, sessions, worker diagnostics, and queue records.
+- Reway JSON restore is separate from browser import. It validates and stages the full replacement before asking for confirmation.
+- Restore creates a recoverable snapshot of the active library, then activates the validated staged snapshot in one short transaction. Failure before activation leaves the active library unchanged.
+- Export and restore use durable server jobs. Generated files and staged data have explicit expiry and cleanup rules.
 
 ### Collection Hierarchy Feedback
 
@@ -361,6 +398,7 @@ The contract follows five interaction rules:
 - Duplicate URLs remain eligible because Reway allows duplicates. Review labels posts already in the library and posts repeated in the selected archive.
 - A malformed archive stops before Review. An empty archive shows an empty result. If an archive mixes valid and malformed records, Review excludes the malformed records and reports how many it skipped.
 - Import is not optimistic. It reports the current step and processed count, then adds each post to the library only after that post succeeds.
+- The production X importer uses the same durable import-job records, reconnect behavior, idempotent item commits, and separate bulk-enrichment queue as browser import.
 - Successful posts go to `X Bookmarks`. Reway creates the collection with the X icon and Neutral color when needed, or reuses the existing collection.
 - Settings may close while an import runs. Reopening Import restores its current state, and Reway blocks a second import until the first one finishes.
 - Partial failure keeps successful posts and retries only failed posts. Total failure adds nothing. Retry keeps the chosen archive, selection, and review results.
@@ -442,6 +480,7 @@ The contract follows five interaction rules:
 - The library is private by default. Every mutation is user-scoped and Supabase-auth enforced.
 - Save latency must be zero. Enrichment is secondary, asynchronous, and non-blocking.
 - Enrichment failures show only a small indicator on the bookmark card. They never produce a toast.
+- Reway retries transient enrichment failures at most three times. It does not retry permanent failures or continue after the attempt limit without a user-started Re-enrich action.
 - Canvas exists to organize and launch bookmarks, not to replace Miro or FigJam.
 - Canvas nodes are bookmark references only, never freeform content.
 - React Flow drawing tools are gated behind a paid subscription.

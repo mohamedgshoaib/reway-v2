@@ -43,6 +43,14 @@ Write facts only. No plans, no advice, no narration.
 - Changed-scope React Doctor scored 82/100. Its three warnings point to unchanged profile form handlers and an unchanged management-state array chain; Phase 7 code produced no diagnostic.
 - Browser, touch, keyboard, screen-reader, and rendered checks remain unverified after Phase 7.
 - Reset demo restores the account, import, bookmark, collection, tag, destination, selection, sort, and view fixtures after an import.
+- Completed the Phase 8 grilling and research pass without starting implementation.
+- Reviewed the current X import state, Supabase Queues, Edge Function limits, resumable uploads, Realtime gaps, TanStack Start server boundaries, Linear sync recovery, Vercel queue semantics, and current Karakeep and Raindrop import behavior.
+- Added `spec/integrations/supabase/phase-08-backend-plan.md` as the bottom-up implementation order for Supabase, core data, durable jobs, capture, enrichment, import, export, restore, Realtime, and mock replacement.
+- Updated the project DNA and feature contract to replace direct per-bookmark enrichment webhooks with transactional durable queueing and batched consumers.
+- Updated the dashboard implementation order so Phase 8 routes to the dedicated backend plan and keeps Phase 9 as the completion pass.
+- Kept this checkpoint documentation-only. No Supabase package, schema, migration, client, backend code, environment value, or MCP mutation was added.
+- Audited the full Phase 8 discussion against the backend plan and handoff before the next chat.
+- Confirmed that Phase 8A has no unresolved product question and added an ordered grilling queue for choices that block Phase 8B or later.
 
 ---
 
@@ -66,6 +74,18 @@ Write facts only. No plans, no advice, no narration.
 - Import state survives Settings page changes and closure. The controller owns library writes, toasts, and navigation while the import-state module owns fixtures and progress.
 - The existing `X Bookmarks` collection is reused. A missing collection is created with the X icon and Neutral color.
 - General browser bookmark import and its folder rules will be discussed for a later phase.
+- Phase 8 is a backend umbrella with independent gates for connection setup, auth and client seams, core schema and RLS, domain adapters, durable jobs, capture and enrichment, import, export and restore, Realtime, and mock replacement.
+- Supabase Queues is the durable enrichment transport. A bookmark insert creates its bookmark row, enrichment request, and queue message in one database transaction.
+- Interactive quick-save and manual Re-enrich work uses a separate queue from bulk-import enrichment, with capacity reserved for both.
+- Transient enrichment failures receive at most three attempts with bounded exponential backoff and jitter. Permanent failures stop at once, and manual Re-enrich starts a new request generation.
+- Import success means bookmark and collection records are durable. Metadata enrichment continues separately and cannot turn a successful import into a partial import.
+- Browser HTML import merges into the current library. Reway JSON restore stages and validates a full replacement before one short activation transaction.
+- Reway exports portable browser HTML and a separate lossless, versioned JSON backup.
+- General import proposes unique names for collection conflicts and never merges into an existing collection without an explicit choice.
+- Phase 8 targets 100,000 bookmarks per account, uses 10,000 bookmarks as the routine large-import benchmark, and starts with a configurable 50 MB file limit.
+- Quick save accepts complete HTTP or HTTPS URLs and clear scheme-less public web addresses, prefixes scheme-less addresses with HTTPS, permits duplicates, creates an Uncollected bookmark, and keeps the current destination.
+- When quick save is not visible in the current destination, the dashboard announces `Saved to Uncollected. Metadata pending.` without a success toast.
+- Re-enrich keeps the last good metadata while pending and after failure. Missing OG-image metadata remains a valid enriched result.
 
 ---
 
