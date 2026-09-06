@@ -4,8 +4,10 @@
 
 - Research and product decisions were recorded on 2026-09-05.
 - Dashboard phases 0 through 7 are complete as local mock work.
-- No Supabase package, schema, migration, client, or backend code has been added
-  in Phase 8.
+- Phase 8A and Phase 8B were completed on 2026-09-06.
+- No schema, migration, generated database type, or feature backend code has
+  been added in Phase 8. Phase 8B added only the client and authentication
+  modules described below.
 - Session 05 remains open.
 
 ## Goal
@@ -87,6 +89,26 @@ review. Do not treat the phase as one large change.
 Stop after the connection check if the project identity, key type, migration
 history, or MCP target is unclear.
 
+Verified Phase 8A state:
+
+- The environment URL and publishable key match the one healthy project exposed
+  by the connected Supabase MCP server. No environment value or project ID was
+  recorded.
+- Remote migration history and the remote `public` schema are empty. The
+  repository uses the CLI migration workflow under `supabase/migrations/`, with
+  `supabase/config.toml` in version control.
+- Local Data API setup requires explicit grants for new tables. RLS remains a
+  separate row-access requirement.
+- `@supabase/supabase-js`, `@supabase/ssr`, and the Supabase CLI are pinned in
+  `package.json` and `pnpm-lock.yaml`.
+- `VITE_SUPABASE_PUBLISHABLE_KEY` is the main browser variable.
+  `VITE_SUPABASE_KEY` remains a checked alias for the current local setup.
+- Public environment checks live in `src/lib/supabase-environment.ts`. Secret
+  checks live in `src/lib/supabase-environment.server.ts` and read
+  `SUPABASE_SECRET_KEY` from `process.env`.
+- Generated database types will live at
+  `src/types/database.generated.ts` after the first reviewed schema exists.
+
 ### Phase 8B: client and auth seams
 
 Create separate modules for browser, request-scoped server, and privileged
@@ -106,6 +128,25 @@ worker access.
 
 The dashboard guide snippet with one shared `src/utils/supabase.ts` client is a
 quickstart example. Do not use that single module as Reway's production seam.
+
+Verified Phase 8B state:
+
+- `src/lib/supabase/browser-client.ts` creates the cookie-backed browser client
+  from the public URL and publishable key.
+- `src/lib/supabase/server-client.server.ts` creates one server client per
+  request. It reads all request cookies, writes refreshed cookies, and applies
+  Supabase's private no-cache response headers.
+- `src/lib/supabase/worker-client.server.ts` creates the privileged client from
+  the server-only secret and disables session persistence, token refresh, and
+  URL session detection.
+- `src/lib/supabase/auth-identity.server.ts` exposes a `createServerFn` that
+  verifies the session with `getClaims()` and returns only the authenticated
+  subject as `userId`.
+- Eleven focused environment, cookie, client-separation, and identity tests
+  pass across five files. The static checks, client and server production
+  builds, client bundle secret scan, and `git diff --check` also pass.
+- Hosted Confirm Email and Google OAuth settings and live authentication remain
+  unverified. Verify them before testing a live auth flow.
 
 ### Phase 8C: core schema and security
 
@@ -502,14 +543,20 @@ skill and ask the matching questions below one at a time.
 
 Before Phase 8B:
 
-- Lock production account creation and recovery rules for email and password,
-  magic link, and Google. Start with required email confirmation, a complete
-  password-reset flow, and no silent identity merge.
-- Decide whether permanent account deletion requires recent authentication in
-  addition to typing `delete`. Start with recent authentication because the
-  action has no recovery period.
-- Decide whether production usernames remain non-unique display names. Start
-  with non-unique names until Reway adds public profiles or handles.
+- Email and password sign-up requires email confirmation before first sign-in.
+  Production sign-in includes Google OAuth.
+- Password recovery uses a complete in-app request, return, password-change, and
+  result flow. The request response never reveals whether an account exists.
+- Supabase may link Google to an existing user only when Google returns the same
+  verified email. V1 keeps manual identity linking disabled, treats different
+  emails as separate accounts, and does not merge libraries.
+- Permanent account deletion requires fresh authentication with the current
+  sign-in method after the user types `delete`. Failure or cancellation leaves
+  the account unchanged. The server revokes active sessions as part of the
+  deletion flow.
+- Usernames remain non-unique display names. The authenticated user ID owns data
+  and authorization. Any future public identity uses a separate normalized,
+  unique handle.
 
 Before Phase 8F:
 

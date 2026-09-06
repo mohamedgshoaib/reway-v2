@@ -51,6 +51,28 @@ Write facts only. No plans, no advice, no narration.
 - Kept this checkpoint documentation-only. No Supabase package, schema, migration, client, backend code, environment value, or MCP mutation was added.
 - Audited the full Phase 8 discussion against the backend plan and handoff before the next chat.
 - Confirmed that Phase 8A has no unresolved product question and added an ordered grilling queue for choices that block Phase 8B or later.
+- Completed Phase 8A without adding a schema, migration, generated database type, Supabase client, or feature backend code.
+- Confirmed that the environment URL and publishable key match the one healthy project exposed by the Supabase MCP server. No environment value or project ID was recorded.
+- Confirmed that remote migration history and the remote `public` schema are empty, then initialized the local CLI migration workflow under `supabase/`.
+- Pinned `@supabase/supabase-js` 2.112.4, `@supabase/ssr` 0.12.5, and Supabase CLI 2.116.0. The repository's seven-day release guard rejected newer runtime releases.
+- Added public and server-only environment checks with five passing tests. Errors report variable names without values.
+- Verified the Supabase CLI, focused environment tests, TypeScript, lint, the client and server production build, and a client-output secret scan. The full run passed 197 tests across 39 files with four workers.
+- Reserved `src/types/database.generated.ts` for generated types after the first reviewed schema.
+- Began the Phase 8B decision pass without adding Supabase client or authentication code.
+- Confirmed email verification before the first email and password sign-in and Google OAuth as part of production sign-in.
+- Confirmed a complete in-app password-recovery flow with an account-neutral request response, an allowlisted return route, a new-password form, and a clear result.
+- Confirmed Supabase's same-verified-email automatic link for Google, disabled manual identity linking for V1, and kept different emails as separate accounts without library merging.
+- Confirmed fresh authentication after typing `delete` for permanent account deletion. Failed authentication leaves the account unchanged, and the server revokes active sessions as part of deletion.
+- Completed the Phase 8B decision pass without starting client or authentication implementation.
+- Confirmed non-unique usernames as private display names. The authenticated user ID remains the owner and authorization identity, and any future public handle will be a separate field.
+- Completed Phase 8B without adding a schema, migration, generated database type, or feature backend code.
+- Added separate browser, request-scoped server, and privileged worker Supabase client modules.
+- The server client reads all request cookies, writes refreshed cookies, and applies Supabase's private no-cache response headers.
+- The privileged worker client reads the secret only through the server-only environment module and disables session persistence, token refresh, and URL session detection.
+- Added one `createServerFn` identity reader that verifies the session through `getClaims()` and returns only the authenticated subject as `userId`.
+- Added six client, cookie, worker, and identity tests. With the five environment tests, the focused Phase 8B run passed 11 tests across five files.
+- `pnpm run check`, the client and server production build, the client bundle secret scan, and `git diff --check` passed.
+- Hosted Confirm Email and Google OAuth settings and live authentication remain unverified after Phase 8B.
 
 ---
 
@@ -86,6 +108,20 @@ Write facts only. No plans, no advice, no narration.
 - Quick save accepts complete HTTP or HTTPS URLs and clear scheme-less public web addresses, prefixes scheme-less addresses with HTTPS, permits duplicates, creates an Uncollected bookmark, and keeps the current destination.
 - When quick save is not visible in the current destination, the dashboard announces `Saved to Uncollected. Metadata pending.` without a success toast.
 - Re-enrich keeps the last good metadata while pending and after failure. Missing OG-image metadata remains a valid enriched result.
+- Phase 8 uses the CLI migration workflow under `supabase/migrations/`. Local Data API setup requires explicit grants for new tables.
+- `VITE_SUPABASE_PUBLISHABLE_KEY` is the main browser variable. `VITE_SUPABASE_KEY` remains a checked alias for the current local environment.
+- `SUPABASE_SECRET_KEY` is read only from `process.env` inside a server-only module.
+- Phase 8B product choices must be locked before its client or authentication code starts.
+- Email and password sign-up requires email confirmation before first sign-in.
+- Production sign-in includes Google OAuth.
+- Password recovery never reveals whether an account exists and completes the password change inside Reway.
+- Supabase may link Google only when it returns the same verified email. V1 keeps manual identity linking disabled and treats different emails as separate accounts.
+- Permanent account deletion requires fresh authentication after the typed confirmation and revokes active sessions as part of the server flow.
+- Usernames remain non-unique display names and never act as account, routing, ownership, or authorization keys.
+- Browser access uses the public URL and publishable key through `createBrowserClient`.
+- Server access creates a new cookie-backed client for each request and applies every cookie and cache header returned by `@supabase/ssr`.
+- Privileged worker access uses a separate server-only client with no persisted session state.
+- Server authorization reads the verified JWT subject through `getClaims()` and does not trust `getSession()` or editable user metadata.
 
 ---
 

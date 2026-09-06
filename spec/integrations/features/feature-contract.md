@@ -411,8 +411,15 @@ The contract follows five interaction rules:
 ### Authentication
 
 - Email and password.
+- Email and password sign-up requires email confirmation before first sign-in.
 - Magic link through OTP-based passwordless login, as an alternative to email and password.
-- Google OAuth.
+- Production sign-in includes Google OAuth.
+- Supabase may link Google to an existing Reway user only when Google returns the same verified email.
+- V1 keeps manual identity linking disabled. Different email addresses stay separate, and Reway does not merge accounts or libraries.
+- Usernames are non-unique display names. The authenticated user ID owns data and authorization; usernames do not identify accounts or appear in public routes.
+- If Reway later adds public identity, it will add a separate normalized, unique handle instead of changing username meaning.
+- Password recovery starts on a public request page and always returns the same response whether the email belongs to an account or not.
+- The recovery email returns to an allowlisted in-app route with a valid recovery session. That route collects and confirms the new password, applies the change, and shows a clear result.
 
 ### Profile Setup
 
@@ -447,8 +454,10 @@ The contract follows five interaction rules:
 ### Account Deletion
 
 - Account deletion uses a two-step confirmation. The user must type `delete` before the destructive action becomes available.
+- After typing `delete`, the user must complete fresh authentication with the current sign-in method before the server may delete the account. A normal existing session is not enough.
+- Failed or cancelled authentication leaves the account and its data unchanged.
 - Confirmation permanently deletes all user data through `CASCADE` from `auth.users`, including bookmarks, collections, tags, and profile.
-- Confirmation immediately invalidates the auth session.
+- The server revokes active sessions as part of the confirmed deletion flow. Deleting the user record alone does not count as session revocation.
 - On its next Supabase 401, the extension clears `chrome.storage.session` and `chrome.storage.local`.
 - The extension then shows: "Log in at reway.page to use the extension."
 - This action is permanent, unrecoverable, and has no grace period or soft delete.

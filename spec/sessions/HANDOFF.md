@@ -2,99 +2,65 @@
 
 ## Purpose
 
-- Start Phase 8 from the database upward after the user prepares the Supabase
-  environment and MCP connection.
+- Prepare and implement Phase 8C core schema and security only.
 
 ## Current scope
 
-- Phase 8 now covers the Supabase backend, core data, durable jobs, capture,
-  enrichment, browser import, export, restore, Realtime, and gated mock
-  replacement.
-- This session produced research and documentation only. No backend code or
-  package installation has started.
+- Phase 8A and Phase 8B are complete.
+- No schema, migration, generated database type, or feature backend code exists
+  yet.
 
 ## Current state
 
 - Dashboard phases 0 through 7 are complete.
 - Session 05 remains open.
-- The feature contract and project DNA now use transactional queueing and
-  batched consumers instead of one direct enrichment webhook per bookmark.
-- Transient enrichment failures receive at most three bounded attempts.
-  Permanent failures stop at once. Manual Re-enrich starts a new request.
-- Browser import completion is separate from metadata enrichment completion.
-- Browser HTML import merges. Browser HTML export is portable. Reway JSON backup
-  and staged replacement restore are lossless.
-- The capacity target is 100,000 bookmarks per account, with 10,000 as the
-  routine large-import benchmark and 50 MB as the initial configurable file
-  limit.
-- The full work order, job rules, edge cases, security rules, and tests are in
+- The connected Supabase project was healthy during Phase 8A. Its remote
+  migration history and `public` schema were empty at that check.
+- Local migration setup lives in `supabase/config.toml` and
+  `supabase/migrations/`. Local Data API setup requires explicit grants for new
+  tables.
+- Public and secret environment checks are in place. The runtime packages and
+  CLI remain pinned.
+- Browser, request-scoped server, privileged worker, and verified identity
+  modules live under `src/lib/supabase/`.
+- The server client maps request cookies and every response cookie and cache
+  header required by `@supabase/ssr`.
+- The worker client is server-only and has no persisted auth state. The identity
+  server function uses `getClaims()` and returns only `userId`.
+- The working tree contains the uncommitted Phase 8A and Phase 8B work. Preserve
+  it.
+- The Phase 8B focused run passed 11 tests across five files. `pnpm run check`,
+  both production builds, the client bundle secret scan, and
+  `git diff --check` passed.
+- Hosted Confirm Email and Google OAuth settings and live authentication remain
+  unverified.
+- The full work order, schema rules, security rules, and tests are in
   `spec/integrations/supabase/phase-08-backend-plan.md`.
 
 ## What's next
 
-1. Follow the session start sequence and read the Phase 8 backend plan.
-2. Confirm that the Supabase MCP target and environment variable names exist
-   without printing their values.
-3. Verify that `VITE_SUPABASE_KEY` contains a publishable key. Prefer the current
-   official name `VITE_SUPABASE_PUBLISHABLE_KEY` or add one validated alias.
-4. Start Phase 8A only. Verify the project identity, migration history, client
-   and secret-key split, dependencies, and generated-type path before Phase 8B.
+1. Follow the session start sequence, then read the Phase 8 backend plan and
+   feature contract.
+2. Run the required `grilling` pass for Phase 8C and confirm the schema slice
+   before writing SQL.
+3. Load `codebase-design`, `supabase`, `postgresql-table-design`,
+   `supabase-postgres-best-practices`, and `find-docs`. Check current Supabase
+   and Postgres docs before choosing schema or RLS syntax.
+4. Recheck the remote migration history and `public` schema without recording a
+   project ID or secret.
+5. Build the core schema in the order set by the backend plan. Use the CLI
+   migration workflow, explicit Data API grants, RLS, ownership checks, and
+   indexed user-scoped access paths.
+6. Generate `src/types/database.generated.ts` only after the first schema passes
+   review.
+7. Add focused migration, same-user, cross-user denial, and replay tests. Stop
+   after Phase 8C verification. Do not start Phase 8D.
 
 ## Expected environment names
 
 - `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_KEY`, expected to contain a publishable key
-- `VITE_SITE_URL`
-- `SUPABASE_SECRET_KEY`, server-only
-
-Never print, copy into documentation, or expose the values. The Supabase secret
-key must not appear in `import.meta.env`, a browser module, or a client bundle.
-
-## Suggested skills
-
-- `supabase` for current platform guidance, key safety, migrations, and MCP work.
-- `supabase-postgres-best-practices` and `postgresql-table-design` for schema,
-  RLS, indexes, constraints, jobs, and queue access.
-- `codebase-design` for the domain interfaces and mock or Supabase adapter seams.
-- `tanstack-start` and `find-docs` before framework-specific server or auth code.
-- `no-use-effect` and `vercel-react-best-practices` when React wiring starts.
-- `vitest` for contract, RLS, queue, import, export, and failure tests.
-- `react-doctor` after React implementation.
-- `unslop` for interface and spec text.
-
-## Established workflow
-
-- Follow `AGENTS.md` and load skills only when their phase begins.
-- Build Phase 8A through 8J in order. Stop and verify each slice before the next.
-- Keep a mock path until its Supabase adapter passes the same contract tests.
-- Run focused risk-based tests during a slice. Run normal lint, format, and type
-  checks, then the broader gates at the end of a coherent change.
-- Do not use browser or Playwright checks without explicit permission.
-- Do not close Session 05 unless the user explicitly ends it.
-
-## Key references
-
-- `spec/integrations/supabase/phase-08-backend-plan.md` for the Phase 8 order and
-  acceptance rules.
-- `spec/integrations/features/feature-contract.md` for approved product behavior.
-- `spec/identity/project-dna.md` for capture, retry, privacy, and queue rules.
-- `spec/dashboard-ui/implementation-order.md` for phase routing and UI history.
-- `spec/sessions/session-05.md` for verified continuity.
-
-## Open questions
-
-- Phase 8A has no open product question. Start it after the environment and MCP
-  checks. Do not carry an unresolved product choice into Phase 8B or later.
-- Use the ordered grilling queue in
-  `spec/integrations/supabase/phase-08-backend-plan.md`. It covers production
-  auth rules, recent authentication for deletion, username uniqueness, offline
-  quick save, bulk enrichment coverage, favicon and OG-image delivery, import
-  concurrency, pause and cancel behavior, root-folder placement, export scope,
-  restore drift and recovery, retention, and JSON compatibility.
-- Ask one question at a time and include the recommended answer. Update the
-  contract after each confirmed choice.
-- Set latency budgets only after local and hosted load runs provide p50, p95,
-  and p99 results. This is a later evidence gate, not a preflight question.
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SECRET_KEY`
 
 ## Redaction rule
 
