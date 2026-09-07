@@ -73,6 +73,107 @@ Write facts only. No plans, no advice, no narration.
 - Added six client, cookie, worker, and identity tests. With the five environment tests, the focused Phase 8B run passed 11 tests across five files.
 - `pnpm run check`, the client and server production build, the client bundle secret scan, and `git diff --check` passed.
 - Hosted Confirm Email and Google OAuth settings and live authentication remain unverified after Phase 8B.
+- Completed the Phase 8C grilling pass and approved all 34 schema, security,
+  concurrency, retention, and performance decisions without writing SQL.
+- Added `spec/integrations/supabase/phase-08c-schema-decisions.md` as the
+  complete approved question-and-answer record.
+- Reconciled the approved decisions with the feature contract. Private
+  Broadcast replaces Postgres Changes, raw visit history expires after 30 days,
+  lifetime counts move to `bookmark_stats`, normalized tag filtering uses a
+  composite B-tree, and normal bulk mutations remain atomic.
+- Added private Storage cleanup to confirmed account deletion because Supabase
+  cannot delete an Auth user who owns Storage objects.
+- Kept Session 05 open and moved the handoff to Phase 8C schema implementation.
+- Verified that the Phase 8C decision record contains all 34 approved answers,
+  every referenced handoff path exists, and stale Phase 8C grilling and replaced
+  schema terms are absent from the active records.
+- `pnpm run check` passed after the documentation update. No code test or React
+  check applied to this documentation-only checkpoint.
+- Completed Phase 8C without starting Phase 8D domain adapters.
+- Added and applied four hosted migrations for the core schema, advisor index
+  fixes, versioned rebalance, bounded retention cleanup, and corrected
+  rebalance constraint lookup.
+- Added nine public user-owned tables and thirteen private search, job, file,
+  snapshot, and staging tables with direct indexed ownership and same-user
+  composite foreign keys.
+- Added database-enforced name, hierarchy, Trash, state, idempotency, ordering,
+  worker lease, and account-write rules.
+- Added exact authenticated grants, RLS policies, one private Realtime Broadcast
+  policy, security-invoker public functions, and private checked helpers.
+- Added grouped statement triggers for collection counts, visit statistics, and
+  search upkeep, plus compact bookmark notices and bulk resync notices.
+- Added `supabase/tests/phase-08c-core-schema.mjs` as the Docker-free migration,
+  behavior, security, and 100,000-bookmark capacity gate.
+- Added `supabase/tests/phase-08c-rebalance.mjs` and expanded the hosted rollback
+  suite to check all three rebalance functions and stale-version rejection.
+- Reproduced the missing-constraint fault before the fix, then verified the
+  corrective migration through the public collection, tag, and bookmark
+  functions locally and on the hosted database.
+- The hosted rollback suite passed the high-risk account, bookmark, hierarchy,
+  visit, search, Trash, worker, RLS, and anonymous-denial paths.
+- The hosted generated-fingerprint benchmark inserted 10,000 rows in about
+  1.97 seconds. Its forced rollback and follow-up counts confirmed no fixture
+  remained.
+- Supabase's performance advisor reports zero unindexed foreign keys and no
+  warning or error after the follow-up index migration.
+- Generated the hosted public schema types at
+  `src/types/database.generated.ts`.
+- `pnpm run check`, both production builds, the client secret scan, and
+  `git diff --check` passed. React Doctor did not apply because no React file
+  changed.
+- Completed the Phase 8D grilling pass without starting implementation.
+- Added `spec/integrations/supabase/phase-08d-domain-decisions.md` as the
+  approved route, domain, adapter, paging, search, mutation, verification, and
+  complexity contract.
+- Audited the live route and found no CSS or component behavior tied to the
+  `/dashboard-ui` URL. The route file and generated route tree own the live URL.
+- Audited the generated database functions and found that Phase 8D needs a safe
+  direct search function and one atomic bookmark-tag replacement function.
+- Kept this checkpoint documentation-only. No route, component, domain module,
+  adapter, migration, generated type, package, or database object changed.
+- Completed Phase 8D and stopped before Phase 8E.
+- Renamed the live route from `/dashboard-ui` to `/library` with no redirect or
+  alias. TanStack tooling regenerated `src/routeTree.gen.ts`, and the route
+  keeps the same `DashboardUiPage` call and props.
+- Added one framework-free `LibraryAdapter` with bounded read and mutation
+  unions, branded decimal IDs, millisecond timestamps, opaque view-bound
+  cursors, and stable `LibraryError` codes.
+- Added a deterministic in-memory adapter and split its read logic from its
+  mutation logic. Reads no longer create missing fixture-detail rows.
+- Added a typed Supabase adapter for preferences, collection and tag pages,
+  bookmark destinations and sorts, bookmark detail, grouped search, simple
+  edits, membership changes, Trash, ordering, preferences, and visit events.
+- Kept account work, quick save, re-enrichment, queues, import, export, restore,
+  Realtime, and visible mock replacement out of Phase 8D.
+- Added and applied `phase_08d_library_interface` with checked grouped search,
+  atomic bookmark-tag replacement, exact grants, fixed search paths, and a
+  collection-name trigram index.
+- Generated hosted public types after the migration. Both browser and
+  request-scoped clients now use the generated `Database` type.
+- The Phase 8D local function test passed grouped search, parent paths, atomic
+  tag replacement, cross-user denial, exact grants, and a 10,000-collection
+  indexed search plan.
+- The Phase 8C replay and capacity gate passed with 100,000 bookmarks and the
+  Phase 8D full-text plus trigram search predicate. The three rebalance
+  regressions also passed.
+- The hosted Phase 8D rollback smoke passed authenticated search, atomic tag
+  replacement, cross-owner rejection, anonymous denial, and forced rollback.
+- Supabase advisors found no new warning or error from Phase 8D. The new search
+  index has a passing 10,000-row plan check despite its immediate unused-index
+  information notice.
+- The final focused run passed 38 tests across the library contract, adapters,
+  typed Supabase clients, profile forms, and management flow. The full run
+  passed all 223 tests across 46 files with four workers.
+- `pnpm run check`, both production builds, the Phase 8C and 8D database checks,
+  the client secret-name scan, and `git diff --check` passed.
+- Full-scope React Doctor 0.9.13 completed across 142 files with no skipped
+  checks, no findings, and a 100/100 score. Two client-owned mock forms keep
+  native submit behavior with narrow false-positive notes. Two locked render
+  surfaces and the UI audit's intentional command-footer copy also have narrow
+  false-positive notes. Real array and lookup findings now use one-pass loops
+  and a set lookup.
+- Browser, touch, keyboard, screen-reader, contrast, and screenshot checks
+  remain unverified.
 
 ---
 
@@ -122,6 +223,82 @@ Write facts only. No plans, no advice, no narration.
 - Server access creates a new cookie-backed client for each request and applies every cookie and cache header returned by `@supabase/ssr`.
 - Privileged worker access uses a separate server-only client with no persisted session state.
 - Server authorization reads the verified JWT subject through `getClaims()` and does not trust `getSession()` or editable user metadata.
+- Phase 8C uses one implicit library per user, hybrid UUID and bigint keys,
+  direct junction ownership, composite ownership foreign keys, and indexed RLS
+  predicates.
+- Collection and tag names use generated normalized values with race-safe
+  uniqueness. Postgres is the final authority for the one-child-tier collection
+  hierarchy.
+- Exact URL lookup uses a fixed SHA-256 fingerprint plus a full-URL comparison.
+  Search uses a separate language-neutral full-text and trigram projection.
+- Raw visit rows expire after 30 days. Batched inserts keep one row per visit,
+  and a statement-level trigger updates the permanent narrow statistics row.
+- Bookmark queries use keyset pagination. A later UI slice adds list and grid
+  virtualization so database, network, memory, and DOM work remain bounded.
+- Ordering uses fractional keys, per-scope versions, short locks, stale-write
+  rejection, and rare scoped rebalance.
+- Simple one-row edits may use direct RLS-safe mutations. Multi-row invariants
+  use short atomic database functions, with security-invoker behavior by
+  default and tightly controlled private helpers only where required.
+- Library sync uses one private Broadcast channel per user. Bulk work suppresses
+  per-row notices and sends one resync notice after commit.
+- Import, export, and restore use typed durable job state, private staging, and
+  private Storage files with explicit retention. High-volume enrichment
+  requests remain separate from transfer-job details.
+- Normal bulk bookmark actions remain one atomic set-based mutation. Import may
+  commit in idempotent chunks because it stores one durable result per item.
+- Confirmed account deletion removes tracked Storage objects before deleting the
+  Auth user and cascading relational data. Once confirmed deletion starts, it
+  remains pending and retries until complete.
+- Docker is not part of the Phase 8C gate. The local gate uses pinned PGlite,
+  while hosted checks use rollback-only fixtures against the connected project.
+- Public application functions run as security invokers. Work that needs raised
+  rights stays in the private schema, fixes its search path, checks the caller,
+  and receives only the grants it needs.
+- Phase 8D renames `/dashboard-ui` directly to `/library` with no redirect and
+  keeps the same rendered `DashboardUiPage` without any visual or behavioral
+  change. The `src/dev/dashboard-ui/` directory stays in place during Phase 8D.
+- Phase 8D builds domain interfaces and matching in-memory and Supabase adapters
+  without replacing the visible mock controller. Phase 8J owns live UI
+  replacement.
+- One framework-free, user-scoped `LibraryAdapter` exposes `read(request)` and
+  `mutate(command)`. It never accepts a user ID and never creates its own
+  Supabase client.
+- `AccountAdapter` separately owns identity and account lifecycle.
+  `LibraryAdapter` owns bookmarks, collections, tags, search, Trash, ordering,
+  dashboard preferences, and visit recording.
+- The Supabase library adapter accepts either the request-scoped server client
+  or browser client. Secret and worker clients remain outside the library
+  adapter.
+- Domain objects use camel-case fields, entity-specific opaque string IDs, and
+  epoch-millisecond timestamps. Generated database row types stay inside the
+  Supabase adapter.
+- Bookmark, collection, and tag keyset pages default to 48 items and reject
+  requests over 96. Phase 8J prefetches before the last 12 loaded items enter
+  view.
+- Routine bookmark pages omit tag and collection memberships. One lazy
+  bookmark-detail read loads those relations when its menu or editor needs
+  them.
+- Search keeps Bookmarks before Collections and returns at most 32 bookmark and
+  16 collection matches. A checked authenticated database function exposes only
+  safe search results while the search projection remains private.
+- Cursors remain opaque to callers and bind to their request kind, destination,
+  and sort.
+- Simple one-row operations use RLS-safe direct access. Multi-row rules use
+  checked database functions, including a new atomic bookmark-tag replacement
+  function.
+- Single-row mutation results return the authoritative object and row version.
+  Reorder returns scope versions. Bulk work returns an affected count and a
+  refetch signal without returning the full library.
+- Both adapters map failures to stable `LibraryError` codes with Retry safety.
+  Raw Supabase and database errors never become browser state or product copy.
+- Phase 8D uses focused contract tests, a hosted rollback smoke only for
+  behavior local checks cannot prove, one advisor pass after final SQL, and the
+  normal static and diff checks. Wider checks run only when changed scope needs
+  them.
+- Quick save, re-enrichment delivery, queues, import, export, restore, Realtime,
+  authentication routes, account replacement, and visible mock replacement
+  remain outside Phase 8D.
 
 ---
 

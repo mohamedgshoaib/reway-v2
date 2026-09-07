@@ -151,6 +151,26 @@ function replaceBookmark(
   )
 }
 
+function removeCollectionAndShiftSiblings(
+  collections: readonly Collection[],
+  collectionId: string,
+  parentId: string | null
+): Collection[] {
+  const remainingCollections: Collection[] = []
+
+  for (const collection of collections) {
+    if (collection.id === collectionId) continue
+
+    remainingCollections.push(
+      collection.parentId === parentId
+        ? { ...collection, order: Math.max(0, collection.order - 1) }
+        : collection
+    )
+  }
+
+  return remainingCollections
+}
+
 export function useDashboardManagementState({
   destination,
   mutationFixture = runDefaultManagementMutationFixture,
@@ -404,18 +424,11 @@ export function useDashboardManagementState({
         },
         rollback: () =>
           setCollections((currentCollections) =>
-            currentCollections
-              .filter(
-                (currentCollection) => currentCollection.id !== collectionId
-              )
-              .map((currentCollection) =>
-                currentCollection.parentId === draft.parentId
-                  ? {
-                      ...currentCollection,
-                      order: Math.max(0, currentCollection.order - 1),
-                    }
-                  : currentCollection
-              )
+            removeCollectionAndShiftSiblings(
+              currentCollections,
+              collectionId,
+              draft.parentId
+            )
           ),
       })
     }

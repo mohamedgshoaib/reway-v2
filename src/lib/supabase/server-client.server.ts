@@ -7,11 +7,12 @@ import {
 } from "@tanstack/react-start/server"
 
 import { getSupabasePublicEnvironment } from "@/lib/supabase-environment"
+import type { Database } from "@/types/database.generated"
 
 export const createSupabaseServerClient = () => {
   const { publishableKey, supabaseUrl } = getSupabasePublicEnvironment()
 
-  return createServerClient(supabaseUrl, publishableKey, {
+  return createServerClient<Database>(supabaseUrl, publishableKey, {
     cookies: {
       getAll: () =>
         Object.entries(getCookies()).map(([name, value]) => ({ name, value })),

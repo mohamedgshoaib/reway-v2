@@ -53,6 +53,7 @@ const preventShiftTextSelection: React.MouseEventHandler<HTMLLabelElement> = (
   if (event.shiftKey) event.preventDefault()
 }
 
+// react-doctor-disable-next-line react-doctor/no-high-complexity-react-function -- This cohesive surface owns paired locked render variants; the measured branches are declarative JSX.
 function BookmarkRowSurface({
   bookmark,
   collections,

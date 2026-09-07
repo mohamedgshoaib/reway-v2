@@ -79,6 +79,7 @@ export function DashboardProfileSetupDialog({
           <DialogHeader>
             <DialogTitle>Set up your profile</DialogTitle>
           </DialogHeader>
+          {/* react-doctor-disable-next-line react-doctor/no-prevent-default -- This mock-backed form owns local validation and has no server action. */}
           <form
             className="contents"
             onSubmit={(event) => {

@@ -7,7 +7,7 @@ import { DashboardUiPage } from "@/dev/dashboard-ui/page"
  * Disposable dashboard shell wireframe route. See
  * src/dev/dashboard-ui/page.tsx for the removal note.
  */
-export const Route = createFileRoute("/dashboard-ui")({
+export const Route = createFileRoute("/library")({
   loader: () => getDashboardNavigationPreferences(),
   head: () => ({
     meta: [

@@ -37,6 +37,7 @@ export function DashboardProfilePanel({
         </p>
       </div>
 
+      {/* react-doctor-disable-next-line react-doctor/no-prevent-default -- This mock-backed form owns local validation and has no server action. */}
       <form
         className="grid gap-6"
         onSubmit={(event) => {

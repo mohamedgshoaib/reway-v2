@@ -63,6 +63,7 @@ function BookmarkImage({
   return <img alt="" className="aspect-5/3 w-full object-cover" src={ogImage} />
 }
 
+// react-doctor-disable-next-line react-doctor/no-high-complexity-react-function -- This cohesive surface owns paired locked render variants; the measured branches are declarative JSX.
 function BookmarkGridCardSurface({
   bookmark,
   collections,

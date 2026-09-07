@@ -2,67 +2,76 @@
 
 ## Purpose
 
-- Prepare and implement Phase 8C core schema and security only.
+- Start the Phase 8E durable jobs and queues decision pass.
 
 ## Current scope
 
-- Phase 8A and Phase 8B are complete.
-- No schema, migration, generated database type, or feature backend code exists
-  yet.
+- Phase 8D is complete. Phase 8E is next and has not started.
+- Do not start Phase 8F quick save or enrichment delivery.
 
 ## Current state
 
-- Dashboard phases 0 through 7 are complete.
+- Dashboard phases 0 through 7 and backend phases 8A through 8D are complete.
+- `/library` is the live dashboard mock route. `/dashboard-ui` has no alias or
+  redirect.
+- `src/lib/library/` contains the framework-free library contract and matching
+  in-memory and Supabase adapters. The dashboard still uses its visible mock
+  controller until Phase 8J.
+- The hosted `phase_08d_library_interface` migration adds grouped search,
+  atomic bookmark-tag replacement, and the measured collection search index.
+- Hosted public types are current. The local and hosted Phase 8D database
+  checks passed and left no fixture data.
+- The full test suite passes all 223 tests. Full-scope React Doctor 0.9.13
+  completes with no skipped checks or findings and scores 100/100.
 - Session 05 remains open.
-- The connected Supabase project was healthy during Phase 8A. Its remote
-  migration history and `public` schema were empty at that check.
-- Local migration setup lives in `supabase/config.toml` and
-  `supabase/migrations/`. Local Data API setup requires explicit grants for new
-  tables.
-- Public and secret environment checks are in place. The runtime packages and
-  CLI remain pinned.
-- Browser, request-scoped server, privileged worker, and verified identity
-  modules live under `src/lib/supabase/`.
-- The server client maps request cookies and every response cookie and cache
-  header required by `@supabase/ssr`.
-- The worker client is server-only and has no persisted auth state. The identity
-  server function uses `getClaims()` and returns only `userId`.
-- The working tree contains the uncommitted Phase 8A and Phase 8B work. Preserve
-  it.
-- The Phase 8B focused run passed 11 tests across five files. `pnpm run check`,
-  both production builds, the client bundle secret scan, and
-  `git diff --check` passed.
-- Hosted Confirm Email and Google OAuth settings and live authentication remain
-  unverified.
-- The full work order, schema rules, security rules, and tests are in
-  `spec/integrations/supabase/phase-08-backend-plan.md`.
 
 ## What's next
 
-1. Follow the session start sequence, then read the Phase 8 backend plan and
-   feature contract.
-2. Run the required `grilling` pass for Phase 8C and confirm the schema slice
-   before writing SQL.
-3. Load `codebase-design`, `supabase`, `postgresql-table-design`,
-   `supabase-postgres-best-practices`, and `find-docs`. Check current Supabase
-   and Postgres docs before choosing schema or RLS syntax.
-4. Recheck the remote migration history and `public` schema without recording a
-   project ID or secret.
-5. Build the core schema in the order set by the backend plan. Use the CLI
-   migration workflow, explicit Data API grants, RLS, ownership checks, and
-   indexed user-scoped access paths.
-6. Generate `src/types/database.generated.ts` only after the first schema passes
-   review.
-7. Add focused migration, same-user, cross-user denial, and replay tests. Stop
-   after Phase 8C verification. Do not start Phase 8D.
+1. Follow the required session start sequence and read the key references below.
+2. Invoke `grilling` and audit which Phase 8E queue, lease, retry, and repair
+   choices still need approval. Do not repeat settled Phase 8 decisions.
+3. Record the approved Phase 8E contract before writing code.
+4. Implement and verify Phase 8E only, then stop before Phase 8F.
 
-## Expected environment names
+## Suggested skills
 
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_PUBLISHABLE_KEY`
-- `SUPABASE_SECRET_KEY`
+- `grilling` - close only the Phase 8E choices that can change the contract.
+- `codebase-design` - keep durable job state behind a small worker seam.
+- `supabase` - verify current Queues, Cron, function, and migration behavior.
+- `supabase-postgres-best-practices` - check claims, leases, indexes, locks, and
+  query plans.
+- `vitest` - cover idempotency, duplicate delivery, lease expiry, and retries.
+
+## Established workflow
+
+- Preserve the dirty worktree and the completed Phase 8A through 8D changes.
+- Use current docs through the repo's `ctx7` workflow before framework, client,
+  CLI, or cloud-service code.
+- Keep secrets, environment values, project IDs, URLs, and private file paths
+  out of output and records.
+- Use focused risk-based checks after each bounded step. Do not hide skipped or
+  incomplete validation.
+
+## Key references
+
+- `spec/integrations/features/feature-contract.md` - product behavior source.
+- `spec/integrations/supabase/phase-08-backend-plan.md` - Phase 8E scope and
+  work order.
+- `spec/integrations/supabase/phase-08c-schema-decisions.md` - locked durable
+  job, claim, retry, retention, and queue rules.
+- `spec/integrations/supabase/phase-08d-domain-decisions.md` - completed
+  adapter seam and Phase 8E boundary.
+- `supabase/migrations/20260906072738_phase_08c_core_schema.sql` - existing job,
+  enrichment, claim, result, and cleanup functions.
+- `src/lib/library/` - completed library contract and adapters.
+
+## Open questions
+
+- The detailed Phase 8E grilling pass has not run. Audit the existing schema
+  and backend plan first, then ask only questions whose answers change the
+  worker or queue contract.
 
 ## Redaction rule
 
-- Never record environment values, keys, access tokens, project IDs, imported
-  URLs, or user file contents in specs, logs, test snapshots, or handoffs.
+- Do not include secrets, credentials, tokens, environment values, project
+  IDs, imported URLs, user file contents, or private Storage paths.

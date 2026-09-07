@@ -10,7 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as DashboardUiRouteImport } from './routes/dashboard-ui'
+import { Route as LibraryRouteImport } from './routes/library'
 import { Route as UiRouteImport } from './routes/ui'
 
 const IndexRoute = IndexRouteImport.update({
@@ -18,9 +18,9 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DashboardUiRoute = DashboardUiRouteImport.update({
-  id: '/dashboard-ui',
-  path: '/dashboard-ui',
+const LibraryRoute = LibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UiRoute = UiRouteImport.update({
@@ -31,31 +31,31 @@ const UiRoute = UiRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/dashboard-ui': typeof DashboardUiRoute
+  '/library': typeof LibraryRoute
   '/ui': typeof UiRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/dashboard-ui': typeof DashboardUiRoute
+  '/library': typeof LibraryRoute
   '/ui': typeof UiRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/dashboard-ui': typeof DashboardUiRoute
+  '/library': typeof LibraryRoute
   '/ui': typeof UiRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/dashboard-ui' | '/ui'
+  fullPaths: '/' | '/library' | '/ui'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/dashboard-ui' | '/ui'
-  id: '__root__' | '/' | '/dashboard-ui' | '/ui'
+  to: '/' | '/library' | '/ui'
+  id: '__root__' | '/' | '/library' | '/ui'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DashboardUiRoute: typeof DashboardUiRoute
+  LibraryRoute: typeof LibraryRoute
   UiRoute: typeof UiRoute
 }
 
@@ -68,11 +68,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dashboard-ui': {
-      id: '/dashboard-ui'
-      path: '/dashboard-ui'
-      fullPath: '/dashboard-ui'
-      preLoaderRoute: typeof DashboardUiRouteImport
+    '/library': {
+      id: '/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof LibraryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ui': {
@@ -87,7 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DashboardUiRoute: DashboardUiRoute,
+  LibraryRoute: LibraryRoute,
   UiRoute: UiRoute,
 }
 export const routeTree = rootRouteImport

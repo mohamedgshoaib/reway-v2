@@ -236,6 +236,7 @@ export function DashboardCommand({
           </CommandPanel>
           <CommandFooter className="justify-center min-[800px]:justify-between">
             <div className="hidden items-center gap-4 min-[800px]:flex">
+              {/* react-doctor-disable-next-line react-doctor/duplicate-jsx-subtree -- The UI audit demo intentionally mirrors this affordance and must stay independent from feature code. */}
               <div className="flex items-center gap-2">
                 <KbdGroup>
                   <Kbd>

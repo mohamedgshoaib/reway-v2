@@ -57,27 +57,37 @@ This is the authoritative record of Reway's approved feature behaviour and techn
 
 ### Extension ↔ Dashboard Realtime Sync
 
-- The dashboard subscribes to Supabase Realtime `postgres_changes` on `bookmarks`, filtered by `user_id=eq.<uid>`.
-- `useRealtimeBookmarks.ts` manages the subscription and is mounted in `_dashboard.library.tsx`.
-- When the extension saves a bookmark, the dashboard receives two automatic events:
+- The dashboard subscribes to one private Supabase Broadcast channel named for
+  the authenticated library owner. Realtime Authorization permits a user to
+  join only `library:<their-user-id>`.
+- `useRealtimeBookmarks.ts` manages the subscription and is mounted in
+  `_dashboard.library.tsx`.
+- When the extension saves a bookmark, the dashboard receives two compact
+  notices:
 
   1. `INSERT`: the bookmark appears immediately with raw URL and title and `metadata_status = 'pending'`.
   2. `UPDATE`: the Edge Function completes enrichment and writes back. The card updates with title, favicon, OG image, and `metadata_status = 'enriched'` or `failed`.
 
+- Each normal notice carries the operation, bookmark ID, and monotonic row
+  version. The client fetches any fields it does not already hold.
+- Imports, restores, cleanup, and large set-based mutations suppress per-row
+  notices and send one `library_resync_required` notice after commit.
+- Visit events, bookmark statistics, search rows, queue data, and worker
+  diagnostics never broadcast.
 - No polling and no manual refresh.
-- Realtime is a fast notification path, not the source of truth. After subscription, reconnect, tab focus, or a known gap, the client queries the current user-scoped rows and rejects stale events by row version or update time.
+- Realtime is a fast notification path, not the source of truth. After
+  subscription, reconnect, tab focus, a bulk resync notice, or a known gap, the
+  client queries the current user-scoped rows and rejects stale notices by row
+  version.
 
 #### Required setup
 
-- RLS `SELECT` policy on `bookmarks`: `TO authenticated USING ((select auth.uid()) = user_id)`.
-- Add `bookmarks` to the `supabase_realtime` publication: `ALTER PUBLICATION supabase_realtime ADD TABLE bookmarks`.
-- The client subscribes to `event: '*'`, filtered by `user_id=eq.<uid>`.
-
-#### RLS caveat
-
-- Realtime does not apply RLS to `DELETE` events.
-- This is not a cross-user leak concern because users can delete only their own bookmarks.
-- The client-side DELETE handler must not treat the payload as an authorization signal.
+- Add Realtime Authorization policies that compare the private channel topic
+  with `(select auth.uid())`.
+- A private trigger helper with a fixed empty `search_path` emits approved
+  notices. Public roles cannot call it.
+- RLS still protects every source table. A Broadcast notice never grants access
+  to a row or replaces an authenticated refetch.
 
 ### Collections
 
@@ -276,6 +286,8 @@ The contract follows five interaction rules:
 
 - Trash is a working system destination in desktop and mobile navigation.
 - Trash shows only bookmarks with `trashedAt`. Trashed bookmarks stay out of All Bookmarks, collections, tags, command search, Uncollected, and saved custom collection order.
+- Trashing a bookmark stores `trashedAt` and its exact `purgeAfter` time. Reads
+  hide expired rows even if physical cleanup has not run yet.
 - The dashboard mock uses one fixed clock for Trash fixtures and mutation dates. Visual components never run an expiry timer.
 - Each trashed bookmark shows the time left in its 30-day recovery window and its prior collection context as `From Research`, `From Research + 2`, or `From Uncollected`. Stored collection IDs on a trashed bookmark are restore context, not active memberships.
 - Restore clears `trashedAt`, preserves tags and metadata, and returns the bookmark to every prior collection that still exists. A bookmark with no surviving prior collection returns as Uncollected. Restore stays one click and does not open a destination dialog.
@@ -285,6 +297,10 @@ The contract follows five interaction rules:
 - Trashed bookmark menus keep Open, Copy link, Select, Restore, and Delete forever. Edit, tag, collection, re-enrich, and normal Delete actions stay hidden.
 - Trash selection mode replaces Add, Move, Remove, and Delete with Restore and Delete forever on desktop and mobile.
 - Bulk Restore and Delete forever apply one optimistic result to the selected snapshot. Pending work blocks repeat actions. Failure rolls back the full result, keeps the selection, and offers Retry.
+- Add, move, remove, Trash, Restore, and Delete forever use one set-based
+  database transaction. They never switch to partially committed background
+  chunks. If measured database cost requires a selection limit, that limit
+  needs a separate product decision.
 - Bulk success and failure use one summary and one polite announcement for the action, never one message per bookmark. Failure toasts remain open with Retry.
 - Toasts are reserved for results that are easy to miss, occur outside the current view, affect several items, or offer recovery. Direct changes that remain visible use inline feedback instead.
 - Global toasts sit at the bottom right on desktop and bottom center on mobile.
@@ -295,12 +311,22 @@ The contract follows five interaction rules:
 - Users enter a reorder mode to manually sort bookmarks within a collection.
 - Custom order in a collection is independent of global All Bookmarks order.
 - Per-collection sorts are date added, most visited, alphabetical, and custom order.
-- Custom order uses fractional indexing through the `fractional-indexing` npm package. Only the moved item's `sort_order` updates: O(1) per reorder.
+- Custom order uses fractional indexing through the `fractional-indexing` npm
+  package. Keys use bytewise `C` collation and remain unique within their
+  ordering scope. Only the moved item's `sort_order` updates: O(1) per reorder.
 - Bulk additions use `generateNKeysBetween` to generate all keys in one call.
-- If a `sort_order` string exceeds 50 characters after a reorder, the client rebalances the complete collection's keys in one batch update.
+- Each ordering scope stores an `order_version`. Reorder requests include the
+  version they read. The database locks that scope, validates its neighbors,
+  updates the moved item, and increments the version. A stale request refetches
+  instead of overwriting newer order.
+- If a proposed `sort_order` string exceeds 50 characters, the client requests
+  a complete scope rebalance. Reorder and rebalance use the same version check
+  and lock. The database keeps a larger key-length limit as a corruption guard.
 - All Bookmarks and Uncollected use system sorts only: date added, most visited, and alphabetical. Neither supports custom reorder.
 - Uncollected uses a partial-index filter, `WHERE collection_count = 0`, which is O(K) for K uncollected bookmarks rather than a `NOT EXISTS` scan over the complete library.
-- A trigger on `bookmark_collections` `INSERT` and `DELETE` maintains `collection_count`.
+- A statement-level trigger on `bookmark_collections` `INSERT` and `DELETE`
+  groups membership changes and updates each affected bookmark's protected
+  `collection_count` once per statement.
 
 ### View Modes
 
@@ -323,7 +349,9 @@ The contract follows five interaction rules:
 - Quick add has no collection picker. The user can organize later.
 - Quick add creates an Uncollected bookmark and keeps the current destination. When the current view cannot show the new bookmark, announce `Saved to Uncollected. Metadata pending.`
 - Keyboard save closes the command at once without decorative motion or a success toast.
-- Database full-text search uses a `tsvector` over `(title, url, tags)` with a GIN index.
+- Database search uses a one-row-per-bookmark projection with a language-neutral
+  `tsvector` over weighted title, tag, and URL text. It uses a full-text GIN
+  index and a trigram GIN index for typo tolerance.
 - The command palette queries Supabase directly and never loads the full library into memory.
 - Client-side filtering applies only to an already-loaded current view, such as a visible collection; it never substitutes for full-library search.
 - Add `pg_trgm` for fuzzy, typo-tolerant matching.
@@ -344,12 +372,30 @@ The contract follows five interaction rules:
 - Import Retry processes only records that failed to commit. Re-enrich handles later metadata failures.
 - Closing Settings, changing tabs, reloading, losing the client connection, or closing the browser does not stop a durable import job.
 - Import progress comes from stored job and item state. The client refetches that state after reconnect instead of relying only on missed Realtime events.
+- Import source files use private, user-prefixed Storage paths. Parsing writes
+  typed private staging rows through bulk inserts or `COPY`.
+- Import commits collections before dependent bookmarks and memberships in
+  idempotent batches. The first benchmark batch size is 500 items and may
+  change after measurement.
+- Import suppresses per-bookmark Broadcast notices and sends one library resync
+  notice when the durable import result is ready.
 - Reway exports browser-compatible bookmark HTML for portability. It escapes every user-controlled HTML field and omits unsafe URL schemes.
 - Browser HTML cannot represent Reway's full data model. Multi-collection bookmarks may appear more than once. Tags, Trash state, visit counts, and Reway-only ordering are not guaranteed to survive.
 - Reway also exports a versioned JSON backup for a lossless library restore. It includes user-owned bookmarks, collections, tags, memberships, ordering, and preferences, but excludes secrets, sessions, worker diagnostics, and queue records.
 - Reway JSON restore is separate from browser import. It validates and stages the full replacement before asking for confirmation.
-- Restore creates a recoverable snapshot of the active library, then activates the validated staged snapshot in one short transaction. Failure before activation leaves the active library unchanged.
-- Export and restore use durable server jobs. Generated files and staged data have explicit expiry and cleanup rules.
+- Restore creates a recoverable snapshot of the active library, then activates
+  the validated staged snapshot through set-based SQL in one user-scoped
+  transaction. Failure before activation leaves the active library unchanged.
+- Restore activation suppresses per-row Broadcast notices and sends one library
+  resync notice after commit.
+- The set-based activation design must pass the 100,000-bookmark lock and write
+  benchmark. If it fails, an internal generation model needs separate review.
+- Import, export, restore, and recovery files live in private Storage. Database
+  rows store their owner, object path, format version, checksum, size, state,
+  and expiry. Generated downloads use short-lived signed URLs.
+- Export and restore use durable server jobs. Generated exports expire after 24
+  hours. Import files and staging rows expire seven days after terminal state.
+  Pre-restore snapshots expire after seven days, with at most two per user.
 
 ### Collection Hierarchy Feedback
 
@@ -361,21 +407,31 @@ The contract follows five interaction rules:
 
 ### Most Visited Tracking
 
-- `bookmark_events(id, user_id, bookmark_id, created_at)` is an append-only insert per visit and the source of truth.
-- Index `bookmark_events` on `(user_id, bookmark_id)`.
-- The event log supports future windowed queries such as visited-this-week and trending without schema changes.
-- `bookmarks.visit_count INTEGER` is the cached counter used for fast sorting.
-- A Supabase trigger on `INSERT` into `bookmark_events` maintains `visit_count`; sorting reads that column directly in O(1), with no aggregation at query time.
+- `bookmark_events(id, event_id, user_id, bookmark_id, created_at)` keeps one
+  append-only row per visit for 30 days. It is recent history, not the permanent
+  lifetime source of truth.
+- Each client-generated `event_id` is unique for retry safety. A repeated event
+  insert uses `ON CONFLICT DO NOTHING` and never increments the count twice.
+- Index recent event queries and expiry cleanup by their user, bookmark, time,
+  and stable ID access paths.
+- One narrow `bookmark_stats` row stores each bookmark's permanent
+  `visit_count`. Its Most Visited index is
+  `(user_id, visit_count DESC, bookmark_id)`.
+- A statement-level insert trigger uses its transition table to group new
+  events by bookmark and update each statistics row once per insert statement.
 - The client accumulates clicks in TanStack Store memory for the session.
 - TanStack Pacer runs a 30-second flush interval and a `visibilitychange` safety flush.
-- Each flush batch-inserts one `bookmark_events` row per visit; the trigger updates the cached counter.
+- Each flush batch-inserts one `bookmark_events` row per visit; the statement
+  trigger updates the permanent counter.
 - Clicks accumulated since the last flush may be lost on hard crash. This is acceptable because visit counts are a sorting aid, not transactional data.
 
 ### Tag Filtering
 
 - Selecting multiple tags uses OR semantics. Show bookmarks that match any selected tag; there is no AND mode.
 - Tags are normalized through `bookmark_tags`.
-- OR filtering queries `WHERE tag_id = ANY(ARRAY[...selected])` on a GIN-indexed `tag_id` column.
+- OR filtering queries `WHERE tag_id = ANY(ARRAY[...selected])` through a
+  composite B-tree index on `(user_id, tag_id, bookmark_id)`. Scalar `tag_id`
+  does not use a GIN index.
 
 ### X (Twitter)
 
@@ -456,8 +512,15 @@ The contract follows five interaction rules:
 - Account deletion uses a two-step confirmation. The user must type `delete` before the destructive action becomes available.
 - After typing `delete`, the user must complete fresh authentication with the current sign-in method before the server may delete the account. A normal existing session is not enough.
 - Failed or cancelled authentication leaves the account and its data unchanged.
-- Confirmation permanently deletes all user data through `CASCADE` from `auth.users`, including bookmarks, collections, tags, and profile.
-- The server revokes active sessions as part of the confirmed deletion flow. Deleting the user record alone does not count as session revocation.
+- After final confirmation, the server marks deletion pending, blocks new
+  writes, and revokes active sessions.
+- The deletion job removes every tracked private Storage object through the
+  Storage API in batches of at most 1,000. It then deletes the Auth user and
+  lets foreign-key cascades remove relational data, including bookmarks,
+  collections, tags, and profile.
+- The confirmed deletion flow is idempotent and retries until it finishes.
+  Once deletion starts, the interface shows pending status instead of promising
+  rollback across Storage and Auth.
 - On its next Supabase 401, the extension clears `chrome.storage.session` and `chrome.storage.local`.
 - The extension then shows: "Log in at reway.page to use the extension."
 - This action is permanent, unrecoverable, and has no grace period or soft delete.

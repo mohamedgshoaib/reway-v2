@@ -5,9 +5,16 @@
 - Research and product decisions were recorded on 2026-09-05.
 - Dashboard phases 0 through 7 are complete as local mock work.
 - Phase 8A and Phase 8B were completed on 2026-09-06.
-- No schema, migration, generated database type, or feature backend code has
-  been added in Phase 8. Phase 8B added only the client and authentication
-  modules described below.
+- The Phase 8C grilling pass and implementation were completed on 2026-09-06.
+  Its schema and security decisions live in `phase-08c-schema-decisions.md`.
+- Phase 8C added and applied the core schema migrations, generated public
+  database types, and a Docker-free migration and capacity check.
+- The Phase 8D grilling pass and implementation were completed on 2026-09-07.
+  Its approved route, domain, adapter, paging, search, mutation, verification,
+  and complexity contract lives in `phase-08d-domain-decisions.md`.
+- Phase 8D added the `/library` route, framework-free domain interface,
+  matching in-memory and Supabase adapters, checked search and tag-replacement
+  functions, hosted types, and focused local and hosted checks.
 - Session 05 remains open.
 
 ## Goal
@@ -152,6 +159,10 @@ Verified Phase 8B state:
 
 Build and test the data model before wiring feature UI.
 
+`phase-08c-schema-decisions.md` is the approved technical contract for this
+slice. Do not repeat its grilling pass or replace a decision during
+implementation without returning for approval.
+
 1. Profiles and account-owned settings.
 2. Bookmarks and their metadata, Trash, visit count, and ordering fields.
 3. Collections, one allowed child tier, appearance, and section order.
@@ -160,6 +171,11 @@ Build and test the data model before wiring feature UI.
 6. Dashboard preferences.
 7. Bookmark visit events.
 8. Import, export, restore, and enrichment request records.
+
+The schema uses one implicit library per user, hybrid UUID and bigint keys,
+direct junction ownership, database-enforced hierarchy and name rules, narrow
+search and statistics tables, keyset pagination, private Broadcast notices,
+typed job records, bounded retention, and atomic invariant-heavy mutations.
 
 Every user-owned table needs:
 
@@ -177,23 +193,68 @@ Do not use the secret key to make missing RLS policies appear to work. Test all
 user paths with authenticated clients. Add cross-user denial tests before UI
 wiring.
 
+Verified Phase 8C state:
+
+- Four hosted migrations add the core public and private tables, constraints,
+  indexes, RLS, exact grants, Realtime authorization, database triggers,
+  versioned reorder and rebalance functions, atomic bulk mutations, worker
+  claims, bounded retention functions, and the rebalance constraint-lookup
+  correction.
+- `supabase/tests/phase-08c-core-schema.mjs` replays every migration in PGlite
+  and runs the Docker-free 100,000-bookmark capacity gate.
+- `supabase/tests/phase-08c-rebalance.mjs` checks collection, tag, and bookmark
+  rebalance plus stale-version rejection without repeating the capacity load.
+- `supabase/tests/phase-08c-hosted.sql` checks Supabase-specific behavior inside
+  one rollback-only transaction, including the three rebalance paths.
+- The hosted generated-fingerprint benchmark inserted 10,000 rows in about
+  1.97 seconds and rolled them back. Follow-up counts confirmed that no fixture
+  remained.
+- Supabase's performance advisor reports no unindexed foreign keys and no
+  warning or error after the advisor-index migration.
+- Generated public types live in `src/types/database.generated.ts`.
+
 ### Phase 8D: domain modules and adapter parity
 
-Keep the current mock and Supabase implementations behind the same small domain
-interfaces while migration is in progress.
+Use `phase-08d-domain-decisions.md` as the approved implementation contract.
+Do not reopen its decisions unless current code or hosted evidence shows a
+conflict.
 
-- Bookmark capture owns URL parsing, local request IDs, persistence state, and
-  the save result.
-- Bookmark lifecycle owns enrichment request generations and visible metadata
-  state.
-- Collection hierarchy remains the single owner of depth rules and flattening.
-- Import owns file parsing, review, staging, conflict decisions, durable commit,
-  and result counts.
-- Export owns snapshot selection, format generation, storage, and expiry.
-- Restore owns validation, staging, replacement activation, and recovery.
+- Rename the route directly from `/dashboard-ui` to `/library` without changing
+  the rendered component, markup, classes, state, animation, copy, or behavior.
+- Keep the current visible mock controller through Phase 8D. Phase 8J owns live
+  UI replacement.
+- Add one user-scoped, framework-free `LibraryAdapter` with `read(request)` and
+  `mutate(command)`. Keep `AccountAdapter` separate.
+- Return domain models with opaque string IDs, millisecond timestamps, typed
+  errors, authoritative bounded results, and opaque keyset cursors.
+- Page bookmarks, collections, and tags by 48 with an internal maximum of 96.
+  Load one bookmark's memberships on demand. Search returns at most 32 bookmark
+  and 16 collection matches.
+- Use direct RLS-protected reads and simple writes. Use checked database
+  functions for private search and multi-row rules.
+- Add the missing direct search function and atomic bookmark-tag replacement
+  function through one reviewed CLI migration, then regenerate hosted types.
+- Run focused contract checks against the in-memory and Supabase adapters. Use
+  one hosted rollback smoke and one final advisor pass when SQL changes.
+- Stop before quick save, queues, enrichment delivery, import, export, restore,
+  Realtime, authentication routes, account replacement, or visible mock
+  replacement.
 
-Run the same contract tests against the mock adapter and Supabase adapter. Swap
-one feature path at a time. Do not keep two independent sets of business rules.
+Verified Phase 8D state:
+
+- `/dashboard-ui` was replaced by `/library` without changing the rendered
+  `DashboardUiPage` call or keeping an old-route alias.
+- `src/lib/library/` owns the two-method `LibraryAdapter`, bounded cursors,
+  stable errors, domain types, deterministic in-memory adapter, and typed
+  Supabase adapter.
+- One applied migration adds checked grouped search, atomic bookmark-tag
+  replacement, and the measured collection-name trigram index.
+- The 100,000-bookmark search plan and 10,000-collection search plan avoid
+  sequential scans on their main search tables.
+- The hosted rollback smoke passed and left no fixture data. Hosted public
+  types include both Phase 8D functions.
+- Phase 8D does not wire live data into the dashboard. Phase 8J still owns mock
+  replacement.
 
 ### Phase 8E: durable jobs and queues
 
@@ -346,17 +407,29 @@ Restore:
 4. Verify counts, references, constraints, ownership, and checksums.
 5. Create a recoverable snapshot of the active library.
 6. Ask for explicit replacement confirmation.
-7. Activate the staged snapshot in one short transaction.
-8. Keep the old snapshot available for the documented recovery period.
+7. Activate the staged snapshot with set-based SQL in one user-scoped
+   transaction.
+8. Suppress per-row Broadcast notices and send one library resync notice after
+   commit.
+9. Keep at most two old snapshots available for seven days.
 
 Failure before activation leaves the active library unchanged. Closing the
 dialog or browser does not activate or discard a validated staged restore.
+The set-based design must pass the 100,000-bookmark lock and write benchmark.
+If it fails, stop and review an internal generation model before changing the
+normal read path.
 
 ### Phase 8I: Realtime and reconciliation
 
 Postgres is authoritative. Realtime is a notification path.
 
-- Subscribe only to the signed-in user's rows.
+- Subscribe to one private Broadcast channel for the signed-in user's library.
+- Send compact operation, bookmark ID, and monotonic row-version notices for
+  normal bookmark changes.
+- Suppress per-row notices during import, restore, cleanup, and large set-based
+  work. Send one `library_resync_required` notice after commit.
+- Do not broadcast visit events, statistics, search rows, queue data, or worker
+  diagnostics.
 - Reconcile job and bookmark state after subscription, reconnect, tab focus,
   and route return.
 - Use stable row versions or update times to reject stale events.
@@ -537,9 +610,10 @@ records differ.
 
 ## Open decisions for the next discussion
 
-Phase 8A has no open product question. Verify its project, key, migration, and
-runtime facts from the environment. Before each later slice, use the `grilling`
-skill and ask the matching questions below one at a time.
+Phase 8A, Phase 8B, and Phase 8C have no open product question. Verify their
+project, key, migration, runtime, and database facts from the environment.
+Before each later slice, use the `grilling` skill and ask the matching questions
+below one at a time.
 
 Before Phase 8B:
 
@@ -590,8 +664,6 @@ Before Phase 8H:
 - Decide whether users can restore the pre-restore recovery snapshot without
   operator help. Start with a user-owned recovery action that uses the same
   staged validation and confirmation rules.
-- Set retention periods for import staging rows, generated exports, staged
-  restores, and pre-restore recovery snapshots.
 - Lock the Reway JSON schema and supported backward-migration window.
 
 After the first local and hosted load runs, set latency budgets from measured
@@ -607,6 +679,9 @@ answer before Phase 8A.
 - [Supabase Edge Function limits](https://supabase.com/docs/guides/functions/limits)
 - [Supabase resumable uploads](https://supabase.com/docs/guides/storage/uploads/resumable-uploads)
 - [Supabase Realtime troubleshooting](https://supabase.com/docs/guides/troubleshooting/realtime-postgres-changes-troubleshooting)
+- [Supabase database-change subscriptions](https://supabase.com/docs/guides/realtime/subscribing-to-database-changes)
+- [Supabase Realtime benchmarks](https://supabase.com/docs/guides/realtime/benchmarks)
+- [Supabase Storage object deletion](https://supabase.com/docs/guides/storage/management/delete-objects)
 - [TanStack Start import protection](https://tanstack.com/start/latest/docs/framework/react/guide/import-protection)
 - [Linear delta-sync read path](https://linear.app/now/rebuilding-delta-sync-read-path)
 - [Vercel queue concepts](https://vercel.com/docs/queues/concepts)
