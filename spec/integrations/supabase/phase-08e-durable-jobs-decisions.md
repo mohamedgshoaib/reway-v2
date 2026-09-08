@@ -61,7 +61,9 @@ in their assigned later phases.
   interval remain measured settings. Do not copy values from another product.
 
 Phase 8E prepares this activation path. Phase 8F enables the first external
-enrichment handler and its wake schedule.
+enrichment handler and its wake schedule. The approved Phase 8F contract keeps
+the framework-free worker interface and moves the handler to a dedicated
+runtime if the Edge Function cannot pin destinations or meet its hosted gates.
 
 ## Message lifecycle
 

@@ -8,6 +8,9 @@
 - The `/library` route, domain interface, in-memory adapter, Supabase adapter,
   migration, hosted types, and focused checks are complete.
 - Phase 8D stops before durable queues and Phase 8E.
+- The approved Phase 8F contract keeps the library interface but changes
+  favicon and OG-image domain URLs to short-lived delivery values backed by
+  tracked private assets. The Phase 8F adapter update owns that change.
 
 ## Route and visual contract
 

@@ -21,7 +21,11 @@
 - Phase 8E installed four logged queues, bounded worker and repair functions,
   Cron repair, opaque worker RPCs, framework-free worker adapters, and a dormant
   JWT-checked Edge Function. Its local, hosted, advisor, build, and test gates
-  passed. Phase 8F has not started.
+  passed.
+- The Phase 8F decision pass was completed on 2026-09-08. Its approved offline
+  capture, enrichment, asset delivery, security, performance, and runtime rules
+  live in `phase-08f-capture-enrichment-decisions.md`. Phase 8F implementation
+  has not started.
 - Session 05 remains open.
 
 ## Goal
@@ -80,6 +84,13 @@ review. Do not treat the phase as one large change.
   exponential backoff and jitter. Respect `Retry-After` when supplied.
 - Permanent failures do not retry. Manual Re-enrich starts a new request and a
   new attempt budget.
+- Quick save first writes to a user-scoped IndexedDB outbox. Offline entries
+  survive reload and browser restart and keep one client request ID until
+  Postgres confirms or reconciles the save.
+- Every valid imported bookmark enters the bulk enrichment queue. Metadata work
+  never delays or changes the durable import result.
+- Reway stores bounded sanitized favicon and OG-image derivatives in private
+  Supabase Storage. The browser never hotlinks source metadata URLs.
 
 ## Work order
 
@@ -304,23 +315,36 @@ checks old active rows, expired leases, queue depth, and missing terminal state.
 
 ### Phase 8F: quick add and enrichment
 
+Use `phase-08f-capture-enrichment-decisions.md` as the approved implementation
+contract. Do not reopen its decisions during implementation without recording
+the replacement and its evidence.
+
 Quick add has two independent state axes:
 
-- Persistence state: `saving`, `saved`, or `save_failed`.
+- Persistence state: `queued_offline`, `saving`, `saved`, or `save_failed`.
 - Metadata state: `pending`, `enriched`, or `failed`.
 
 Do not use metadata pending to hide a failed bookmark insert.
 
-Online save flow:
+Capture flow:
 
 1. Parse and normalize the address without network access.
 2. Create a client request ID.
-3. Show the local saving bookmark at once when the destination can display it.
-4. Submit an idempotent bookmark-create request.
-5. In one database transaction, insert the bookmark, create its enrichment
+3. Write the capture to a user-scoped IndexedDB outbox before closing the
+   command.
+4. Show the local bookmark at once when the destination can display it.
+5. Submit an idempotent bookmark-create request when the authenticated account
+   and server are reachable.
+6. In one database transaction, insert the bookmark, create its enrichment
    request, and enqueue the message.
-6. Return the durable bookmark without waiting for metadata.
-7. Reconcile an uncertain client response by request ID before retrying.
+7. Return the durable bookmark without waiting for metadata.
+8. Reconcile an uncertain response by request ID before retrying.
+9. Remove the local outbox entry only after confirmed success or explicit user
+   dismissal of a permanent failure.
+
+IndexedDB, persistent-storage requests, multi-tab claims, leases, retry timing,
+account isolation, and recovery stay behind one client outbox interface. Do not
+depend on `navigator.onLine`, Background Sync, or one open tab for correctness.
 
 Enrichment flow:
 
@@ -330,18 +354,39 @@ Enrichment flow:
 4. Disable automatic redirects. Validate and resolve every redirect target.
 5. Apply DNS, connection, header, body, redirect-count, content-type, and total
    response limits.
-6. Extract title, favicon, and OG-image URL from the same bounded document.
-7. Store a complete result, including valid null fields.
-8. Update the bookmark only if the request generation still matches.
-9. Acknowledge the queue message after the database result commits.
+6. Extract title, favicon, and OG-image URLs from the same bounded document.
+7. Fetch each image through the same SSRF checks, validate and sanitize the
+   bytes, create one bounded static derivative, and upload it to private
+   Storage.
+8. Store tracked asset references and valid null fields. Never store or return
+   a source image URL as the browser delivery URL.
+9. Update the bookmark only if the request generation still matches.
+10. Acknowledge the queue message after the database and Storage result is
+    durably reconciled.
 
 Re-enrich keeps prior metadata visible. A successful result replaces it. A
 failed result preserves it and records the failure state.
 
-Do not add a broad cross-user metadata cache in the first version. Exact URL
+Every valid imported bookmark enters the bulk enrichment queue. Exact URL
 duplicates inside one user-owned import may share one in-flight fetch, then copy
-the result into separate bookmark rows. Manual Re-enrich always makes a fresh
-request for one bookmark.
+the checked result into separate bookmark rows. Do not share work or assets
+across users. Manual Re-enrich always makes a fresh request for one bookmark.
+
+Sign private assets in one bounded batch for the loaded page and reuse each
+exact signed URL until close to expiry. Sign OG images only for a view that
+needs them. Use immutable generation paths and delete tracked objects when
+access must end.
+
+Enable immediate post-commit wakes and independent scheduled recovery for the
+interactive and bulk handlers. Queue order follows import display order so the
+first visible page enriches first. A slow host consumes one bounded slot and
+does not delay unrelated hosts.
+
+Start with the current Edge Function only if it can pin validated destinations
+and pass the approved resource and latency gates. Otherwise move the same
+handler behind the Phase 8E worker interface to a measured dedicated runtime.
+Do not weaken SSRF checks or make the user wait for metadata to keep one
+runtime.
 
 ### Phase 8G: browser import
 
@@ -553,7 +598,8 @@ Design targets:
 - Cursor-paginated export with bounded worker memory.
 - Indexed O(log n) user and job lookups.
 
-Do not promise a duration before measurement. Record p50, p95, and p99 for:
+Do not turn an internal target into a public promise before measurement. Record
+p50, p95, and p99 for:
 
 - Quick-save local feedback.
 - Bookmark persistence acknowledgement.
@@ -562,6 +608,21 @@ Do not promise a duration before measurement. Record p50, p95, and p99 for:
 - Upload, parse, review, commit, and completion time by import size.
 - Export generation time and output size.
 - Reconnect-to-consistent-state time.
+
+The approved Phase 8F controlled 50-link gates are:
+
+- Phase 8F's rollback fixture publishes 50 bookmarks, enrichment requests, and
+  bulk queue messages within 1 second at p95. Phase 8G must meet the same
+  one-second p95 end-to-end response after parsing and review.
+- Eligible queue wait below 250 milliseconds at p95 under normal measured load.
+- First 12 visible bookmarks enriched within 2 seconds at p95.
+- All 50 basic metadata results and cached assets settled within 10 seconds at
+  p95.
+- One slow host does not delay unrelated hosts.
+
+These gates separate Reway overhead from uncontrolled remote-site latency. If
+the selected worker runtime misses them, change the runtime or work split before
+activation.
 
 Run load tests with duplicates, repeated hosts, slow hosts, rate limits, invalid
 HTML, large titles, long folder paths, missing images, Arabic and accented text,
@@ -641,15 +702,10 @@ Before Phase 8B:
 
 Before Phase 8F:
 
-- Decide whether quick save queues locally while the browser is offline, or
-  fails with a preserved Retry action. Start with a preserved Retry action so
-  the first release does not need a second durable client queue.
-- Confirm whether every valid imported bookmark should enter the bulk
-  enrichment queue. The researched recommendation is yes, with bounded worker
-  capacity and no effect on import completion.
-- Decide how Reway delivers favicon and OG-image bytes. The current plan stores
-  source metadata URLs, but direct browser hotlinking is not locked. Research a
-  bounded proxy or cache before choosing its privacy, storage, and expiry rules.
+- The decision pass is complete. Use
+  `phase-08f-capture-enrichment-decisions.md` for the approved durable browser
+  outbox, full bulk-enrichment coverage, private cached assets, signed delivery,
+  performance gates, and worker-runtime exit rule.
 
 Before Phase 8G:
 
@@ -689,6 +745,10 @@ answer before Phase 8A.
 - [Supabase database-change subscriptions](https://supabase.com/docs/guides/realtime/subscribing-to-database-changes)
 - [Supabase Realtime benchmarks](https://supabase.com/docs/guides/realtime/benchmarks)
 - [Supabase Storage object deletion](https://supabase.com/docs/guides/storage/management/delete-objects)
+- [Supabase private Storage delivery](https://supabase.com/docs/guides/storage/serving/downloads)
+- [Supabase Smart CDN](https://supabase.com/docs/guides/storage/cdn/smart-cdn)
+- [Supabase image transformations](https://supabase.com/docs/guides/storage/serving/image-transformations)
+- [Supabase Edge Function image processing](https://supabase.com/docs/guides/functions/examples/image-manipulation)
 - [TanStack Start import protection](https://tanstack.com/start/latest/docs/framework/react/guide/import-protection)
 - [Linear delta-sync read path](https://linear.app/now/rebuilding-delta-sync-read-path)
 - [Vercel queue concepts](https://vercel.com/docs/queues/concepts)
@@ -698,3 +758,6 @@ answer before Phase 8A.
 - [Raindrop import behavior](https://help.raindrop.io/import)
 - [Chrome bookmark import and export](https://support.google.com/chrome/answer/96816?hl=en)
 - [OWASP SSRF prevention](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html)
+- [IndexedDB guide](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Using_IndexedDB)
+- [Persistent browser storage](https://developer.mozilla.org/en-US/docs/Web/API/StorageManager/persist)
+- [Background Sync support](https://developer.mozilla.org/en-US/docs/Web/API/Background_Synchronization_API)

@@ -31,10 +31,18 @@ This is the authoritative record of Reway's approved feature behaviour and techn
 
 - Bookmark insertion, creation of an enrichment request, and queueing happen in one database transaction. A committed bookmark cannot lose its enrichment request between those steps.
 - Supabase Queues is the durable record of pending delivery. Database webhooks may wake a consumer, but they are never the only record that work exists.
-- Batched Edge Function consumers perform enrichment independently of the browser session. Work continues if the user closes Settings, changes tabs, reloads, or closes the browser.
+- Bounded workers perform enrichment independently of the browser session. The
+  first hosted implementation may use the current Edge Function only if it can
+  pin validated destinations and pass the Phase 8F security, resource, and
+  latency gates. Work continues if the user closes Settings, changes tabs,
+  reloads, or closes the browser.
 - Quick saves and manual re-enrichment use an interactive queue. Imported bookmarks use a bulk queue with reserved worker capacity. Interactive work may pass bulk work, but bulk work must continue to make progress.
-- Enrichment fetches and extracts title, favicon, and OG-image metadata as one bounded operation regardless of the current view. A missing OG image is a valid enriched result with a null image.
-- On completion, the worker writes title, favicon, OG image, and `metadata_status = 'enriched'`.
+- Enrichment fetches and extracts title, favicon, and OG-image metadata as one bounded operation regardless of the current view. Every valid imported bookmark enters the bulk enrichment queue. A missing OG image is a valid enriched result with a null image.
+- The worker fetches favicon and OG-image bytes through the same SSRF checks as
+  the page, validates and sanitizes them, and stores bounded static derivatives
+  in private Supabase Storage. The browser never hotlinks source metadata URLs.
+- On completion, the worker writes the title, tracked asset references, valid
+  null fields, and `metadata_status = 'enriched'`.
 - Re-enrichment preserves the last good metadata while it is pending. Success replaces it. Failure keeps it and sets `metadata_status = 'failed'`.
 - A new bookmark that fails enrichment keeps its URL-derived title and domain fallback.
 - Queue consumers assume a message may arrive more than once. A stable request ID, idempotency key, and request generation prevent duplicate or stale writes.
@@ -45,10 +53,27 @@ This is the authoritative record of Reway's approved feature behaviour and techn
 
 #### SSRF protection
 
-- SSRF protection lives inside the Edge Function, in one place for every save path including the extension.
+- SSRF protection lives inside one framework-free fetch module used by every
+  enrichment runtime and save path, including the extension.
 - Before any connection, enforce `https` and `http` only, reject embedded credentials, parse the hostname, resolve and pin the destination, and block local, private, link-local, multicast, reserved, and cloud-metadata addresses for IPv4 and IPv6.
 - Disable automatic redirects. Resolve and validate every redirect target before following it.
 - Apply DNS, connection, response-header, response-body, redirect-count, content-type, and total-duration limits.
+
+#### Asset delivery
+
+- Bookmark assets use private, opaque, user-scoped, generation-specific Storage
+  paths. Postgres tracks ownership, bookmark, generation, kind, object path,
+  checksum, type, dimensions, size, and lifecycle state.
+- The app signs only assets owned by the authenticated user. It signs one
+  bounded loaded page in a batch and signs OG images only when the active view
+  needs them.
+- The client reuses each exact signed URL until close to expiry. Browser cache
+  duration cannot exceed the signed access period.
+- Re-enrich uploads new immutable objects before atomically switching the
+  bookmark generation. Failed Re-enrich keeps prior assets. Successful
+  replacement schedules old objects for durable deletion.
+- Trash retains assets. Delete Forever and account deletion remove tracked
+  objects through bounded, idempotent Storage cleanup.
 
 #### Why enrichment is not a TanStack server function
 
@@ -66,7 +91,9 @@ This is the authoritative record of Reway's approved feature behaviour and techn
   notices:
 
   1. `INSERT`: the bookmark appears immediately with raw URL and title and `metadata_status = 'pending'`.
-  2. `UPDATE`: the Edge Function completes enrichment and writes back. The card updates with title, favicon, OG image, and `metadata_status = 'enriched'` or `failed`.
+  2. `UPDATE`: the enrichment worker completes its checked result. The card
+     refetches the title, signed favicon and OG-image delivery values, and
+     `metadata_status = 'enriched'` or `failed`.
 
 - Each normal notice carries the operation, bookmark ID, and monotonic row
   version. The client fetches any fields it does not already hold.
@@ -349,6 +376,22 @@ The contract follows five interaction rules:
 - Quick add has no collection picker. The user can organize later.
 - Quick add creates an Uncollected bookmark and keeps the current destination. When the current view cannot show the new bookmark, announce `Saved to Uncollected. Metadata pending.`
 - Keyboard save closes the command at once without decorative motion or a success toast.
+- Before the command closes, quick save writes the normalized URL and stable
+  client request ID to a user-scoped IndexedDB outbox. The outbox survives
+  reload and browser restart until Postgres confirms or reconciles the save.
+- Quick-save persistence uses `queued_offline`, `saving`, `saved`, and
+  `save_failed`. Metadata pending never hides an unconfirmed bookmark write.
+- A queued offline save appears locally at once when the active destination can
+  show it. Elsewhere, feedback says that the save is queued on this device.
+  `Saved to Uncollected. Metadata pending.` appears only after Postgres confirms
+  the save.
+- The outbox drains after enqueue, application start, session recovery, network
+  return, and focus. Background Sync and `navigator.onLine` may wake work but
+  never decide correctness.
+- Delivery reuses the same client request ID. An uncertain response reconciles
+  that ID before another create attempt, so Retry cannot create a duplicate.
+- A missing or different signed-in account pauses the prior account's entries.
+  One account never drains another account's local saves.
 - Database search uses a one-row-per-bookmark projection with a language-neutral
   `tsvector` over weighted title, tag, and URL text. It uses a full-text GIN
   index and a trigram GIN index for typo tolerance.
@@ -369,6 +412,12 @@ The contract follows five interaction rules:
 - Unresolved collection-name conflicts block commit. Excluded folders and bookmarks remain excluded instead of moving to Uncollected.
 - Import keeps the first two collection tiers. It assigns deeper descendants to the nearest retained child and reports every flattened source path.
 - An import is complete when every selected bookmark and collection record has a durable result. Metadata enrichment continues through the bulk queue and does not change import success into partial failure.
+- Every valid imported bookmark receives its own enrichment request and bulk
+  queue message. Exact duplicate URLs inside one user-owned import may share one
+  in-flight fetch, but each bookmark keeps its own generation and result.
+- Import opens the durable result without waiting for remote metadata. Queue
+  order follows display order so the first visible page enriches first, while a
+  slow host cannot block unrelated hosts.
 - Import Retry processes only records that failed to commit. Re-enrich handles later metadata failures.
 - Closing Settings, changing tabs, reloading, losing the client connection, or closing the browser does not stop a durable import job.
 - Import progress comes from stored job and item state. The client refetches that state after reconnect instead of relying only on missed Realtime events.
@@ -551,6 +600,9 @@ The contract follows five interaction rules:
 
 - The library is private by default. Every mutation is user-scoped and Supabase-auth enforced.
 - Save latency must be zero. Enrichment is secondary, asynchronous, and non-blocking.
+- Offline quick saves remain durable in the user-scoped browser outbox and use
+  honest local, sending, saved, and failed states. Browser storage is never
+  described as server durability.
 - Enrichment failures show only a small indicator on the bookmark card. They never produce a toast.
 - Reway retries transient enrichment failures at most three times. It does not retry permanent failures or continue after the attempt limit without a user-started Re-enrich action.
 - Canvas exists to organize and launch bookmarks, not to replace Miro or FigJam.

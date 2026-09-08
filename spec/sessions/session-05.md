@@ -219,6 +219,29 @@ Write facts only. No plans, no advice, no narration.
   the final grant migration. Their remaining notices are informational.
 - React Doctor and browser checks did not apply because Phase 8E changed no
   React or rendered UI.
+- Completed the Phase 8F decision pass without starting implementation.
+- Replaced the proposed offline Retry-only path with a durable, user-scoped
+  IndexedDB outbox that survives reload and browser restart, keeps one client
+  request ID, isolates accounts, and never labels local-only work as saved.
+- Confirmed that every valid imported bookmark enters the bulk enrichment
+  queue without delaying or changing import success.
+- Confirmed private Supabase Storage for bounded sanitized favicon and OG-image
+  derivatives, batched signed delivery, immutable generation paths, and durable
+  tracked cleanup. The browser never hotlinks source metadata URLs.
+- Approved a fast-import contract that commits 50 bookmarks before metadata,
+  opens the result at once, wakes bulk work after commit, enriches the first
+  visible page first, and prevents one slow host from blocking the rest.
+- Approved controlled hosted p95 gates of one second for Phase 8F's 50-item
+  bulk publication fixture and Phase 8G's later durable import response, 250
+  milliseconds for eligible queue wait, two seconds for the first 12
+  enrichments, and ten seconds for all 50 basic metadata and asset results.
+- Approved moving the enrichment handler to a dedicated worker runtime if the
+  Supabase Edge Function cannot pin destinations or meet the security,
+  resource, and latency gates. The Phase 8E worker interface and durable queue
+  controls remain unchanged.
+- Added `spec/integrations/supabase/phase-08f-capture-enrichment-decisions.md`
+  and reconciled the feature contract, backend plan, Supabase index, and
+  handoff. This checkpoint changes documentation only.
 
 ---
 
@@ -362,6 +385,22 @@ Write facts only. No plans, no advice, no narration.
   roles cannot access queue tables, private job state, or worker diagnostics.
 - A private `service_role` operator snapshot reports bounded queue, lease,
   retry, repair, and poison counts without user data or payloads.
+- Phase 8F quick save uses a durable browser outbox. Its persistence states are
+  `queued_offline`, `saving`, `saved`, and `save_failed`, separate from bookmark
+  metadata state.
+- The outbox writes before command close, reuses one client request ID, pauses
+  on missing or mismatched identity, and drains through several wake paths
+  without depending on Background Sync or `navigator.onLine`.
+- Every valid imported bookmark gets its own bulk enrichment request and result
+  state. Same-user exact duplicates may share only one in-flight fetch.
+- Favicon and OG-image bytes use private tracked Storage objects, bounded static
+  derivatives, immutable generation paths, and batched signed delivery. Source
+  metadata URLs never become browser image URLs.
+- Phase 8F performance gates measure Reway overhead with a controlled hosted
+  50-link fixture. Remote host variance never becomes a page-level import wait.
+- The enrichment runtime is replaceable behind `runDurableWorker`. Security and
+  measured latency decide whether the Supabase Edge Function remains the
+  production handler.
 
 ---
 

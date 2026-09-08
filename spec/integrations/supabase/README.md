@@ -10,6 +10,8 @@ Start here for Reway's Supabase work.
   interface, adapter, paging, search, mutation, testing, and complexity rules.
 - `phase-08e-durable-jobs-decisions.md` records the approved Phase 8E queue,
   worker, lease, retry, repair, security, and operating rules.
+- `phase-08f-capture-enrichment-decisions.md` records the approved Phase 8F
+  offline capture, enrichment, asset delivery, security, and performance rules.
 - `supabase/config.toml` owns local Supabase and migration settings.
 - `supabase/migrations/` owns reviewed schema changes.
 - `src/types/database.generated.ts` holds the generated hosted public database
@@ -28,8 +30,8 @@ Keep `SUPABASE_SECRET_KEY` in server-only modules and read it from `process.env`
 The feature contract remains authoritative for product behavior. This folder
 owns the technical plan that implements that behavior.
 
-Phase 8A through Phase 8E are complete. Phase 8F quick save and enrichment is
-next and has not started.
+Phase 8A through Phase 8E are complete. The Phase 8F decision pass is complete,
+and Phase 8F implementation has not started.
 
 Do not add secrets, copied environment values, access tokens, or project IDs to
 these files. Keep migrations and generated database types in their current

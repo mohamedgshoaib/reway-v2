@@ -8,6 +8,9 @@
   contract and backend plan.
 - No Phase 8C SQL or generated database type existed when this record was
   approved.
+- The approved Phase 8F contract replaces only the favicon and OG-image URL
+  storage choice below with tracked private asset references. It keeps the
+  Phase 8C ownership, generation, cleanup, and bounded-work rules.
 
 ## Design rule
 
@@ -148,10 +151,11 @@ indexes.
 ### 19. Bookmark metadata layout
 
 Keep card fields on `bookmarks`: URL, URL fingerprint, title, normalized title,
-favicon URL, OG image URL, metadata state, Trash dates, timestamps,
-`collection_count`, and row version. Keep search and visit statistics in their
-approved narrow tables. Do not store filter, sort, or constraint fields inside
-JSONB.
+favicon and OG-image asset references, metadata state, Trash dates, timestamps,
+`collection_count`, and row version. Phase 8F moves source image URLs out of
+browser bookmark rows and tracks private Storage objects with typed relational
+data. Keep search and visit statistics in their approved narrow tables. Do not
+store filter, sort, or constraint fields inside JSONB.
 
 ### 20. Profiles and preferences
 
@@ -217,11 +221,11 @@ contract records one durable result per item and retries failed items.
 
 ### 28. File storage
 
-Keep import, export, restore, and recovery files in private Supabase Storage.
-Postgres stores the owner, object path, format version, checksum, byte size,
-state, and expiry. Use user-prefixed paths and short-lived signed URLs. Track
-server-created objects even when Storage does not assign a user owner. Do not
-store large files in Postgres.
+Keep import, export, restore, recovery, and bookmark asset files in private
+Supabase Storage. Postgres stores the owner, object path, format or generation,
+checksum, byte size, state, and expiry or lifecycle link. Use user-prefixed
+opaque paths and short-lived signed URLs. Track server-created objects even
+when Storage does not assign a user owner. Do not store large files in Postgres.
 
 ### 29. Restore activation
 

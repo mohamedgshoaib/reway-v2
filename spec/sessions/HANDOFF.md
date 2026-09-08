@@ -2,11 +2,12 @@
 
 ## Purpose
 
-- Start the Phase 8F quick save and enrichment decision pass.
+- Implement the approved Phase 8F capture and enrichment contract.
 
 ## Current scope
 
-- Phase 8E is complete. Phase 8F is next and has not started.
+- Phase 8E is complete. The Phase 8F decision pass is complete, and Phase 8F
+  implementation has not started.
 - Do not start Phase 8G import work.
 
 ## Current state
@@ -23,10 +24,14 @@
   passed and left no fixture data.
 - `spec/integrations/supabase/phase-08e-durable-jobs-decisions.md` contains the
   approved Phase 8E contract and implementation order.
+- `spec/integrations/supabase/phase-08f-capture-enrichment-decisions.md`
+  contains the approved Phase 8F outbox, enrichment, private asset, security,
+  performance, and implementation contract.
 - The hosted project has four logged PGMQ queues, bounded worker RPCs, one active
   repair schedule, and no worker grants for browser roles.
 - The deployed `durable-worker` Edge Function keeps JWT verification on but has
-  no wake token or enabled handler. Phase 8F owns its first active handler.
+  no wake token or enabled handler. Phase 8F may activate it only after it can
+  pin validated destinations and pass the approved hosted gates.
 - The full test suite passes all 245 tests. The latest full-scope React Doctor
   remains the Phase 8D run with no skipped checks or findings and a 100/100
   score. Phase 8E changed no React.
@@ -35,20 +40,27 @@
 ## What's next
 
 1. Follow the required session start sequence and read the key references below.
-2. Invoke `grilling` and ask the Phase 8F questions in the backend plan one at a
-   time. Do not reopen the Phase 8E contract.
-3. Record the approved Phase 8F contract before writing code.
-4. Implement and verify Phase 8F only, then stop before Phase 8G.
+2. Follow the implementation order in the Phase 8F decision record. Start with
+   the pure URL and SSRF modules and prove destination pinning in the intended
+   runtime before live fetching.
+3. Add the outbox, library commands and adapters, reviewed migration, metadata
+   and asset modules, queue handlers, wakes, and hosted benchmarks in their
+   recorded order.
+4. If the Edge Function misses a security, resource, or latency gate, move the
+   handler behind the same framework-free worker interface. Do not loosen the
+   gate.
+5. Implement and verify Phase 8F only, then stop before Phase 8G.
 
 ## Suggested skills
 
-- `grilling` - close only choices that change the Phase 8F contract.
 - `codebase-design` - keep capture and enrichment behind the completed worker
-  seam.
+  seam and the new outbox and fetch interfaces.
 - `supabase` - verify current Edge Function and client behavior.
 - `vitest` - cover URL normalization, SSRF classes, stale generations, retries,
-  and metadata results.
+  outbox recovery, asset lifecycle, and metadata results.
 - `unslop` - keep changed project records direct and factual.
+- `grilling` - use only if current evidence requires a product-level contract
+  change.
 
 ## Established workflow
 
@@ -71,6 +83,8 @@
   adapter seam and Phase 8E boundary.
 - `spec/integrations/supabase/phase-08e-durable-jobs-decisions.md` - approved
   and completed queue and worker contract.
+- `spec/integrations/supabase/phase-08f-capture-enrichment-decisions.md` -
+  approved Phase 8F contract and exact implementation order.
 - `supabase/migrations/20260906072738_phase_08c_core_schema.sql` - existing job,
   enrichment, claim, result, and cleanup functions.
 - `src/lib/durable-worker/` - completed worker, retry, in-memory, and Supabase
@@ -80,9 +94,9 @@
 
 ## Open questions
 
-- Phase 8F still needs the three decisions listed in the backend plan: offline
-  quick-save behavior, bulk enrichment coverage, and favicon or OG-image byte
-  delivery.
+- None. Return for approval only if current evidence requires changing the
+  approved product behavior, safety bounds, private asset model, or performance
+  gates.
 
 ## Redaction rule
 
