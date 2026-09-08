@@ -7,6 +7,7 @@
     "check": "pnpm run lint && pnpm run format:check && pnpm run typecheck",
     "db:check:phase8c": "node supabase/tests/phase-08c-core-schema.mjs && node supabase/tests/phase-08c-rebalance.mjs",
     "db:check:phase8d": "node supabase/tests/phase-08d-library-interface.mjs",
+    "db:check:phase8e": "node supabase/tests/phase-08e-durable-jobs.mjs",
     "dev": "vite dev --port 3000",
     "doctor": "npx react-doctor@latest",
     "format": "oxfmt",

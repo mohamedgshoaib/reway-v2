@@ -40,6 +40,12 @@
   },
   "overrides": [
     {
+      "files": ["src/types/database.generated.ts"],
+      "rules": {
+        "typescript/no-redundant-type-constituents": "off"
+      }
+    },
+    {
       "files": ["src/components/ui/**"],
       "rules": {
         "jsx-a11y/no-autofocus": "off",

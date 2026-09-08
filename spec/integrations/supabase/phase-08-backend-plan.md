@@ -15,6 +15,13 @@
 - Phase 8D added the `/library` route, framework-free domain interface,
   matching in-memory and Supabase adapters, checked search and tag-replacement
   functions, hosted types, and focused local and hosted checks.
+- The Phase 8E decision pass was completed on 2026-09-07. Its approved queue,
+  worker, lease, retry, repair, security, and operating contract lives in
+  `phase-08e-durable-jobs-decisions.md`.
+- Phase 8E installed four logged queues, bounded worker and repair functions,
+  Cron repair, opaque worker RPCs, framework-free worker adapters, and a dormant
+  JWT-checked Edge Function. Its local, hosted, advisor, build, and test gates
+  passed. Phase 8F has not started.
 - Session 05 remains open.
 
 ## Goal

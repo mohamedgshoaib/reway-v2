@@ -174,6 +174,51 @@ Write facts only. No plans, no advice, no narration.
   and a set lookup.
 - Browser, touch, keyboard, screen-reader, contrast, and screenshot checks
   remain unverified.
+- Completed the Phase 8E durable jobs and queues decision pass without writing
+  implementation code.
+- Audited the current Phase 8 records, job schema, claim and result functions,
+  worker client, installed package types, hosted extensions, migrations, and
+  Edge Functions.
+- Confirmed at the decision checkpoint that the hosted project was healthy and
+  current through Phase 8D. PGMQ, Cron, and pg_net were available but not
+  installed, and no Edge Function was deployed.
+- Added `spec/integrations/supabase/phase-08e-durable-jobs-decisions.md` as the
+  approved activation, queue, message, lease, retry, repair, worker security,
+  diagnostic, verification, and complexity contract.
+- Kept this checkpoint documentation-only. No migration, queue, extension,
+  worker module, Edge Function, generated type, or hosted database object
+  changed.
+- Completed Phase 8E and stopped before Phase 8F.
+- Added and applied the durable queue, opaque worker ID, extension-helper grant,
+  and strict retry-message migrations.
+- Installed PGMQ, Cron, and pg_net and created four logged queues for interactive
+  enrichment, bulk enrichment, import or restore, and export work.
+- Added transactional queue writes for bookmark creation and manual Re-enrich,
+  exact message claims, renewable leases, attempt start, retry visibility,
+  terminal deletion, poison rejection, bounded repair, and a private operator
+  snapshot.
+- Kept all public worker functions as security invokers. Browser roles have no
+  worker grants, PGMQ has no browser or direct `service_role` grants, and the
+  extension event-trigger helper no longer has public execution grants.
+- Added the framework-free durable worker, strict versioned envelopes, bounded
+  concurrency, stable retry jitter, in-memory adapter, and server-only Supabase
+  adapter under `src/lib/durable-worker/`.
+- Added and deployed a dormant `durable-worker` Edge Function with JWT
+  verification and a separate wake-token check. Phase 8E enables no queue
+  handler and stores no wake token.
+- Regenerated hosted public types after changing worker message IDs and
+  enrichment generations to opaque strings at the RPC seam.
+- The Phase 8E PGLite suite, applied-schema hosted rollback smoke, and focused
+  worker run passed. The focused run has 22 tests across five files.
+- The full suite passed 245 tests across 51 files with four workers. The Phase
+  8C 100,000-bookmark gate, three rebalance checks, Phase 8D 10,000-row search
+  check, and Phase 8E queue checks passed.
+- `pnpm run check`, both production builds, the client secret-name scan, and
+  `git diff --check` passed.
+- Supabase security and performance advisors report no warning or error after
+  the final grant migration. Their remaining notices are informational.
+- React Doctor and browser checks did not apply because Phase 8E changed no
+  React or rendered UI.
 
 ---
 
@@ -299,6 +344,24 @@ Write facts only. No plans, no advice, no narration.
 - Quick save, re-enrichment delivery, queues, import, export, restore, Realtime,
   authentication routes, account replacement, and visible mock replacement
   remain outside Phase 8D.
+- Phase 8E uses logged PGMQ queues while application tables remain the durable
+  status and audit source.
+- Hybrid activation combines a best-effort post-commit wake with independent
+  scheduled consumers. A bounded database Cron function repairs queue and lease
+  drift without an Edge Function.
+- One queue message stays bound to one request or job generation through its
+  automatic retry cycle. Terminal messages are deleted, and poison payloads
+  are never archived.
+- Workers use renewable fail-closed leases, bounded claims, and attempt counts
+  that start only before external or irreversible work.
+- One typed retry module owns bounded backoff, stable jitter, and bounded
+  `Retry-After` handling.
+- Interactive, bulk, import or restore, and export queues have independent
+  consumers and measured limits behind one shared worker module.
+- Worker invocation uses JWT verification plus a separate wake token. Browser
+  roles cannot access queue tables, private job state, or worker diagnostics.
+- A private `service_role` operator snapshot reports bounded queue, lease,
+  retry, repair, and poison counts without user data or payloads.
 
 ---
 

@@ -1,14 +1,16 @@
 import assert from "node:assert/strict"
-import { readdir, readFile } from "node:fs/promises"
-import { resolve } from "node:path"
 
 import { PGlite } from "@electric-sql/pglite"
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm"
 import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto"
 
+import {
+  applyPhase8Migrations,
+  installPhase8ExternalStubs,
+} from "./pglite-migrations.mjs"
+
 const USER_ONE = "11111111-1111-4111-8111-111111111111"
 const USER_TWO = "22222222-2222-4222-8222-222222222222"
-const MIGRATIONS_DIRECTORY = resolve("supabase/migrations")
 const database = new PGlite({ extensions: { pg_trgm, pgcrypto } })
 
 const setAuthenticatedUser = async (userId) => {
@@ -75,16 +77,8 @@ try {
     grant select on table realtime.messages to authenticated;
   `)
 
-  const migrationNames = (await readdir(MIGRATIONS_DIRECTORY))
-    .filter((name) => name.endsWith(".sql"))
-    .sort()
-  for (const migrationName of migrationNames) {
-    const migration = await readFile(
-      resolve(MIGRATIONS_DIRECTORY, migrationName),
-      "utf8"
-    )
-    await database.exec(migration)
-  }
+  await installPhase8ExternalStubs(database)
+  await applyPhase8Migrations(database)
 
   await database.exec(`
     insert into auth.users (id, email)

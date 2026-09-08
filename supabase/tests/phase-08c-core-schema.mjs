@@ -1,15 +1,16 @@
 import assert from "node:assert/strict"
-import { readdir, readFile } from "node:fs/promises"
-import { resolve } from "node:path"
 
 import { PGlite } from "@electric-sql/pglite"
 import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm"
 import { pgcrypto } from "@electric-sql/pglite/contrib/pgcrypto"
 
+import {
+  applyPhase8Migrations,
+  installPhase8ExternalStubs,
+} from "./pglite-migrations.mjs"
+
 const USER_ONE = "11111111-1111-4111-8111-111111111111"
 const USER_TWO = "22222222-2222-4222-8222-222222222222"
-const MIGRATIONS_DIRECTORY = resolve("supabase/migrations")
-
 const database = new PGlite({ extensions: { pg_trgm, pgcrypto } })
 
 const setAuthenticatedUser = async (userId) => {
@@ -76,16 +77,8 @@ try {
     grant select on table realtime.messages to authenticated;
   `)
 
-  const migrationNames = (await readdir(MIGRATIONS_DIRECTORY))
-    .filter((name) => name.endsWith(".sql"))
-    .sort()
-  for (const migrationName of migrationNames) {
-    const migration = await readFile(
-      resolve(MIGRATIONS_DIRECTORY, migrationName),
-      "utf8"
-    )
-    await database.exec(migration)
-  }
+  await installPhase8ExternalStubs(database)
+  await applyPhase8Migrations(database)
 
   await database.exec(`
     insert into auth.users (id, email, raw_user_meta_data)
@@ -176,29 +169,55 @@ try {
   assert.match(derivedRows.rows[0].searchable_text, /Engineering/)
 
   await database.exec("set role service_role;")
-  const claims = await database.query(`
-    select * from private.claim_enrichment_requests('interactive', 1, 60);
+  const messages = await database.query(`
+    select * from public.worker_read_queue(
+      'reway_enrichment_interactive',
+      90,
+      1
+    );
   `)
-  assert.equal(claims.rows.length, 1)
-  const claim = claims.rows[0]
+  assert.equal(messages.rows.length, 1)
+  const message = messages.rows[0]
+  const requestId = message.envelope.request_id
+  const generation = message.envelope.generation
+  const claimRows = await database.query(`
+    select public.worker_claim_enrichment_message(
+      'reway_enrichment_interactive',
+      '${message.message_id}',
+      '${requestId}',
+      '${generation}',
+      60
+    ) as claim;
+  `)
+  const claim = claimRows.rows[0].claim
+  assert.equal(claim.status, "claimed")
   const attempt = await database.query(`
-    select private.start_enrichment_attempt(
-      '${claim.request_id}',
-      ${claim.generation},
+    select public.worker_start_enrichment_attempt(
+      '${requestId}',
+      '${generation}',
       '${claim.lease_token}'
     ) as started;
   `)
   assert.equal(attempt.rows[0].started, true)
   const finish = await database.query(`
-    select private.finish_enrichment_request(
-      '${claim.request_id}',
-      ${claim.generation},
+    select public.worker_finish_enrichment_message(
+      'reway_enrichment_interactive',
+      '${message.message_id}',
+      '${requestId}',
+      '${generation}',
       '${claim.lease_token}',
       true,
       'Enriched title'
     ) as finished;
   `)
-  assert.equal(finish.rows[0].finished, true)
+  assert.equal(finish.rows[0].finished, "completed")
+  const deleted = await database.query(`
+    select public.worker_delete_terminal_message(
+      'reway_enrichment_interactive',
+      '${message.message_id}'
+    ) as deleted;
+  `)
+  assert.equal(deleted.rows[0].deleted, true)
 
   await database.exec("reset role;")
   await database.query(`

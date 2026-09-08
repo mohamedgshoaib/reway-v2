@@ -1,5 +1,3 @@
-/* oxlint-disable typescript/no-redundant-type-constituents -- Supabase emits never unions when a schema has no enums or composite types. */
-
 export type Json =
   | string
   | number
@@ -584,6 +582,123 @@ export type Database = {
         }[]
       }
       trash_bookmarks: { Args: { bookmark_ids: number[] }; Returns: number }
+      worker_claim_enrichment_message: {
+        Args: {
+          lease_seconds: number
+          target_generation: string
+          target_message_id: string
+          target_queue_name: string
+          target_request_id: string
+        }
+        Returns: Json
+      }
+      worker_claim_transfer_message: {
+        Args: {
+          lease_seconds: number
+          target_job_id: string
+          target_message_id: string
+          target_queue_name: string
+          target_work_kind: string
+        }
+        Returns: Json
+      }
+      worker_delete_terminal_message: {
+        Args: { target_message_id: string; target_queue_name: string }
+        Returns: boolean
+      }
+      worker_finish_enrichment_message: {
+        Args: {
+          result_failure_class?: string
+          result_favicon_url?: string
+          result_internal_error?: string
+          result_og_image_url?: string
+          result_public_error_code?: string
+          result_title?: string
+          retry_at?: string
+          succeeded: boolean
+          target_generation: string
+          target_lease_token: string
+          target_message_id: string
+          target_queue_name: string
+          target_request_id: string
+        }
+        Returns: string
+      }
+      worker_finish_transfer_message: {
+        Args: {
+          target_failed_count: number
+          target_internal_error?: string
+          target_job_id: string
+          target_lease_token: string
+          target_message_id: string
+          target_processed_count: number
+          target_public_error_code?: string
+          target_queue_name: string
+          target_retry_at?: string
+          target_state: string
+          target_succeeded_count: number
+        }
+        Returns: string
+      }
+      worker_operator_snapshot: { Args: never; Returns: Json }
+      worker_read_queue: {
+        Args: {
+          batch_size: number
+          target_queue_name: string
+          visibility_seconds: number
+        }
+        Returns: {
+          delivery_count: number
+          enqueued_at: string
+          envelope: Json
+          message_id: string
+          visible_at: string
+        }[]
+      }
+      worker_reject_poison_message: {
+        Args: {
+          target_delivery_count: number
+          target_message_id: string
+          target_queue_name: string
+          target_reason_code: string
+        }
+        Returns: boolean
+      }
+      worker_renew_enrichment_lease: {
+        Args: {
+          lease_seconds: number
+          target_generation: string
+          target_lease_token: string
+          target_message_id: string
+          target_queue_name: string
+          target_request_id: string
+          visibility_seconds: number
+        }
+        Returns: boolean
+      }
+      worker_renew_transfer_lease: {
+        Args: {
+          lease_seconds: number
+          target_job_id: string
+          target_lease_token: string
+          target_message_id: string
+          target_queue_name: string
+          visibility_seconds: number
+        }
+        Returns: boolean
+      }
+      worker_start_enrichment_attempt: {
+        Args: {
+          target_generation: string
+          target_lease_token: string
+          target_request_id: string
+        }
+        Returns: boolean
+      }
+      worker_start_transfer_attempt: {
+        Args: { target_job_id: string; target_lease_token: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
