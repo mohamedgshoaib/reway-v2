@@ -21,22 +21,32 @@ import type {
 import {
   toCollectionId,
   toEpochMilliseconds,
+  toBookmarkId,
   toTagId,
 } from "@/lib/library/library-types"
 import {
   assertUniqueCollectionName,
   assertUniqueTagName,
   assertValidCollectionParent,
+  normalizeQuickSaveUrl,
   normalizeBookmarkUrl,
   requireUniqueIds,
   validateAlignedOrderInput,
   validateBookmarkTitle,
+  validateClientRequestId,
   validateLibraryName,
   validateOrderKey,
+  validateQuickSaveCreatedAt,
 } from "@/lib/library/library-validation"
+
+export interface InMemoryBookmarkRequestBinding {
+  bookmarkId: BookmarkId
+  clientRequestId: string
+}
 
 export interface InMemoryLibrarySeed {
   bookmarkDetails?: BookmarkDetail[]
+  bookmarkRequestBindings?: InMemoryBookmarkRequestBinding[]
   bookmarks: Bookmark[]
   collections: Collection[]
   preferences: DashboardPreferences
@@ -75,24 +85,36 @@ const nextId = (ids: readonly string[]): string => {
 
 class InMemoryLibraryAdapter implements LibraryAdapter {
   private bookmarks: Bookmark[]
+  private readonly bookmarkIdsByClientRequestId: Map<string, BookmarkId>
   private collections: Collection[]
   private details: BookmarkDetail[]
   private preferences: DashboardPreferences
   private readonly recordedEventIds: Set<string>
+  private readonly reenrichmentBookmarkIdsByKey: Map<string, BookmarkId>
   private tags: Tag[]
   private readonly now: () => EpochMilliseconds
 
   constructor(seed: InMemoryLibrarySeed, options: InMemoryLibraryOptions) {
     this.bookmarks = seed.bookmarks.map(cloneBookmark)
+    this.bookmarkIdsByClientRequestId = new Map(
+      (seed.bookmarkRequestBindings ?? []).map((binding) => [
+        validateClientRequestId(binding.clientRequestId),
+        binding.bookmarkId,
+      ])
+    )
     this.collections = seed.collections.map(cloneCollection)
     this.details = (seed.bookmarkDetails ?? []).map(cloneDetail)
     this.preferences = clonePreferences(seed.preferences)
     this.recordedEventIds = new Set(seed.recordedEventIds ?? [])
+    this.reenrichmentBookmarkIdsByKey = new Map()
     this.tags = seed.tags.map(cloneTag)
     this.now = options.now ?? (() => toEpochMilliseconds(Date.now()))
   }
 
   async read(request: LibraryReadRequest): Promise<LibraryReadResult> {
+    if (request.kind === "bookmark-by-client-request-id") {
+      return this.readBookmarkByClientRequestId(request.clientRequestId)
+    }
     return readInMemoryLibrary(
       {
         bookmarks: this.bookmarks,
@@ -107,6 +129,16 @@ class InMemoryLibraryAdapter implements LibraryAdapter {
 
   async mutate(command: LibraryCommand): Promise<LibraryMutationResult> {
     switch (command.kind) {
+      case "quick-save-bookmark":
+        return {
+          bookmark: this.quickSaveBookmark(command),
+          kind: "bookmark",
+        }
+      case "request-bookmark-reenrichment":
+        return {
+          bookmark: this.requestBookmarkReenrichment(command),
+          kind: "bookmark",
+        }
       case "create-collection":
         return {
           collection: this.createCollection(command.draft),
@@ -182,6 +214,82 @@ class InMemoryLibraryAdapter implements LibraryAdapter {
     if (!bookmark)
       throw new LibraryError("not_found", "Bookmark not found.", false)
     return bookmark
+  }
+
+  private readBookmarkByClientRequestId(
+    clientRequestId: string
+  ): Extract<LibraryReadResult, { kind: "bookmark-by-client-request-id" }> {
+    const requestId = validateClientRequestId(clientRequestId)
+    const bookmarkId = this.bookmarkIdsByClientRequestId.get(requestId)
+    const bookmark =
+      bookmarkId === undefined
+        ? undefined
+        : this.bookmarks.find((candidate) => candidate.id === bookmarkId)
+    return {
+      bookmark: bookmark === undefined ? null : cloneBookmark(bookmark),
+      kind: "bookmark-by-client-request-id",
+    }
+  }
+
+  private quickSaveBookmark(
+    command: Extract<LibraryCommand, { kind: "quick-save-bookmark" }>
+  ): Bookmark {
+    const clientRequestId = validateClientRequestId(command.clientRequestId)
+    const existingBookmarkId =
+      this.bookmarkIdsByClientRequestId.get(clientRequestId)
+    if (existingBookmarkId !== undefined) {
+      return cloneBookmark(this.requireBookmark(existingBookmarkId))
+    }
+
+    const normalizedUrl = normalizeQuickSaveUrl(command.url).value
+    const timestamp = validateQuickSaveCreatedAt(command.createdAt)
+    const bookmark: Bookmark = {
+      collectionCount: 0,
+      createdAt: timestamp,
+      domain: null,
+      faviconUrl: null,
+      id: toBookmarkId(nextId(this.bookmarks.map(({ id }) => id))),
+      metadataStatus: "pending",
+      ogImageUrl: null,
+      purgeAfter: null,
+      rowVersion: 1,
+      title: normalizedUrl.hostname,
+      trashedAt: null,
+      updatedAt: timestamp,
+      url: normalizedUrl.href,
+      visitCount: 0,
+    }
+    this.bookmarks.push(bookmark)
+    this.bookmarkIdsByClientRequestId.set(clientRequestId, bookmark.id)
+    return cloneBookmark(bookmark)
+  }
+
+  private requestBookmarkReenrichment(
+    command: Extract<LibraryCommand, { kind: "request-bookmark-reenrichment" }>
+  ): Bookmark {
+    const idempotencyKey = validateClientRequestId(command.idempotencyKey)
+    const existingBookmarkId =
+      this.reenrichmentBookmarkIdsByKey.get(idempotencyKey)
+    if (existingBookmarkId !== undefined) {
+      if (existingBookmarkId !== command.bookmarkId) {
+        throw new LibraryError(
+          "conflict",
+          "The Re-enrich request belongs to another bookmark.",
+          false
+        )
+      }
+      return cloneBookmark(this.requireBookmark(existingBookmarkId))
+    }
+
+    const bookmark = this.requireBookmark(command.bookmarkId)
+    if (bookmark.trashedAt !== null) {
+      throw new LibraryError("not_found", "Bookmark not found.", false)
+    }
+    this.reenrichmentBookmarkIdsByKey.set(idempotencyKey, bookmark.id)
+    bookmark.metadataStatus = "pending"
+    bookmark.rowVersion += 1
+    bookmark.updatedAt = this.now()
+    return cloneBookmark(bookmark)
   }
 
   private requireCollection(collectionId: CollectionId): Collection {

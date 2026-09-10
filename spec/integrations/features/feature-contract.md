@@ -79,6 +79,10 @@ This is the authoritative record of Reway's approved feature behaviour and techn
 
 - Client-session coupling is disqualifying: if the tab closes before a second RPC fires, enrichment is silently lost.
 - On the developer's current Vercel Hobby plan, tighter function-duration limits compound the issue and enrichment competes with SSR traffic on the same runtime.
+- A database-woken Vercel Function in the same project is allowed as a separate
+  worker entrypoint. It must keep enrichment outside TanStack request handlers,
+  use private server environment values, and pass the Phase 8F live gates within
+  Hobby limits before activation.
 
 ### Extension ↔ Dashboard Realtime Sync
 

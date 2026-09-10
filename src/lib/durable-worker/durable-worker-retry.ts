@@ -1,7 +1,7 @@
 import type {
   DurableRetryInput,
   DurableRetryPolicy,
-} from "./durable-worker-types"
+} from "./durable-worker-types.ts"
 
 export interface DurableRetryPolicyOptions {
   baseDelayMs: number

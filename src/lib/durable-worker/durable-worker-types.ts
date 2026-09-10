@@ -121,7 +121,11 @@ export interface DurableWorkerAdapter<Result> {
 export interface DurableWorkerHandler<Result> {
   run(
     envelope: DurableEnvelope,
-    options: { signal: AbortSignal }
+    options: {
+      attemptNumber: number
+      leaseToken: string
+      signal: AbortSignal
+    }
   ): Promise<DurableWorkOutcome<Result>>
 }
 
@@ -153,6 +157,9 @@ export interface DurableWorkerSummary {
   failed: number
   leaseLost: number
   poisonDeleted: number
+  queueWaitP50Ms: number
+  queueWaitP95Ms: number
+  queueWaitP99Ms: number
   read: number
   retried: number
   terminalDeleted: number

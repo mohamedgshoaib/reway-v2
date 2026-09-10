@@ -156,11 +156,13 @@ export type Database = {
           collection_count: number
           created_at: string
           domain: string | null
+          favicon_asset_id: string | null
           favicon_url: string | null
           id: number
           metadata_generation: number
           metadata_status: string
           normalized_title: string | null
+          og_image_asset_id: string | null
           og_image_url: string | null
           purge_after: string | null
           row_version: number
@@ -176,11 +178,13 @@ export type Database = {
           collection_count?: number
           created_at?: string
           domain?: string | null
+          favicon_asset_id?: string | null
           favicon_url?: string | null
           id?: never
           metadata_generation?: number
           metadata_status?: string
           normalized_title?: string | null
+          og_image_asset_id?: string | null
           og_image_url?: string | null
           purge_after?: string | null
           row_version?: number
@@ -196,11 +200,13 @@ export type Database = {
           collection_count?: number
           created_at?: string
           domain?: string | null
+          favicon_asset_id?: string | null
           favicon_url?: string | null
           id?: never
           metadata_generation?: number
           metadata_status?: string
           normalized_title?: string | null
+          og_image_asset_id?: string | null
           og_image_url?: string | null
           purge_after?: string | null
           row_version?: number
@@ -430,11 +436,13 @@ export type Database = {
           collection_count: number
           created_at: string
           domain: string | null
+          favicon_asset_id: string | null
           favicon_url: string | null
           id: number
           metadata_generation: number
           metadata_status: string
           normalized_title: string | null
+          og_image_asset_id: string | null
           og_image_url: string | null
           purge_after: string | null
           row_version: number
@@ -488,6 +496,19 @@ export type Database = {
           sort_orders: string[]
         }
         Returns: number
+      }
+      read_bookmark_asset_signing_paths: {
+        Args: { bookmark_ids: number[]; include_og_image?: boolean }
+        Returns: {
+          asset_id: string
+          asset_kind: string
+          bookmark_id: number
+          byte_size: number
+          content_type: string
+          height: number
+          object_path: string
+          width: number
+        }[]
       }
       rebalance_bookmarks: {
         Args: {
@@ -582,6 +603,16 @@ export type Database = {
         }[]
       }
       trash_bookmarks: { Args: { bookmark_ids: number[] }; Returns: number }
+      worker_claim_bookmark_asset_cleanup: {
+        Args: { batch_size: number; lease_seconds: number }
+        Returns: {
+          asset_id: string
+          cleanup_attempt_count: number
+          cleanup_lease_token: string
+          object_path: string
+          user_id: string
+        }[]
+      }
       worker_claim_enrichment_message: {
         Args: {
           lease_seconds: number
@@ -606,12 +637,22 @@ export type Database = {
         Args: { target_message_id: string; target_queue_name: string }
         Returns: boolean
       }
+      worker_finish_bookmark_asset_cleanup: {
+        Args: {
+          retry_at?: string
+          succeeded: boolean
+          target_asset_id: string
+          target_cleanup_lease_token: string
+        }
+        Returns: boolean
+      }
       worker_finish_enrichment_message: {
         Args: {
+          result_domain?: string
           result_failure_class?: string
-          result_favicon_url?: string
+          result_favicon_asset_id?: string
           result_internal_error?: string
-          result_og_image_url?: string
+          result_og_image_asset_id?: string
           result_public_error_code?: string
           result_title?: string
           retry_at?: string
@@ -640,7 +681,28 @@ export type Database = {
         }
         Returns: string
       }
+      worker_mark_bookmark_asset_ready: {
+        Args: {
+          target_asset_id: string
+          target_byte_size: number
+          target_checksum: string
+          target_generation: string
+          target_height: number
+          target_lease_token: string
+          target_request_id: string
+          target_width: number
+        }
+        Returns: boolean
+      }
       worker_operator_snapshot: { Args: never; Returns: Json }
+      worker_read_enrichment_bookmark_id: {
+        Args: {
+          target_generation: string
+          target_lease_token: string
+          target_request_id: string
+        }
+        Returns: string
+      }
       worker_read_queue: {
         Args: {
           batch_size: number
@@ -686,6 +748,17 @@ export type Database = {
           visibility_seconds: number
         }
         Returns: boolean
+      }
+      worker_reserve_bookmark_asset: {
+        Args: {
+          target_asset_id: string
+          target_content_type: string
+          target_generation: string
+          target_kind: string
+          target_lease_token: string
+          target_request_id: string
+        }
+        Returns: string
       }
       worker_start_enrichment_attempt: {
         Args: {

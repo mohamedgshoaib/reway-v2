@@ -207,7 +207,8 @@ try {
       '${generation}',
       '${claim.lease_token}',
       true,
-      'Enriched title'
+      'Enriched title',
+      'example.com'
     ) as finished;
   `)
   assert.equal(finish.rows[0].finished, "completed")

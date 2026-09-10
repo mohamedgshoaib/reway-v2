@@ -1,5 +1,9 @@
 {
   "imports": {
-    "@supabase/functions-js": "jsr:@supabase/functions-js@2.116.0"
+    "@cf-wasm/photon": "npm:@cf-wasm/photon@0.4.0",
+    "@cf-wasm/photon/node": "npm:@cf-wasm/photon@0.4.0/node",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.112.4",
+    "@supabase/functions-js": "jsr:@supabase/functions-js@2.116.0",
+    "htmlparser2": "npm:htmlparser2@12.0.0"
   }
 }

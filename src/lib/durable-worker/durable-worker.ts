@@ -1,7 +1,7 @@
 import {
   getDurableEnvelopeKey,
   parseDurableEnvelope,
-} from "./durable-worker-envelope"
+} from "./durable-worker-envelope.ts"
 import type {
   ClaimedDurableWork,
   DurableQueueMessage,
@@ -9,7 +9,7 @@ import type {
   DurableWorkerDependencies,
   DurableWorkerRequest,
   DurableWorkerSummary,
-} from "./durable-worker-types"
+} from "./durable-worker-types.ts"
 
 const MAX_BATCH_SIZE = 100
 const MAX_CONCURRENCY = 20
@@ -24,10 +24,19 @@ const createSummary = (): DurableWorkerSummary => ({
   failed: 0,
   leaseLost: 0,
   poisonDeleted: 0,
+  queueWaitP50Ms: 0,
+  queueWaitP95Ms: 0,
+  queueWaitP99Ms: 0,
   read: 0,
   retried: 0,
   terminalDeleted: 0,
 })
+
+const percentile = (values: readonly number[], fraction: number): number => {
+  if (values.length === 0) return 0
+  const sorted = [...values].sort((left, right) => left - right)
+  return sorted[Math.max(0, Math.ceil(sorted.length * fraction) - 1)]
+}
 
 const defaultWait = (
   milliseconds: number,
@@ -122,6 +131,8 @@ const runWithHeartbeat = async <Result>(
   const heartbeatPromise = heartbeat()
   try {
     const outcome = await dependencies.handler.run(claim.envelope, {
+      attemptNumber: claim.attemptCount,
+      leaseToken: claim.leaseToken,
       signal: workController.signal,
     })
     return leaseLost ? { leaseLost: true } : { leaseLost: false, outcome }
@@ -269,6 +280,13 @@ export const runDurableWorker = async <Result>(
   }
   const summary = createSummary()
   summary.read = messages.length
+  const readAtMs = (dependencies.now ?? Date.now)()
+  const queueWaitSamples = messages.map((message) =>
+    Math.max(0, readAtMs - message.enqueuedAtMs)
+  )
+  summary.queueWaitP50Ms = percentile(queueWaitSamples, 0.5)
+  summary.queueWaitP95Ms = percentile(queueWaitSamples, 0.95)
+  summary.queueWaitP99Ms = percentile(queueWaitSamples, 0.99)
 
   let nextMessageIndex = 0
   const workerCount = Math.min(request.concurrency, messages.length)

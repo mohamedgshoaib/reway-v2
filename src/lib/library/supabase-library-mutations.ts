@@ -15,6 +15,7 @@ import {
   validateLibraryName,
   validateOrderKey,
 } from "@/lib/library/library-validation"
+import { SupabaseLibraryCapture } from "@/lib/library/supabase-library-capture"
 import { throwPostgrestError } from "@/lib/library/supabase-library-error"
 import {
   mapSupabaseBookmark,
@@ -45,15 +46,21 @@ const requireRpcNumber = (value: number | null): number => {
 }
 
 export class SupabaseLibraryMutations {
+  private readonly capture: SupabaseLibraryCapture
   private readonly client: SupabaseLibraryClient
   private ownerIdPromise: Promise<string> | undefined
 
   constructor(client: SupabaseLibraryClient) {
     this.client = client
+    this.capture = new SupabaseLibraryCapture(client)
   }
 
   async mutate(command: LibraryCommand): Promise<LibraryMutationResult> {
     switch (command.kind) {
+      case "quick-save-bookmark":
+        return this.capture.quickSave(command)
+      case "request-bookmark-reenrichment":
+        return this.capture.requestReenrichment(command)
       case "create-collection":
         return this.createCollection(command)
       case "edit-collection":

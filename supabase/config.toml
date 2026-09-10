@@ -414,6 +414,6 @@ enabled = true
 
 [functions.durable-worker]
 enabled = true
-verify_jwt = true
+verify_jwt = false
 import_map = "./functions/durable-worker/deno.json"
 entrypoint = "./functions/durable-worker/index.ts"

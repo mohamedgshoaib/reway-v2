@@ -28,6 +28,7 @@ import {
   toTagId,
 } from "@/lib/library/library-types"
 import { toNumericId } from "@/lib/library/library-validation"
+import { SupabaseLibraryCapture } from "@/lib/library/supabase-library-capture"
 import { throwPostgrestError } from "@/lib/library/supabase-library-error"
 import {
   mapSupabaseBookmark,
@@ -108,10 +109,12 @@ const mapWithConcurrency = async <T, R>(
 
 class SupabaseLibraryAdapter implements LibraryAdapter {
   private readonly client: SupabaseLibraryClient
+  private readonly capture: SupabaseLibraryCapture
   private readonly mutations: SupabaseLibraryMutations
 
   constructor(client: SupabaseLibraryClient) {
     this.client = client
+    this.capture = new SupabaseLibraryCapture(client)
     this.mutations = new SupabaseLibraryMutations(client)
   }
 
@@ -128,6 +131,8 @@ class SupabaseLibraryAdapter implements LibraryAdapter {
           detail: await this.readBookmarkDetail(request.bookmarkId),
           kind: request.kind,
         }
+      case "bookmark-by-client-request-id":
+        return this.capture.readByClientRequestId(request.clientRequestId)
       case "bookmarks":
         return { kind: request.kind, page: await this.readBookmarks(request) }
       case "search":

@@ -3,7 +3,7 @@
 Write facts only. No plans, no advice, no narration.
 
 **Filename:** `session-05.md`
-**Session Status:** Open
+**Session Status:** Ended
 
 ---
 
@@ -242,6 +242,124 @@ Write facts only. No plans, no advice, no narration.
 - Added `spec/integrations/supabase/phase-08f-capture-enrichment-decisions.md`
   and reconciled the feature contract, backend plan, Supabase index, and
   handoff. This checkpoint changes documentation only.
+- Completed Phase 8F implementation-order step 1 and stopped before the browser
+  outbox.
+- Added pure HTTP URL normalization, public IP classification, a 16-address DNS
+  bound, mixed-safe DNS rejection, an injected SSRF policy, exact peer checks,
+  and Deno DNS and pinned-connection adapters.
+- The Deno adapter opens TCP to the checked IP and starts TLS with the original
+  host name. The dormant worker now fails at boot if the runtime lacks the DNS,
+  TCP, or TLS operation needed for destination pinning.
+- Deployed the still-dormant worker with JWT verification on. The hosted boot
+  proof passed without a wake token, enabled queue, outbound connection, or
+  page fetch.
+- The focused URL, IP, SSRF, Deno adapter, and worker-wake run passed 93 tests
+  across five files. `pnpm run check`, both production builds, the client
+  secret-name scan, and `git diff --check` passed.
+- No outbox, library command, migration, metadata, asset, queue handler, wake,
+  live fetch, or Phase 8G work started.
+- Completed Phase 8F implementation-order step 2 and stopped before library
+  quick-save and Re-enrich commands.
+- Added one framework-free quick-save outbox interface with matching in-memory
+  and IndexedDB adapters, subject-scoped reads and mutations, atomic per-subject
+  totals, bounded multi-tab claims, lease recovery, and stable retry timing.
+- Kept one client request ID through retries and reloads. Uncertain responses
+  persist `reconcile` as the next action. Confirmed saves remove the stored entry,
+  while permanent failures remain until explicit dismissal.
+- Enforced 1,000-entry and 16 MiB caps without dropping older saves. Missing or
+  different identities cannot read or claim another subject's entries through
+  the normal interface.
+- The browser adapter requests persistent storage once. Denial keeps the entry
+  with `best_effort` status, while an IndexedDB failure reports that the device
+  did not preserve the save.
+- Added pinned `fake-indexeddb` 6.2.5 as a test-only dependency.
+- The focused URL, IP, SSRF, outbox, Deno adapter, and worker-wake run passed
+  112 tests across seven files. `pnpm run check`, both production builds, the
+  client secret-name scan, and `git diff --check` passed.
+- Browser-backed IndexedDB, persistence, and multi-tab checks remain unverified.
+- No library command, Supabase adapter change, migration, metadata, asset, queue
+  handler, wake, live fetch, UI wiring, or Phase 8G work started.
+- Completed Phase 8F implementation-order step 3 and stopped before the
+  reviewed migration.
+- Extended `LibraryAdapter` and both adapters with idempotent quick save,
+  client request reconciliation, and manual Re-enrich.
+- Quick save now uses the checked Phase 8F URL policy, preserves the client
+  creation time, creates a pending Uncollected bookmark, and permits the same
+  URL under different request IDs.
+- The Supabase adapter uses the existing atomic bookmark and Re-enrich
+  functions, returns an authoritative bookmark with visit stats, and looks up
+  uncertain saves through the user-scoped request ID index under RLS.
+- Added tests for repeat saves, request reconciliation, duplicate URLs,
+  metadata preservation, Trash, unsafe input, invalid receipts, and
+  authoritative Supabase mapping.
+- The focused library run passed 29 tests across three files. The Phase 8F run
+  passed 141 tests across ten files. The Phase 8D and 8E database checks,
+  `pnpm run check`, both production builds, the client secret-name scan, and
+  `git diff --check` passed.
+- React Doctor did not apply because no React file changed. Browser-backed
+  IndexedDB, persistence, and multi-tab checks remain unverified.
+- No migration, metadata parser, asset work, queue handler, wake, live fetch,
+  UI wiring, or Phase 8G work started.
+- Completed Phase 8F implementation-order step 4 and stopped before metadata
+  parsing, derivative creation, and Storage upload.
+- Added the reviewed `phase_08f_bookmark_assets` migration without applying it
+  to the hosted project or regenerating hosted types.
+- Added the 8,192-character bookmark URL bound and one private derivative bucket
+  limited to JPEG, PNG, WebP, and 256 KiB objects.
+- Added private tracked bookmark assets, current bookmark asset references,
+  immutable user-prefixed paths, checked derivative facts, six-candidate request
+  caps, owner-checked signing-path reads, and bounded cleanup leases.
+- Replaced the worker's source-image URL result with checked asset IDs and one
+  required normalized domain. Successful work switches assets atomically.
+  Failed Re-enrich keeps the last good metadata, and stale work queues its
+  candidates for deletion.
+- Aligned worker asset locks with bookmark deletion order and made manual
+  Re-enrich keys race-safe and conflicting cross-bookmark reuse explicit.
+- Added `supabase/tests/phase-08f-bookmark-assets.mjs` and updated the shared
+  PGlite Storage stub plus older worker calls for the new result contract.
+- All Phase 8C through 8F database gates passed. The Phase 8C capacity run kept
+  its 100,000-bookmark check, and the new gate passed URL, asset, ownership,
+  replacement, stale-generation, grant, deletion, and cleanup cases.
+- The Phase 8F focused run passed 141 tests across ten files. `pnpm run check`,
+  both production builds, the client secret-name scan, and `git diff --check`
+  passed.
+- React Doctor did not apply because no React file changed. Browser-backed
+  IndexedDB, persistence, and multi-tab checks remain unverified.
+- No metadata parser, derivative implementation, Storage object upload, queue
+  handler, wake, hosted apply, generated type update, live fetch, UI wiring, or
+  Phase 8G work started.
+- Completed Phase 8F implementation-order step 5 and stopped before queue
+  handlers.
+- Added bounded HTML and XHTML parsing for title, favicon, base URL, and OG-image
+  metadata. The parser supports UTF-8, UTF-16, and Windows-1252 input, the 2 MiB
+  body cap, 512-code-point titles, malformed markup, bounded duplicate fields,
+  and safe relative URL resolution.
+- Added a framework-free bookmark asset processor with injected rasterizer,
+  checked registry, and private Storage interfaces.
+- The processor checks declared and actual image types, source bytes, static
+  PNG, JPEG, and WebP structure, the 20-megapixel decode cap, animation, output
+  dimensions, output bytes, and checksum before it marks an asset ready.
+- Added a Photon WebAssembly rasterizer for bounded static WebP derivatives. It
+  keeps aspect ratio, never upscales, strips source metadata, and makes at most
+  eight size-reduction attempts.
+- Added immutable private Supabase Storage upload with explicit content type,
+  one-hour cache metadata, and no upsert. An uncertain duplicate succeeds only
+  when the stored bytes match. A different object returns a non-retryable
+  conflict.
+- Pinned `htmlparser2` 12.0.0 and `@cf-wasm/photon` 0.4.0.
+- The new parser, processor, rasterizer, and Storage adapter passed 36 tests
+  across four files. The Phase 8F focused run passed 177 tests across 14 files,
+  and the local Phase 8F database gate passed.
+- `pnpm run check`, both production builds, `pnpm audit --prod`, the client
+  secret-name scan, and `git diff --check` passed.
+- React Doctor did not apply because no React file changed. Browser-backed
+  IndexedDB, persistence, and multi-tab checks remain unverified.
+- HTML parsing costs `O(H)` time and memory for at most 2 MiB. Image inspection
+  costs `O(B)` time and constant extra memory. Decode and bounded re-encoding
+  cost `O(P)` time and memory for at most 20 million pixels. Duplicate upload
+  checks cost `O(S)` time and memory for at most 256 KiB.
+- No queue handler, wake, hosted apply, generated type update, live fetch, UI
+  wiring, or Phase 8G work started.
 
 ---
 
@@ -412,7 +530,7 @@ Write facts only. No plans, no advice, no narration.
 
 ## Session end
 
-- Open
+- Session ended
 
 ---
 

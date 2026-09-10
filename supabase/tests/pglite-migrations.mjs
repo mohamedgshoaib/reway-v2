@@ -14,6 +14,15 @@ const omitHostedExtensions = (migration) =>
 
 export const installPhase8ExternalStubs = async (database) => {
   await database.exec(`
+    create schema storage;
+    create table storage.buckets (
+      id text primary key,
+      name text not null unique,
+      public boolean not null default false,
+      file_size_limit bigint,
+      allowed_mime_types text[]
+    );
+
     create function public.rls_auto_enable()
     returns void
     language plpgsql
@@ -150,6 +159,55 @@ export const installPhase8ExternalStubs = async (database) => {
       using target_message_id;
       get diagnostics deleted_count = row_count;
       return deleted_count = 1;
+    end;
+    $$;
+
+    create schema vault;
+    create table vault.secrets (
+      id uuid primary key default gen_random_uuid(),
+      name text not null unique,
+      secret text not null
+    );
+    create view vault.decrypted_secrets as
+    select id, name, secret as decrypted_secret
+    from vault.secrets;
+
+    create schema net;
+    create sequence net.http_request_id_seq;
+    create table net.http_request_queue (
+      id bigint primary key,
+      url text not null,
+      headers jsonb not null,
+      body jsonb not null,
+      timeout_milliseconds integer not null
+    );
+    create function net.http_post(
+      url text,
+      body jsonb default '{}'::jsonb,
+      params jsonb default '{}'::jsonb,
+      headers jsonb default '{}'::jsonb,
+      timeout_milliseconds integer default 1000
+    )
+    returns bigint
+    language plpgsql
+    as $$
+    declare
+      request_id bigint := nextval('net.http_request_id_seq');
+    begin
+      insert into net.http_request_queue (
+        id,
+        url,
+        headers,
+        body,
+        timeout_milliseconds
+      ) values (
+        request_id,
+        url,
+        headers,
+        body,
+        timeout_milliseconds
+      );
+      return request_id;
     end;
     $$;
 

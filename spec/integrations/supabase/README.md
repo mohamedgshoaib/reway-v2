@@ -30,8 +30,23 @@ Keep `SUPABASE_SECRET_KEY` in server-only modules and read it from `process.env`
 The feature contract remains authoritative for product behavior. This folder
 owns the technical plan that implements that behavior.
 
-Phase 8A through Phase 8E are complete. The Phase 8F decision pass is complete,
-and Phase 8F implementation has not started.
+Phase 8A through Phase 8E are complete. The Phase 8F decision pass and its first
+seven bounded steps are complete. URL and SSRF safety, destination pinning, the
+durable browser outbox, library capture operations, the reviewed bookmark asset
+migration, bounded metadata parsing, static image derivatives, and immutable
+private Storage uploads are in place. Interactive and bulk handlers now run
+through the durable-worker interface with separate limits. Immediate and
+scheduled wakes are defined, the wake token is configured without being
+recorded, and the hosted publication and runtime gates pass. The production
+worker remains dormant until the final activation checks in step 9. The
+migration passes its local gate and has been applied once to the hosted project.
+The service-only worker uses its private wake-token check with the platform JWT
+check disabled. Its guarded live activation completed all 50 items but missed
+the queue-wait, first-12, and total-time gates. The worker URL and publishable
+key were removed from Vault, so the schedules are no-ops. Step 8 is now required
+before Step 9 can resume. A Node worker entrypoint now lives in the existing
+Vercel project with a 60-second cap and London placement. It needs a normal
+Vercel deployment and the same live measurement before acceptance.
 
 Do not add secrets, copied environment values, access tokens, or project IDs to
 these files. Keep migrations and generated database types in their current

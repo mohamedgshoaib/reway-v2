@@ -69,6 +69,9 @@ describe("durable worker", () => {
       failed: 0,
       leaseLost: 0,
       poisonDeleted: 0,
+      queueWaitP50Ms: 1_000,
+      queueWaitP95Ms: 1_000,
+      queueWaitP99Ms: 1_000,
       read: 1,
       retried: 0,
       terminalDeleted: 1,
@@ -79,6 +82,38 @@ describe("durable worker", () => {
       result: "done",
       state: "completed",
     })
+  })
+
+  it("reports queue-wait percentiles for the messages it reads", async () => {
+    const waits = [10, 20, 30, 40]
+    const adapter = createInMemoryDurableWorkerAdapter(
+      waits.map((wait, index) =>
+        createSeed<string>({
+          enqueuedAtMs: NOW - wait,
+          envelope: {
+            generation: "1",
+            requestId: `aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa${index}`,
+            version: 1,
+            workKind: "enrichment",
+          },
+          messageId: String(index + 1),
+        })
+      ),
+      { now: () => NOW }
+    )
+
+    const summary = await runDurableWorker(request, {
+      adapter,
+      handler: {
+        run: async () => ({ result: "done", status: "succeeded" }),
+      },
+      now: () => NOW,
+      retryPolicy,
+    })
+
+    expect(summary.queueWaitP50Ms).toBe(20)
+    expect(summary.queueWaitP95Ms).toBe(40)
+    expect(summary.queueWaitP99Ms).toBe(40)
   })
 
   it("keeps the same message for a bounded transient retry", async () => {

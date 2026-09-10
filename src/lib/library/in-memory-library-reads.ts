@@ -20,6 +20,15 @@ import type {
   Tag,
 } from "@/lib/library/library-types"
 
+type StandardLibraryReadRequest = Exclude<
+  LibraryReadRequest,
+  { kind: "bookmark-by-client-request-id" }
+>
+type StandardLibraryReadResult = Exclude<
+  LibraryReadResult,
+  { kind: "bookmark-by-client-request-id" }
+>
+
 export interface InMemoryLibraryReadState {
   bookmarks: readonly Bookmark[]
   collections: readonly Collection[]
@@ -108,7 +117,7 @@ class InMemoryLibraryReader {
     )
   }
 
-  read(request: LibraryReadRequest): LibraryReadResult {
+  read(request: StandardLibraryReadRequest): StandardLibraryReadResult {
     switch (request.kind) {
       case "bookmarks":
         return { kind: request.kind, page: this.readBookmarks(request) }
@@ -385,5 +394,5 @@ class InMemoryLibraryReader {
 
 export const readInMemoryLibrary = (
   state: InMemoryLibraryReadState,
-  request: LibraryReadRequest
-): LibraryReadResult => new InMemoryLibraryReader(state).read(request)
+  request: StandardLibraryReadRequest
+): StandardLibraryReadResult => new InMemoryLibraryReader(state).read(request)

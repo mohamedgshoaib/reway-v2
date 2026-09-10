@@ -47,6 +47,7 @@ export type LibraryReadRequest =
     } & PageRequest)
   | ({ kind: "tags"; order: TagOrder } & PageRequest)
   | { bookmarkId: BookmarkId; kind: "bookmark-detail" }
+  | { clientRequestId: string; kind: "bookmark-by-client-request-id" }
   | {
       bookmarkLimit?: number
       collectionLimit?: number
@@ -65,6 +66,7 @@ export type LibraryReadResult =
   | { kind: "collections"; page: LibraryPage<Collection> }
   | { kind: "tags"; page: LibraryPage<Tag> }
   | { detail: BookmarkDetail; kind: "bookmark-detail" }
+  | { bookmark: Bookmark | null; kind: "bookmark-by-client-request-id" }
   | { kind: "search"; results: LibrarySearchResults }
   | { kind: "preferences"; preferences: DashboardPreferences }
 
@@ -88,6 +90,17 @@ export interface VisitEvent {
 }
 
 export type LibraryCommand =
+  | {
+      clientRequestId: string
+      createdAt: EpochMilliseconds
+      kind: "quick-save-bookmark"
+      url: string
+    }
+  | {
+      bookmarkId: BookmarkId
+      idempotencyKey: string
+      kind: "request-bookmark-reenrichment"
+    }
   | { draft: CollectionDraft; kind: "create-collection" }
   | {
       collectionId: CollectionId

@@ -46,7 +46,7 @@ describe("durable worker wake", () => {
     expect(response.status).toBe(401)
   })
 
-  it("keeps every handler disabled during Phase 8E", async () => {
+  it("rejects a queue that is not enabled", async () => {
     const response = await handleDurableWorkerWake(createRequest(), {
       enabledQueues: new Set(),
       runQueue: async () => ({}),

@@ -24,9 +24,25 @@
   passed.
 - The Phase 8F decision pass was completed on 2026-09-08. Its approved offline
   capture, enrichment, asset delivery, security, performance, and runtime rules
-  live in `phase-08f-capture-enrichment-decisions.md`. Phase 8F implementation
-  has not started.
-- Session 05 remains open.
+  live in `phase-08f-capture-enrichment-decisions.md`. The first bounded
+  implementation steps are complete: URL normalization, SSRF policy, injected
+  Deno network adapters, the dormant hosted runtime boot proof, the durable
+  browser outbox, and library commands and adapters for quick save,
+  reconciliation, and manual Re-enrich. The reviewed bookmark asset migration,
+  bounded metadata parser, checked static image processor, Photon rasterizer,
+  and immutable private Storage adapter are also complete. Interactive and bulk
+  handlers, immediate and scheduled wake definitions, the unrecorded wake
+  token, and the hosted publication and runtime gates are complete. Those gates
+  led to a guarded Step 9 activation. Step 9 applied the reviewed migration and
+  one bounded wake-timeout correction, regenerated hosted types, and proved the
+  service-wake authentication contract. The live Edge path completed all 50
+  items but missed the queue-wait, first-12, and total-time gates. The worker URL
+  and publishable key were removed from Vault so schedules are no-ops. Step 8 is
+  now required before Step 9 can resume. The existing Vercel project now has a
+  separate Node worker entrypoint. It preserves the durable worker and network
+  safety interfaces without Docker or another host. Deployment and live
+  measurement remain open.
+- Session 06 remains open.
 
 ## Goal
 
@@ -752,6 +768,9 @@ answer before Phase 8A.
 - [TanStack Start import protection](https://tanstack.com/start/latest/docs/framework/react/guide/import-protection)
 - [Linear delta-sync read path](https://linear.app/now/rebuilding-delta-sync-read-path)
 - [Vercel queue concepts](https://vercel.com/docs/queues/concepts)
+- [Vercel Node.js runtime](https://vercel.com/docs/functions/runtimes/node-js)
+- [Vercel Function limits](https://vercel.com/docs/functions/limitations)
+- [Vercel Function regions](https://vercel.com/docs/functions/configuring-functions/region)
 - [Karakeep import worker](https://github.com/karakeep-app/karakeep/blob/main/apps/workers/workers/importWorker.ts)
 - [Karakeep queue definitions](https://github.com/karakeep-app/karakeep/blob/main/packages/shared-server/src/queues.ts)
 - [Karakeep 0.33.1 release notes](https://github.com/karakeep-app/karakeep/releases/tag/v0.33.1)

@@ -3,13 +3,44 @@ import type {
   BookmarkId,
   Collection,
   CollectionId,
+  EpochMilliseconds,
   Tag,
   TagId,
 } from "@/lib/library/library-types"
+import { normalizeHttpUrl } from "@/lib/network-safety/url-policy"
 
 const MAX_LIBRARY_NAME_LENGTH = 24
 const MAX_ORDER_KEY_LENGTH = 200
+const MAX_DATE_EPOCH_MS = 8_640_000_000_000_000
 const INVALID_TEXT = /[\p{Cc}\p{Cf}]/u
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+export const validateClientRequestId = (value: string): string => {
+  if (!UUID_PATTERN.test(value)) {
+    throw invalidLibraryInput("The client request ID is invalid.")
+  }
+  return value
+}
+
+export const validateQuickSaveCreatedAt = (
+  value: EpochMilliseconds
+): EpochMilliseconds => {
+  if (!Number.isSafeInteger(value) || value < 0 || value > MAX_DATE_EPOCH_MS) {
+    throw invalidLibraryInput("The quick-save timestamp is invalid.")
+  }
+  return value
+}
+
+export const normalizeQuickSaveUrl = (
+  value: string
+): ReturnType<typeof normalizeHttpUrl> & { ok: true } => {
+  const result = normalizeHttpUrl(value)
+  if (!result.ok) {
+    throw invalidLibraryInput("Enter a valid public HTTP or HTTPS URL.")
+  }
+  return result
+}
 
 export const normalizeLibraryName = (name: string): string =>
   name.trim().replace(/\s+/gu, " ")

@@ -25,6 +25,10 @@ const collectionId3 = toCollectionId("3")
 const tagId1 = toTagId("1")
 const tagId2 = toTagId("2")
 const fixedNow = toEpochMilliseconds(10_000)
+const clientRequestId1 = "11111111-1111-4111-8111-111111111111"
+const clientRequestId2 = "22222222-2222-4222-8222-222222222222"
+const reenrichmentKey1 = "33333333-3333-4333-8333-333333333333"
+const reenrichmentKey2 = "44444444-4444-4444-8444-444444444444"
 
 const createSeed = (): InMemoryLibrarySeed => ({
   bookmarkDetails: [
@@ -250,6 +254,140 @@ describe("in-memory library reads", () => {
 })
 
 describe("in-memory library mutations", () => {
+  it("quick-saves once per client request and reconciles by that request", async () => {
+    const adapter = createAdapter()
+    const command = {
+      clientRequestId: clientRequestId1,
+      createdAt: toEpochMilliseconds(5_000),
+      kind: "quick-save-bookmark" as const,
+      url: "example.org/path",
+    }
+
+    const first = await adapter.mutate(command)
+    const repeated = await adapter.mutate(command)
+    const reconciled = asResult(
+      await adapter.read({
+        clientRequestId: clientRequestId1,
+        kind: "bookmark-by-client-request-id",
+      }),
+      "bookmark-by-client-request-id"
+    )
+
+    expect(first).toMatchObject({
+      bookmark: {
+        collectionCount: 0,
+        createdAt: 5_000,
+        metadataStatus: "pending",
+        title: "example.org",
+        url: "https://example.org/path",
+      },
+      kind: "bookmark",
+    })
+    expect(repeated).toEqual(first)
+    expect(reconciled.bookmark).toEqual(
+      first.kind === "bookmark" ? first.bookmark : null
+    )
+    await expect(
+      adapter.read({
+        clientRequestId: clientRequestId2,
+        kind: "bookmark-by-client-request-id",
+      })
+    ).resolves.toEqual({
+      bookmark: null,
+      kind: "bookmark-by-client-request-id",
+    })
+  })
+
+  it("allows duplicate URLs when their client request IDs differ", async () => {
+    const adapter = createAdapter()
+    const command = {
+      createdAt: toEpochMilliseconds(5_000),
+      kind: "quick-save-bookmark" as const,
+      url: "https://example.org",
+    }
+    const first = await adapter.mutate({
+      ...command,
+      clientRequestId: clientRequestId1,
+    })
+    const second = await adapter.mutate({
+      ...command,
+      clientRequestId: clientRequestId2,
+    })
+
+    expect(first).toMatchObject({ kind: "bookmark" })
+    expect(second).toMatchObject({ kind: "bookmark" })
+    if (first.kind !== "bookmark" || second.kind !== "bookmark") {
+      throw new TypeError("Expected bookmark results.")
+    }
+    expect(second.bookmark.id).not.toBe(first.bookmark.id)
+    expect(second.bookmark.url).toBe(first.bookmark.url)
+  })
+
+  it("makes Re-enrich idempotent and keeps the last good metadata", async () => {
+    const adapter = createAdapter()
+    const command = {
+      bookmarkId: bookmarkId1,
+      idempotencyKey: reenrichmentKey1,
+      kind: "request-bookmark-reenrichment" as const,
+    }
+    const first = await adapter.mutate(command)
+    const repeated = await adapter.mutate(command)
+    const secondRequest = await adapter.mutate({
+      ...command,
+      idempotencyKey: reenrichmentKey2,
+    })
+
+    expect(first).toMatchObject({
+      bookmark: {
+        domain: "linear.app",
+        metadataStatus: "pending",
+        rowVersion: 3,
+        title: "Linear research",
+      },
+      kind: "bookmark",
+    })
+    expect(repeated).toEqual(first)
+    expect(secondRequest).toMatchObject({
+      bookmark: { metadataStatus: "pending", rowVersion: 4 },
+    })
+  })
+
+  it("rejects Re-enrich for Trash and invalid request IDs", async () => {
+    const adapter = createAdapter()
+
+    await expect(
+      adapter.mutate({
+        bookmarkId: bookmarkId3,
+        idempotencyKey: reenrichmentKey1,
+        kind: "request-bookmark-reenrichment",
+      })
+    ).rejects.toMatchObject({ code: "not_found", retrySafe: false })
+    await expect(
+      adapter.mutate({
+        clientRequestId: "invalid",
+        createdAt: toEpochMilliseconds(5_000),
+        kind: "quick-save-bookmark",
+        url: "example.org",
+      })
+    ).rejects.toMatchObject({ code: "invalid_input", retrySafe: false })
+    await expect(
+      adapter.mutate({
+        clientRequestId: clientRequestId1,
+        createdAt: toEpochMilliseconds(Number.MAX_SAFE_INTEGER),
+        kind: "quick-save-bookmark",
+        url: "example.org",
+      })
+    ).rejects.toMatchObject({ code: "invalid_input", retrySafe: false })
+    await expect(
+      adapter.mutate({
+        clientRequestId: clientRequestId1,
+        createdAt: toEpochMilliseconds(5_000),
+        kind: "quick-save-bookmark",
+        url: "http://127.0.0.1/private",
+      })
+    ).rejects.toMatchObject({ code: "invalid_input", retrySafe: false })
+  })
+
   it("normalizes creates and maps duplicate and stale writes to stable errors", async () => {
     const adapter = createAdapter()
     const created = await adapter.mutate({
