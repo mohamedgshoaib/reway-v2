@@ -9,6 +9,7 @@ export type EdgeWorkerQueueName = (typeof EDGE_WORKER_QUEUE_NAMES)[number]
 
 export interface DurableWorkerWakeOptions {
   enabledQueues: ReadonlySet<EdgeWorkerQueueName>
+  monotonicNow?: () => number
   runQueue: (queueName: EdgeWorkerQueueName) => Promise<Record<string, number>>
   wakeToken: string | undefined
 }
@@ -17,6 +18,7 @@ const MAX_BODY_BYTES = 256
 const WAKE_TOKEN_HEADER = "x-reway-worker-wake"
 const queueNames = new Set<string>(EDGE_WORKER_QUEUE_NAMES)
 const encoder = new TextEncoder()
+const defaultMonotonicNow = (): number => performance.now()
 
 const jsonResponse = (
   status: number,
@@ -115,6 +117,8 @@ export const handleDurableWorkerWake = async (
   request: Request,
   options: DurableWorkerWakeOptions
 ): Promise<Response> => {
+  const monotonicNow = options.monotonicNow ?? defaultMonotonicNow
+  const wakeStartedAt = monotonicNow()
   if (request.method !== "POST") {
     return new Response(null, {
       headers: { Allow: "POST", "Cache-Control": "no-store" },
@@ -138,6 +142,10 @@ export const handleDurableWorkerWake = async (
     return jsonResponse(409, { code: "worker_not_enabled" })
   }
 
+  const wakeEntryMs = Math.max(0, monotonicNow() - wakeStartedAt)
   const result = await options.runQueue(queueName)
-  return jsonResponse(200, { code: "worker_run_complete", result })
+  return jsonResponse(200, {
+    code: "worker_run_complete",
+    result: { ...result, wakeEntryMs },
+  })
 }

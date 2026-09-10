@@ -140,13 +140,10 @@ export const createInMemoryDurableWorkerAdapter = <Result>(
         status: "claimed",
       }
     },
-    deleteTerminal: async (
-      queueName: DurableQueueName,
-      messageId: string
-    ): Promise<boolean> => {
+    deleteTerminal: async (queueName: DurableQueueName, messageId: string) => {
       const work = workByMessageId.get(messageId)
       if (!work || work.queueName !== queueName || !work.messagePresent) {
-        return false
+        return "already_deleted" as const
       }
       if (
         work.state !== "completed" &&
@@ -156,7 +153,7 @@ export const createInMemoryDurableWorkerAdapter = <Result>(
         throw new Error("Message is not terminal.")
       }
       work.messagePresent = false
-      return true
+      return "deleted" as const
     },
     finish: async (
       claim: ClaimedDurableWork,

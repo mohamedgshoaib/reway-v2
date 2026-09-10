@@ -27,7 +27,7 @@ export const ENRICHMENT_QUEUE_SETTINGS: Readonly<
   },
   [DURABLE_QUEUE_NAMES.bulkEnrichment]: {
     batchSize: 50,
-    concurrency: 4,
+    concurrency: 6,
     heartbeatIntervalMs: 20_000,
     leaseSeconds: 60,
     perHostConcurrency: 2,

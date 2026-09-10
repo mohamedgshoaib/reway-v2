@@ -56,25 +56,41 @@ describe("durable worker", () => {
     const summary = await runDurableWorker(request, {
       adapter,
       handler: {
-        run: async () => ({ result: "done", status: "succeeded" }),
+        run: async () => ({
+          result: "done",
+          stageTimings: { assetProcessingMs: 11, fetchMs: 7 },
+          status: "succeeded",
+        }),
       },
+      monotonicNow: (() => {
+        const values = [0, 10, 15, 20, 25, 30, 35, 40, 45, 50]
+        return () => values.shift() ?? 50
+      })(),
       now: () => NOW,
       retryPolicy,
     })
 
     expect(summary).toEqual({
+      assetProcessingMs: 11,
+      claimMs: 5,
       claimed: 1,
+      completionMs: 5,
       completed: 1,
       deferred: 0,
       failed: 0,
+      fetchMs: 7,
       leaseLost: 0,
       poisonDeleted: 0,
+      queueReadMs: 5,
       queueWaitP50Ms: 1_000,
       queueWaitP95Ms: 1_000,
       queueWaitP99Ms: 1_000,
       read: 1,
       retried: 0,
+      terminalAlreadyDeleted: 0,
+      terminalDeletionMs: 5,
       terminalDeleted: 1,
+      workerRunMs: 50,
     })
     expect(adapter.getWork("1")).toMatchObject({
       attemptCount: 1,
@@ -82,6 +98,85 @@ describe("durable worker", () => {
       result: "done",
       state: "completed",
     })
+  })
+
+  it("accounts for a terminal message removed by an overlapping wake", async () => {
+    const message: DurableQueueMessage = {
+      deliveryCount: 1,
+      enqueuedAtMs: NOW - 1_000,
+      envelope: {
+        generation: "1",
+        request_id: REQUEST_ID,
+        version: 1,
+        work_kind: "enrichment",
+      },
+      messageId: "1",
+      visibleAtMs: NOW + 90_000,
+    }
+    let claimCalls = 0
+    let messagePresent = true
+    let finishRun: (() => void) | undefined
+    const finished = new Promise<void>((resolve) => {
+      finishRun = resolve
+    })
+    let releaseFirstDelete: (() => void) | undefined
+    const secondDeleteStarted = new Promise<void>((resolve) => {
+      releaseFirstDelete = resolve
+    })
+    let deleteCalls = 0
+    const adapter: DurableWorkerAdapter<string> = {
+      claim: async () => {
+        claimCalls += 1
+        if (claimCalls === 1) {
+          return {
+            attemptCount: 0,
+            leaseToken: "lease-1",
+            maxAttempts: 3,
+            status: "claimed",
+          }
+        }
+        await finished
+        return { status: "terminal" }
+      },
+      deleteTerminal: async () => {
+        deleteCalls += 1
+        if (deleteCalls === 1) {
+          await secondDeleteStarted
+        } else {
+          releaseFirstDelete?.()
+        }
+        if (!messagePresent) return "already_deleted"
+        messagePresent = false
+        return "deleted"
+      },
+      finish: async () => {
+        finishRun?.()
+        return "completed"
+      },
+      read: async () => [message],
+      rejectPoison: async () => true,
+      renew: async () => true,
+      startAttempt: async () => true,
+    }
+    const dependencies = {
+      adapter,
+      handler: {
+        run: async () => ({ result: "done", status: "succeeded" as const }),
+      },
+      monotonicNow: () => 0,
+      now: () => NOW,
+      retryPolicy,
+    }
+
+    const [first, second] = await Promise.all([
+      runDurableWorker(request, dependencies),
+      runDurableWorker(request, dependencies),
+    ])
+
+    expect(first.completed + second.completed).toBe(1)
+    expect(first.terminalDeleted + second.terminalDeleted).toBe(1)
+    expect(first.terminalAlreadyDeleted + second.terminalAlreadyDeleted).toBe(1)
+    expect(messagePresent).toBe(false)
   })
 
   it("reports queue-wait percentiles for the messages it reads", async () => {

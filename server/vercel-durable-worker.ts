@@ -25,11 +25,17 @@ const requireEnvironment = (name: string): string => {
   return value
 }
 
+const requireSupabaseUrl = (): string => {
+  const value = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL
+  if (!value) throw new Error("The Supabase URL environment value is missing.")
+  return value
+}
+
 const getQueueRunner = (): EnrichmentQueueRunner => {
   if (queueRunner) return queueRunner
 
   const client = createClient<Database>(
-    requireEnvironment("SUPABASE_URL"),
+    requireSupabaseUrl(),
     requireEnvironment("SUPABASE_SECRET_KEY"),
     {
       auth: {

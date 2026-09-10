@@ -24,7 +24,7 @@
   passed.
 - The Phase 8F decision pass was completed on 2026-09-08. Its approved offline
   capture, enrichment, asset delivery, security, performance, and runtime rules
-  live in `phase-08f-capture-enrichment-decisions.md`. The first bounded
+  live in [phase-08f-capture-enrichment-decisions.md](phase-08f-capture-enrichment-decisions.md). The first bounded
   implementation steps are complete: URL normalization, SSRF policy, injected
   Deno network adapters, the dormant hosted runtime boot proof, the durable
   browser outbox, and library commands and adapters for quick save,
@@ -32,16 +32,25 @@
   bounded metadata parser, checked static image processor, Photon rasterizer,
   and immutable private Storage adapter are also complete. Interactive and bulk
   handlers, immediate and scheduled wake definitions, the unrecorded wake
-  token, and the hosted publication and runtime gates are complete. Those gates
-  led to a guarded Step 9 activation. Step 9 applied the reviewed migration and
+  token, and the hosted publication and preliminary runtime checks are
+  complete. The full live Edge and Vercel speed gates are not complete. Those
+  checks led to a guarded Step 9 activation. Step 9 applied the reviewed migration and
   one bounded wake-timeout correction, regenerated hosted types, and proved the
   service-wake authentication contract. The live Edge path completed all 50
   items but missed the queue-wait, first-12, and total-time gates. The worker URL
   and publishable key were removed from Vault so schedules are no-ops. Step 8 is
-  now required before Step 9 can resume. The existing Vercel project now has a
-  separate Node worker entrypoint. It preserves the durable worker and network
-  safety interfaces without Docker or another host. Deployment and live
-  measurement remain open.
+  now required before Step 9 can resume. The new Reway V2 Vercel project now has
+  a separate Node worker entrypoint. It preserves the durable worker and network
+  safety interfaces without Docker or a separate backend host. The V1 account
+  and project stay live and unchanged. The Vercel worker passed its auth checks
+  and completed all 50 items, but queue wait, first-12, and total time missed the
+  gates. Vault routing is disabled and fixtures are gone. Step 9 stays paused.
+  A bounded optimization pass added stage timings, explained the 49-of-50
+  deletion count as one already-deleted terminal message, split and deferred
+  Photon, minified the worker, and measured bulk concurrency 6 and 8. The best
+  candidate now passes the 10-second total gate but still misses the 250 ms
+  queue-wait and two-second first-12 gates. The pass is complete and requires
+  an explicit product decision before more runtime work.
 - Session 06 remains open.
 
 ## Goal

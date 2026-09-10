@@ -1,5 +1,3 @@
-import { PhotonImage, SamplingFilter, resize } from "@cf-wasm/photon/node"
-
 import type {
   ImageRasterizer,
   ImageRasterizerRequest,
@@ -8,6 +6,15 @@ import type {
 
 const MAX_ENCODING_ATTEMPTS = 8
 const OUTPUT_SHRINK_FACTOR = 0.82
+type PhotonModule = typeof import("@cf-wasm/photon/node")
+type PhotonImage = ReturnType<PhotonModule["PhotonImage"]["new_from_byteslice"]>
+
+export interface PhotonImageRasterizerDependencies {
+  readonly loadPhoton?: () => Promise<PhotonModule>
+}
+
+const loadPhotonModule = (): Promise<PhotonModule> =>
+  import("@cf-wasm/photon/node")
 
 const requireActive = (signal: AbortSignal): void => {
   if (signal.aborted) {
@@ -29,6 +36,7 @@ const fitWithin = (
 }
 
 const encodeAtSize = (
+  photon: PhotonModule,
   source: PhotonImage,
   width: number,
   height: number
@@ -36,7 +44,12 @@ const encodeAtSize = (
   if (source.get_width() === width && source.get_height() === height) {
     return source.get_bytes_webp()
   }
-  const resized = resize(source, width, height, SamplingFilter.Lanczos3)
+  const resized = photon.resize(
+    source,
+    width,
+    height,
+    photon.SamplingFilter.Lanczos3
+  )
   try {
     return resized.get_bytes_webp()
   } finally {
@@ -44,11 +57,14 @@ const encodeAtSize = (
   }
 }
 
-const createDerivative = (
-  request: ImageRasterizerRequest
-): StaticImageDerivative => {
+const createDerivative = async (
+  request: ImageRasterizerRequest,
+  loadPhoton: () => Promise<PhotonModule>
+): Promise<StaticImageDerivative> => {
   requireActive(request.signal)
-  const source = PhotonImage.new_from_byteslice(request.bytes)
+  const photon = await loadPhoton()
+  requireActive(request.signal)
+  const source = photon.PhotonImage.new_from_byteslice(request.bytes)
   try {
     if (
       source.get_width() !== request.width ||
@@ -66,7 +82,7 @@ const createDerivative = (
     let lastDerivative: StaticImageDerivative | null = null
     for (let attempt = 0; attempt < MAX_ENCODING_ATTEMPTS; attempt += 1) {
       requireActive(request.signal)
-      const bytes = encodeAtSize(source, target.width, target.height)
+      const bytes = encodeAtSize(photon, source, target.width, target.height)
       lastDerivative = {
         bytes,
         contentType: "image/webp",
@@ -91,6 +107,16 @@ const createDerivative = (
   }
 }
 
-export const createPhotonImageRasterizer = (): ImageRasterizer => ({
-  createStaticDerivative: async (request) => createDerivative(request),
-})
+export const createPhotonImageRasterizer = (
+  dependencies: PhotonImageRasterizerDependencies = {}
+): ImageRasterizer => {
+  let photonPromise: Promise<PhotonModule> | undefined
+  const loadPhoton = (): Promise<PhotonModule> => {
+    photonPromise ??= (dependencies.loadPhoton ?? loadPhotonModule)()
+    return photonPromise
+  }
+
+  return {
+    createStaticDerivative: (request) => createDerivative(request, loadPhoton),
+  }
+}

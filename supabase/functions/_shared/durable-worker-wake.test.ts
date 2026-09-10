@@ -63,6 +63,10 @@ describe("durable worker wake", () => {
     const queueName = EDGE_WORKER_QUEUE_NAMES[0]
     const response = await handleDurableWorkerWake(createRequest(queueName), {
       enabledQueues: new Set([queueName]),
+      monotonicNow: (() => {
+        const values = [10, 15]
+        return () => values.shift() ?? 15
+      })(),
       runQueue: async () => ({ claimed: 2, completed: 2 }),
       wakeToken: TOKEN,
     })
@@ -70,7 +74,7 @@ describe("durable worker wake", () => {
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
       code: "worker_run_complete",
-      result: { claimed: 2, completed: 2 },
+      result: { claimed: 2, completed: 2, wakeEntryMs: 5 },
     })
   })
 

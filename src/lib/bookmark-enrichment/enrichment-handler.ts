@@ -47,7 +47,29 @@ export interface EnrichmentHandlerDependencies {
   readonly assets: BookmarkAssetProcessor
   readonly createAssetId: () => string
   readonly fetcher: PinnedHttpFetcher
+  readonly monotonicNow?: () => number
   readonly source: EnrichmentWorkSource
+}
+
+interface MutableStageTimings {
+  assetProcessingMs: number
+  fetchMs: number
+}
+
+const defaultMonotonicNow = (): number => performance.now()
+
+const measureStage = async <Result>(
+  stage: keyof MutableStageTimings,
+  timings: MutableStageTimings,
+  now: () => number,
+  operation: () => Promise<Result>
+): Promise<Result> => {
+  const startedAt = now()
+  try {
+    return await operation()
+  } finally {
+    timings[stage] += Math.max(0, now() - startedAt)
+  }
 }
 
 const toFailure = (
@@ -85,34 +107,44 @@ const fetchAsset = async (
   url: string | null,
   envelope: Extract<DurableEnvelope, { workKind: "enrichment" }>,
   options: { attemptNumber: number; leaseToken: string; signal: AbortSignal },
-  dependencies: EnrichmentHandlerDependencies
+  dependencies: EnrichmentHandlerDependencies,
+  timings: MutableStageTimings,
+  monotonicNow: () => number
 ): Promise<string | null> => {
   if (url === null) return null
   let response: Awaited<ReturnType<PinnedHttpFetcher["fetch"]>>
   try {
-    response = await dependencies.fetcher.fetch({
-      acceptedContentTypes: IMAGE_CONTENT_TYPES,
-      maxBodyBytes: IMAGE_SOURCE_LIMITS[kind],
-      signal: options.signal,
-      url,
-    })
+    response = await measureStage("fetchMs", timings, monotonicNow, () =>
+      dependencies.fetcher.fetch({
+        acceptedContentTypes: IMAGE_CONTENT_TYPES,
+        maxBodyBytes: IMAGE_SOURCE_LIMITS[kind],
+        signal: options.signal,
+        url,
+      })
+    )
   } catch (error) {
     if (error instanceof PinnedHttpFetchError && !error.retrySafe) return null
     throw error
   }
 
   const assetId = dependencies.createAssetId()
-  const result = await dependencies.assets.process({
-    assetId,
-    attemptNumber: options.attemptNumber,
-    bytes: response.body,
-    declaredContentType: response.contentType,
-    generation: envelope.generation,
-    kind,
-    leaseToken: options.leaseToken,
-    requestId: envelope.requestId,
-    signal: options.signal,
-  })
+  const result = await measureStage(
+    "assetProcessingMs",
+    timings,
+    monotonicNow,
+    () =>
+      dependencies.assets.process({
+        assetId,
+        attemptNumber: options.attemptNumber,
+        bytes: response.body,
+        declaredContentType: response.contentType,
+        generation: envelope.generation,
+        kind,
+        leaseToken: options.leaseToken,
+        requestId: envelope.requestId,
+        signal: options.signal,
+      })
+  )
   if (result.status === "ready") return result.assetId
   if (result.status === "stale")
     throw new Error("The enrichment lease is stale.")
@@ -126,6 +158,11 @@ export const createEnrichmentHandler = (
     if (envelope.workKind !== "enrichment") {
       return { code: "unsupported_work_kind", status: "permanent_failure" }
     }
+    const monotonicNow = dependencies.monotonicNow ?? defaultMonotonicNow
+    const stageTimings: MutableStageTimings = {
+      assetProcessingMs: 0,
+      fetchMs: 0,
+    }
     try {
       const input = await dependencies.source.read(
         envelope,
@@ -133,14 +170,24 @@ export const createEnrichmentHandler = (
         options.signal
       )
       if (input === null) {
-        return { code: "stale_generation", status: "permanent_failure" }
+        return {
+          code: "stale_generation",
+          stageTimings,
+          status: "permanent_failure",
+        }
       }
-      const page = await dependencies.fetcher.fetch({
-        acceptedContentTypes: HTML_CONTENT_TYPES,
-        maxBodyBytes: MAX_HTML_RESPONSE_BYTES,
-        signal: options.signal,
-        url: input.url,
-      })
+      const page = await measureStage(
+        "fetchMs",
+        stageTimings,
+        monotonicNow,
+        () =>
+          dependencies.fetcher.fetch({
+            acceptedContentTypes: HTML_CONTENT_TYPES,
+            maxBodyBytes: MAX_HTML_RESPONSE_BYTES,
+            signal: options.signal,
+            url: input.url,
+          })
+      )
       const metadata = parsePageMetadata({
         body: page.body,
         contentType: page.contentType,
@@ -155,14 +202,18 @@ export const createEnrichmentHandler = (
         metadata.faviconUrl,
         envelope,
         options,
-        dependencies
+        dependencies,
+        stageTimings,
+        monotonicNow
       )
       const ogImageAssetId = await fetchAsset(
         "og_image",
         metadata.ogImageUrl,
         envelope,
         options,
-        dependencies
+        dependencies,
+        stageTimings,
+        monotonicNow
       )
       return {
         result: {
@@ -171,10 +222,11 @@ export const createEnrichmentHandler = (
           ogImageAssetId,
           title: metadata.title ?? input.fallbackTitle,
         },
+        stageTimings,
         status: "succeeded",
       }
     } catch (error) {
-      return toFailure(error)
+      return { ...toFailure(error), stageTimings }
     }
   },
 })

@@ -137,7 +137,7 @@ export const createSupabaseDurableWorkerAdapter = <Result>(
       target_queue_name: queueName,
     })
     if (error) throw createDurableWorkerDatabaseError(error)
-    return data
+    return data ? "deleted" : "already_deleted"
   },
   finish: (claim, outcome, retryAtMs) =>
     finishClaim(client, claim, outcome, retryAtMs),

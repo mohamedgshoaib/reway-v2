@@ -4,6 +4,7 @@ import {
 } from "./durable-worker-envelope.ts"
 import type {
   ClaimedDurableWork,
+  DurableClaimResult,
   DurableQueueMessage,
   DurableWorkOutcome,
   DurableWorkerDependencies,
@@ -18,19 +19,66 @@ const MAX_VISIBILITY_SECONDS = 900
 const MAX_HEARTBEAT_INTERVAL_MS = 300_000
 
 const createSummary = (): DurableWorkerSummary => ({
+  assetProcessingMs: 0,
+  claimMs: 0,
   claimed: 0,
+  completionMs: 0,
   completed: 0,
   deferred: 0,
   failed: 0,
+  fetchMs: 0,
   leaseLost: 0,
   poisonDeleted: 0,
+  queueReadMs: 0,
   queueWaitP50Ms: 0,
   queueWaitP95Ms: 0,
   queueWaitP99Ms: 0,
   read: 0,
   retried: 0,
+  terminalAlreadyDeleted: 0,
+  terminalDeletionMs: 0,
   terminalDeleted: 0,
+  workerRunMs: 0,
 })
+
+const defaultMonotonicNow = (): number => performance.now()
+
+const elapsedMilliseconds = (startedAt: number, now: () => number): number =>
+  Math.max(0, now() - startedAt)
+
+const measure = async <Result>(
+  now: () => number,
+  record: (durationMs: number) => void,
+  operation: () => Promise<Result>
+): Promise<Result> => {
+  const startedAt = now()
+  try {
+    return await operation()
+  } finally {
+    record(elapsedMilliseconds(startedAt, now))
+  }
+}
+
+const recordTerminalDeletion = async <Result>(
+  queueName: DurableWorkerRequest["queueName"],
+  messageId: string,
+  dependencies: DurableWorkerDependencies<Result>,
+  summary: DurableWorkerSummary,
+  monotonicNow: () => number
+): Promise<void> => {
+  const outcome = await measure(
+    monotonicNow,
+    (durationMs) => {
+      summary.terminalDeletionMs += durationMs
+    },
+    () => dependencies.adapter.deleteTerminal(queueName, messageId)
+  )
+  if (outcome === "deleted") {
+    summary.terminalDeleted += 1
+  } else {
+    summary.terminalAlreadyDeleted += 1
+  }
+}
 
 const percentile = (values: readonly number[], fraction: number): number => {
   if (values.length === 0) return 0
@@ -146,7 +194,8 @@ const processMessage = async <Result>(
   message: DurableQueueMessage,
   request: DurableWorkerRequest,
   dependencies: DurableWorkerDependencies<Result>,
-  summary: DurableWorkerSummary
+  summary: DurableWorkerSummary,
+  monotonicNow: () => number
 ): Promise<void> => {
   const parsed = parseDurableEnvelope(message.envelope, request.queueName)
   if (!parsed.ok) {
@@ -159,11 +208,18 @@ const processMessage = async <Result>(
     return
   }
 
-  const claimResult = await dependencies.adapter.claim(
-    request.queueName,
-    message,
-    parsed.envelope,
-    request.leaseSeconds
+  const claimResult: DurableClaimResult = await measure(
+    monotonicNow,
+    (durationMs) => {
+      summary.claimMs += durationMs
+    },
+    () =>
+      dependencies.adapter.claim(
+        request.queueName,
+        message,
+        parsed.envelope,
+        request.leaseSeconds
+      )
   )
 
   if (
@@ -180,11 +236,13 @@ const processMessage = async <Result>(
   }
 
   if (claimResult.status === "terminal") {
-    const deleted = await dependencies.adapter.deleteTerminal(
+    await recordTerminalDeletion(
       request.queueName,
-      message.messageId
+      message.messageId,
+      dependencies,
+      summary,
+      monotonicNow
     )
-    if (deleted) summary.terminalDeleted += 1
     return
   }
 
@@ -227,21 +285,29 @@ const processMessage = async <Result>(
     summary.leaseLost += 1
     return
   }
+  const outcome = runResult.outcome
+
+  if (outcome.stageTimings) {
+    summary.assetProcessingMs += outcome.stageTimings.assetProcessingMs
+    summary.fetchMs += outcome.stageTimings.fetchMs
+  }
 
   const retryAtMs =
-    runResult.outcome.status === "transient_failure"
+    outcome.status === "transient_failure"
       ? dependencies.retryPolicy.getRetryAt({
           attemptCount: claim.attemptCount,
           maxAttempts: claim.maxAttempts,
           nowMs: (dependencies.now ?? Date.now)(),
           requestKey: getDurableEnvelopeKey(claim.envelope),
-          retryAfterMs: runResult.outcome.retryAfterMs,
+          retryAfterMs: outcome.retryAfterMs,
         })
       : null
-  const finishState = await dependencies.adapter.finish(
-    claim,
-    runResult.outcome,
-    retryAtMs
+  const finishState = await measure(
+    monotonicNow,
+    (durationMs) => {
+      summary.completionMs += durationMs
+    },
+    () => dependencies.adapter.finish(claim, outcome, retryAtMs)
   )
 
   if (finishState === "queued") {
@@ -258,27 +324,38 @@ const processMessage = async <Result>(
     summary.failed += 1
   }
 
-  const deleted = await dependencies.adapter.deleteTerminal(
+  await recordTerminalDeletion(
     request.queueName,
-    message.messageId
+    message.messageId,
+    dependencies,
+    summary,
+    monotonicNow
   )
-  if (deleted) summary.terminalDeleted += 1
 }
 
 export const runDurableWorker = async <Result>(
   request: DurableWorkerRequest,
   dependencies: DurableWorkerDependencies<Result>
 ): Promise<DurableWorkerSummary> => {
+  const monotonicNow = dependencies.monotonicNow ?? defaultMonotonicNow
+  const workerStartedAt = monotonicNow()
   validateRequest(request)
-  const messages = await dependencies.adapter.read(
-    request.queueName,
-    request.visibilitySeconds,
-    request.batchSize
+  const summary = createSummary()
+  const messages = await measure(
+    monotonicNow,
+    (durationMs) => {
+      summary.queueReadMs += durationMs
+    },
+    () =>
+      dependencies.adapter.read(
+        request.queueName,
+        request.visibilitySeconds,
+        request.batchSize
+      )
   )
   if (messages.length > request.batchSize) {
     throw new Error("Durable worker adapter exceeded the batch limit.")
   }
-  const summary = createSummary()
   summary.read = messages.length
   const readAtMs = (dependencies.now ?? Date.now)()
   const queueWaitSamples = messages.map((message) =>
@@ -294,10 +371,17 @@ export const runDurableWorker = async <Result>(
     while (nextMessageIndex < messages.length) {
       const message = messages[nextMessageIndex]
       nextMessageIndex += 1
-      await processMessage(message, request, dependencies, summary)
+      await processMessage(
+        message,
+        request,
+        dependencies,
+        summary,
+        monotonicNow
+      )
     }
   })
   await Promise.all(workers)
+  summary.workerRunMs = elapsedMilliseconds(workerStartedAt, monotonicNow)
 
   return summary
 }

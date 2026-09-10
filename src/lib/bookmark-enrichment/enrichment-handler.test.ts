@@ -70,6 +70,10 @@ describe("enrichment handler", () => {
       assets: { process },
       createAssetId: () => ids.shift() ?? "missing",
       fetcher: createFetcher(),
+      monotonicNow: (() => {
+        let tick = 0
+        return () => tick++
+      })(),
       source: {
         read: async () => ({
           fallbackTitle: "Fallback",
@@ -87,6 +91,7 @@ describe("enrichment handler", () => {
         ogImageAssetId: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
         title: "Page title",
       },
+      stageTimings: { assetProcessingMs: 2, fetchMs: 3 },
       status: "succeeded",
     })
     expect(process).toHaveBeenNthCalledWith(
@@ -150,6 +155,7 @@ describe("enrichment handler", () => {
           throw new PinnedHttpFetchError("timeout", true)
         },
       },
+      monotonicNow: () => 0,
       source: {
         read: async () => ({
           fallbackTitle: "Fallback",
@@ -161,6 +167,7 @@ describe("enrichment handler", () => {
     await expect(handler.run(ENVELOPE, OPTIONS)).resolves.toEqual({
       code: "timeout",
       retryAfterMs: undefined,
+      stageTimings: { assetProcessingMs: 0, fetchMs: 0 },
       status: "transient_failure",
     })
   })
@@ -171,11 +178,13 @@ describe("enrichment handler", () => {
       assets: { process: vi.fn<BookmarkAssetProcessor["process"]>() },
       createAssetId: () => crypto.randomUUID(),
       fetcher: { fetch },
+      monotonicNow: () => 0,
       source: { read: async () => null },
     })
 
     await expect(handler.run(ENVELOPE, OPTIONS)).resolves.toEqual({
       code: "stale_generation",
+      stageTimings: { assetProcessingMs: 0, fetchMs: 0 },
       status: "permanent_failure",
     })
     expect(fetch).not.toHaveBeenCalled()

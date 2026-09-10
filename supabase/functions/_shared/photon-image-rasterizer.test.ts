@@ -1,7 +1,12 @@
 import { PhotonImage } from "@cf-wasm/photon/node"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
-import { createPhotonImageRasterizer } from "./photon-image-rasterizer"
+import {
+  createPhotonImageRasterizer,
+  type PhotonImageRasterizerDependencies,
+} from "./photon-image-rasterizer"
+
+type PhotonLoader = NonNullable<PhotonImageRasterizerDependencies["loadPhoton"]>
 
 const createImage = (
   width: number,
@@ -26,6 +31,30 @@ const createImage = (
 }
 
 describe("Photon image rasterizer", () => {
+  it("does not load Photon until image work starts", async () => {
+    const loadPhoton = vi.fn<PhotonLoader>(async () => {
+      throw new Error("load requested")
+    })
+    const rasterizer = createPhotonImageRasterizer({
+      loadPhoton,
+    })
+
+    expect(loadPhoton).not.toHaveBeenCalled()
+    await expect(
+      rasterizer.createStaticDerivative({
+        bytes: new Uint8Array(),
+        contentType: "image/png",
+        height: 1,
+        maxHeight: 64,
+        maxOutputBytes: 32 * 1024,
+        maxWidth: 64,
+        signal: new AbortController().signal,
+        width: 1,
+      })
+    ).rejects.toThrow("load requested")
+    expect(loadPhoton).toHaveBeenCalledOnce()
+  })
+
   it("creates a bounded static WebP derivative", async () => {
     const sourceBytes = createImage(128, 64)
     const rasterizer = createPhotonImageRasterizer()

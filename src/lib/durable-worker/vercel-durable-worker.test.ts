@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import durableWorker from "../../../api/durable-worker"
+import durableWorker from "../../../server/vercel-durable-worker"
 
 describe("Vercel durable worker entrypoint", () => {
   it("loads the Node worker bundle and rejects non-POST requests", async () => {

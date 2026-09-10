@@ -7,7 +7,10 @@
 - Implementation started on 2026-09-08.
 - Implementation-order steps 1 through 7 are complete. Step 9 started as a
   guarded activation and the live Edge worker missed three approved gates.
-  Step 8 is now required before step 9 can resume. Step 10 has not started.
+  Step 8 then measured the Vercel Hobby worker, which also missed those gates.
+  The bounded Vercel optimization pass reduced the worker below the 10-second
+  total gate but still missed queue-wait and first-12. No runtime is accepted,
+  Step 9 remains paused, and Step 10 has not started.
 - These decisions replace conflicting Phase 8F notes in the feature contract
   and backend plan.
 
@@ -683,11 +686,13 @@ worker and perform step 8 if an activation gate fails.
 - The runtime benchmark split 50 real mixed-host page operations from 100 basic
   image and Storage operations. It did not exercise the deployed queue wake,
   claim, database completion, and asset tracking path as one production flow.
-- The hosted worker remains dormant, the Phase 8F migration remains unapplied,
+- At this earlier audit checkpoint, the hosted worker remained dormant, the
+  Phase 8F migration remained unapplied,
   and the required eligible queue-wait result below 250 ms p95 remains
   unmeasured. Host isolation and separate queue capacity have focused local
   coverage, but no hosted slow-host-under-load result has been recorded.
-- Step 8 is not indicated before activation because the Edge-specific safety,
+- At that checkpoint, Step 8 was not indicated before activation because the
+  Edge-specific safety,
   fetch, WASM, Storage, and measured time checks passed. It is not ruled out.
   Step 9 is a guarded activation. If the live queue wait or complete worker path
   misses an approved gate, restore the dormant worker and perform step 8 before
@@ -700,8 +705,9 @@ worker and perform step 8 if an activation gate fails.
   phases. The hosted private asset table, exact private bucket, seven public
   worker functions, wake trigger, and two recovery schedules exist. Browser
   roles have no wake-function grant.
-- Only the wake token exists in Vault. The missing worker URL and API key keep
-  both recovery schedules as safe no-ops. No enabled worker has been deployed.
+- At the start of this checkpoint, only the wake token existed in Vault. The
+  missing worker URL and API key kept both recovery schedules as safe no-ops.
+  No enabled worker had been deployed.
 - Current Supabase documentation proves an authentication mismatch in the
   reviewed wake design. With `verify_jwt` enabled, the Edge gateway requires a
   user JWT in the `Authorization` header and does not accept a publishable key.
@@ -712,10 +718,11 @@ worker and perform step 8 if an activation gate fails.
   disabled and keeps the handler's separate high-entropy wake-token check. This
   matches the caller, avoids legacy or privileged wake credentials, and lets the
   handler reject unauthorized work before it parses a queue request.
-- Next, set the Vault worker URL and publishable key, deploy the enabled worker,
-  prove missing and wrong tokens fail, and run the live queue-wait and complete
-  worker-path gates. Hosted types, Storage lifecycle verification, advisors,
-  and final Step 9 gates remain incomplete.
+- The next action at that checkpoint was to set the Vault worker URL and
+  publishable key, deploy the enabled worker, prove missing and wrong tokens
+  fail, and run the live queue-wait and complete worker-path gates. Hosted
+  types, Storage lifecycle verification, advisors, and final Step 9 gates were
+  then incomplete.
 - Regenerated hosted public types and deployed the exact enabled worker with
   `verify_jwt` disabled. Missing and wrong wake tokens returned 401. The valid
   Vault token reached the worker and returned 200.
@@ -751,8 +758,10 @@ worker and perform step 8 if an activation gate fails.
   process were candidates only. Nothing was deployed or purchased. That path is
   removed from the implementation and is no longer an open option.
 - Step 8 now uses one Node.js Vercel Function at `/api/durable-worker` inside the
-  existing project. The database wakes it over HTTP, so it does not depend on a
-  browser tab or run inside a TanStack request handler.
+  new Reway V2 app project. A small JavaScript entry imports a worker bundle made
+  during the normal build. The database wakes it over HTTP, so it does not depend
+  on a browser tab or run inside a TanStack request handler. The separate V1
+  account and project stay live and unchanged.
 - The function keeps the same bounded body, exact queue allowlist, private wake
   token, durable claims, leases, retries, and result contract. The queue runner
   now receives generic DNS and connection adapters. Supabase Edge supplies the
@@ -765,22 +774,164 @@ worker and perform step 8 if an activation gate fails.
   near the hosted database. Sixty seconds fits both legacy Hobby projects and
   projects with Fluid Compute. The accepted path must still meet the stricter
   Phase 8F ten-second gate.
-- This choice adds no Docker image, no second host, and no paid resource. It uses
-  the current Vercel project and Hobby allowance. The tradeoff is shared account
-  usage, so activation still depends on the live queue, latency, and resource
-  measurements.
+- This choice adds no Docker image, no backend-only host, and no paid resource.
+  The V2 app and worker share one new Vercel Hobby account and project. The
+  tradeoff is shared V2 account usage, so activation still depends on the live
+  queue, latency, and resource measurements.
 - The focused Node adapter, shared SSRF, pinned fetch, wake, queue-setting, and
   worker run passes 35 tests. `pnpm run check`, the production build, and diff
-  hygiene pass. The Vercel bundle, deployment, and hosted measurements remain
-  unverified because this checkout has no Vercel login or project link.
+  hygiene pass. The checkout is linked to the new V2 Vercel project.
+- The first linked Vercel build proved the app output, then the Node function
+  builder crashed while loading TypeScript 7.0.2. Vercel's builder still uses
+  the compiler interface that TypeScript 7 removed. TypeScript 6.0.3 passes the
+  repo typecheck, so the project pins it and tests the two compiler members that
+  the builder needs.
+- The first Windows prebuilt preview omitted pnpm's package links. A normal Linux
+  source deployment installed them but preserved `.ts` import suffixes in the
+  emitted worker files. The build now bundles the worker implementation and its
+  packages before Vercel traces the JavaScript entry. This avoids both runtime
+  resolution failures without changing the shared worker interfaces.
+- The corrected Vercel build emits one 3.0 MB Node 24 worker with a 60-second
+  cap. Preview and production deployments completed. The preview method guard
+  returned 405, and missing and wrong wake tokens returned 401. A database wake
+  reached production with status 200, proving the Vercel and Vault tokens match.
+- One guarded production run published and completed 50 bulk requests with no
+  failed, queued, retried, deferred, or lost-lease requests. Queue wait was 459
+  ms p95 against 250 ms. The first 12 completed in 3,655.43 ms against two
+  seconds. All 50 completed in 11,359.72 ms against 10 seconds. The worker read
+  and completed 50 messages and reported 49 terminal deletes; the final request
+  state still showed all 50 completed.
+- The Vercel runtime therefore fails Step 8 under the approved contract. Removed
+  the worker URL and publishable key from Vault, kept the wake token, and deleted
+  the fixture user. No fixture bookmark, request, or asset remains. The recovery
+  schedules are safe no-ops again.
 - The Vercel entrypoint does constant work before the existing worker call. A
   wake retains the worker's `O(N)` bounded item work and `O(C * B)` memory, with
   at most 50 messages read and four active bulk handlers.
-- After deployment, add `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, and
-  `REWAY_WORKER_WAKE_TOKEN` as private Vercel environment values. Prove missing
-  and wrong tokens fail, point Vault at the Vercel function, and rerun the
-  50-item live gates. Resume the remaining Step 9 checks only if all gates pass.
-  If Hobby cannot pass them, stop instead of adding a paid host.
+- Do not resume Step 9 or reactivate Vault routing. The next decision must either
+  approve one bounded Vercel optimization pass under the same gates or accept
+  that the current free-plan, no-separate-backend constraint cannot meet them.
+  Do not add a paid host or loosen a gate without approval.
+
+## Step 8 completion analysis
+
+The Vercel test proved the runtime and worker contract, but it did not prove the
+performance contract. This is a speed failure, not a correctness, durability,
+security, build, or deployment failure.
+
+| Measurement | Required | Vercel result | Gap |
+| --- | ---: | ---: | ---: |
+| Eligible queue wait | Below 250 ms p95 | 459 ms | 209 ms over |
+| First 12 completed | Below 2,000 ms p95 | 3,655.43 ms | 1,655.43 ms over |
+| All 50 completed | Below 10,000 ms p95 | 11,359.72 ms | 1,359.72 ms over |
+
+The test used one authenticated transaction that created 50 bookmarks, 50
+enrichment requests, and 50 bulk queue messages. The URLs were split across
+`example.com`, `example.org`, and `example.net`. One post-commit wake ran the
+production Vercel function through the wake-token check, queue read, request
+claim, pinned DNS and HTTP fetch, metadata parsing, asset work when present,
+checked completion, and terminal queue deletion. Bulk work used a batch of 50,
+global concurrency 4, and per-host concurrency 2.
+
+Queue wait is the worker read time minus each message's enqueue time. Its p95
+came from the 50 messages in this run. First-12 and all-50 are single-run elapsed
+times from the earliest request creation. They are not a multi-run p95 series.
+One failed run is enough to reject activation, but it is not enough to claim
+that Vercel can never pass. A valid final p95 needs at least 20 full samples.
+
+The following causes remain working hypotheses until stage timings prove them:
+
+- Queue wait includes post-commit `pg_net` dispatch, network setup, Vercel
+  startup, module evaluation, client creation, and the first queue read.
+- The worker loads a 3.0 MB bundle that includes Photon WASM before queue work.
+  Moving Photon behind the image-processing call may reduce startup and queue
+  wait without weakening the asset contract.
+- Global concurrency 4 requires at least 13 processing waves for 50 messages.
+  Per-host concurrency 2 also limits the three-host fixture. Bulk concurrency
+  may need measured tuning while the interactive queue keeps its smaller limits.
+- A worker summary reported 49 terminal deletes after 50 completions. The final
+  database state had 50 completed requests, so this does not prove data loss.
+  It may indicate another wake, an already-deleted message, or a delete result
+  that needs a separate outcome. Do not choose among those explanations without
+  a reproduction.
+
+### Required next implementation slice
+
+1. Add numeric stage timings for wake entry, queue read, claim, fetch, asset
+   processing, completion, and terminal deletion. Do not log URLs, user data,
+   object paths, tokens, or database values.
+2. Reproduce the 49-of-50 terminal deletion result with overlapping-wake tests.
+   Add a same-queue single-flight control or a distinct already-deleted outcome
+   only if the evidence requires it.
+3. Load Photon only when static image work begins and keep it out of the initial
+   Vercel worker path. Confirm the main worker bundle and cold start shrink.
+4. Tune only the bulk global and per-host concurrency. Keep the batch at 50 and
+   keep interactive queue limits independent. Measure CPU, memory, duration,
+   host fairness, and free-plan usage before accepting a larger value.
+5. Run focused worker, wake, SSRF, fetch, asset, retry, and build tests. Then
+   deploy Preview and Production, repeat method and token checks, and keep Vault
+   routing absent until those checks pass.
+6. Run 20 complete 50-item samples. Report cold and warm results separately and
+   calculate p50, p95, and p99 for queue wait, first 12, and all 50. Remove every
+   fixture after each bounded run.
+7. Pass the slow-host isolation check, Vercel Hobby resource check, hosted
+   private Storage lifecycle, browser IndexedDB persistence and multi-tab
+   recovery, Supabase advisors, full tests, production build, secret scan, and
+   diff hygiene.
+8. Activate Vault routing only after every hard gate passes. Then complete the
+   remaining Step 9 record and stop at Step 10 before Phase 8G.
+
+Phase 8F is complete only when the accepted runtime passes the original gates,
+the terminal deletion count is explained and covered, all hosted and browser
+checks pass, fixtures are gone, Vault routing is active, and the final records
+contain no skipped or deferred item. If Vercel still fails after the bounded
+optimization, return for an explicit product decision. Do not silently weaken
+the gates or add a paid or separate backend runtime.
+
+## Bounded Vercel optimization checkpoint
+
+- Added numeric wake-entry, queue-read, claim, fetch, asset-processing,
+  completion, terminal-deletion, and total worker timings. Metrics contain no
+  URL, user value, object path, token, or raw error.
+- A concurrent worker regression test reproduced a terminal message removed by
+  another cleanup. The adapter now reports `terminalAlreadyDeleted` separately
+  from `terminalDeleted`. A hosted run then reported 49 deleted and one already
+  deleted while all 50 requests completed. This explains the prior 49-of-50
+  count without adding a same-queue lock or changing PGMQ visibility.
+- Photon now loads only when static image work starts. Esbuild emits it as a
+  separate chunk. The initial worker module fell from 3,146,544 bytes to
+  1,025,764 bytes after splitting and to 360,994 bytes after minification.
+  The lazy Photon chunk is 2,119,575 bytes.
+- The worker build now deletes only `dist/worker` before emitting files. This
+  prevents old hashed chunks from entering Vercel through `includeFiles`.
+- Bulk concurrency 6 with per-host concurrency 2 beat the original setting.
+  One trigger-driven run measured 435 ms queue wait, 2,641.13 ms for the first
+  12, and 8,146.69 ms for all 50. It completed all work and reported 49 deleted
+  plus one already deleted terminal message.
+- Bulk concurrency 8 with per-host concurrency 3 regressed to 567 ms queue
+  wait, 3,750.64 ms for the first 12, and 9,500.43 ms for all 50. The accepted
+  local candidate returned to 6 and 2. Interactive settings did not change.
+- Two minified concurrency-6 runs measured 606 and 662 ms queue wait,
+  2,665.83 and 2,824.98 ms for the first 12, and 8,769.35 and 8,762.54 ms for
+  all 50. Both completed 50 requests with no failed result. Minification did
+  not close the remaining dispatch and first-visible gaps.
+- The bounded pass passes the 10-second total gate but fails the 250 ms
+  queue-wait and two-second first-12 gates. A 20-sample acceptance run did not
+  start because the candidate already fails hard gates.
+- Preview and Production builds and method and failed-token checks passed. The
+  latest V2 Production deployment remains dormant. Vault keeps only the wake
+  token, the bulk queue is empty, fixture counts are zero, and V1 was not
+  changed.
+- The final focused run passes 83 tests across 16 files. `pnpm run check`, the
+  local Phase 8F database gate, the full production build, `pnpm audit --prod`,
+  the client secret-name scan, and `git diff --check` pass.
+- Deno is unavailable on this host, so the changed shared Photon module has no
+  fresh local Deno check. The rejected candidate did not proceed to the
+  20-sample acceptance series, slow-host load, hosted asset lifecycle, browser
+  IndexedDB checks, advisors, or final activation checks.
+- Step 9 remains paused. Further work needs an explicit product decision. Do
+  not loosen a gate, add a paid or separate runtime, or change the worker
+  contract without approval.
 
 ## Rejected alternatives
 

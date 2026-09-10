@@ -120,4 +120,19 @@ describe("Supabase durable worker adapter", () => {
     )
     expect(finishClaim).toHaveBeenCalledWith(client, claim, outcome, null)
   })
+
+  it("distinguishes a terminal message already removed by another cleanup", async () => {
+    const rpc = vi.fn<RpcMock>().mockResolvedValue({ data: false, error: null })
+    const adapter = createSupabaseDurableWorkerAdapter(
+      createClient(rpc),
+      vi.fn()
+    )
+
+    await expect(
+      adapter.deleteTerminal(
+        DURABLE_QUEUE_NAMES.interactiveEnrichment,
+        message.messageId
+      )
+    ).resolves.toBe("already_deleted")
+  })
 })

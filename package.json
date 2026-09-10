@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && pnpm run build:worker",
+    "build:worker": "node scripts/build-vercel-worker.mjs",
     "check": "pnpm run lint && pnpm run format:check && pnpm run typecheck",
     "db:check:phase8c": "node supabase/tests/phase-08c-core-schema.mjs && node supabase/tests/phase-08c-rebalance.mjs",
     "db:check:phase8d": "node supabase/tests/phase-08d-library-interface.mjs",
@@ -60,6 +61,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^6.1.1",
+    "esbuild": "0.27.0",
     "fake-indexeddb": "6.2.5",
     "jsdom": "^30.0.1",
     "oxfmt": "^0.65.0",
@@ -67,7 +69,7 @@
     "oxlint-tsgolint": "^7.0.2001",
     "react-doctor": "^0.9.12",
     "supabase": "2.116.0",
-    "typescript": "^7.0.2",
+    "typescript": "6.0.3",
     "vite": "^8.2.2",
     "vitest": "^4.1.11"
   },

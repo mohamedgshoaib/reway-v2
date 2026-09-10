@@ -2,8 +2,8 @@
 
 ## Purpose
 
-- Continue the approved Phase 8F capture and enrichment contract from the
-  hosted apply and activation step.
+- Complete Phase 8F without deferred activation, failed performance gates, or
+  unexplained queue outcomes.
 
 ## Current scope
 
@@ -13,13 +13,27 @@
   pinning, the browser outbox, library capture operations, the reviewed bookmark
   asset migration, metadata parsing, image validation, derivative creation, or
   private Storage upload, pinned HTTP fetching, or enrichment handlers.
-- Start implementation-order step 8. The guarded Edge activation missed the
-  queue-wait, first-12, and total-time gates. Preserve the worker interface and
-  deploy the completed Node worker as a separate function in the existing
-  Vercel Hobby project. Do not add Docker, a second backend host, or a paid
-  resource. Resume the remaining step 9 gates only after that function passes
-  the same live measurements.
+- Step 8 completed its bounded Vercel optimization pass. The best candidate
+  passes the 10-second total gate but misses queue wait and first-12. The prior
+  49-of-50 terminal deletion count is now explained and covered as one
+  already-deleted terminal message.
+- Vault routing is disabled, the bulk queue is empty, and all fixture rows are
+  gone. Keep V1 live and unchanged. Do not add Docker, a backend-only host, a
+  paid resource, or another optimization slice without a new product decision.
+- The next chat must decide whether to change an allowed runtime, a performance
+  gate, or the worker work split. Do not resume Step 9 before that decision.
 - Do not start Phase 8G import work.
+
+## Required reads before edits
+
+- [Feature contract](../integrations/features/feature-contract.md) for product
+  behavior and user-visible rules.
+- [Phase 8 backend plan](../integrations/supabase/phase-08-backend-plan.md) for
+  the implementation order and current phase status.
+- [Phase 8E durable jobs decisions](../integrations/supabase/phase-08e-durable-jobs-decisions.md)
+  for the protected queue and worker contract.
+- [Phase 8F capture and enrichment decisions](../integrations/supabase/phase-08f-capture-enrichment-decisions.md)
+  for the active performance gates and completion definition.
 
 ## Current state
 
@@ -45,6 +59,26 @@
   The handler checks its separate private wake token before parsing or running
   work. The worker URL and publishable key were removed from Vault after the
   failed gate, so the database trigger and schedules cannot invoke it.
+- The Reway V2 Vercel project has a deployed Node 24 worker with a 60-second cap
+  and London placement. It is dormant because Supabase Vault has no worker URL
+  or API-key routing value. V1 was not changed.
+- `api/durable-worker.js` loads the worker bundle generated from
+  `server/vercel-durable-worker.ts`. TypeScript is pinned to 6.0.3 because the
+  current Vercel function builder cannot use the TypeScript 7 compiler interface.
+  `esbuild` 0.27.0 creates one 360,994-byte initial worker module, one lazy
+  2,119,575-byte Photon chunk, and one small shared chunk during
+  `pnpm run build`. The build clears only `dist/worker` before emission.
+- Worker summaries include numeric stage timings and distinguish deleted from
+  already-deleted terminal messages. The hosted 49-of-50 result was 49 deleted
+  plus one already deleted, with all 50 requests complete.
+- Bulk uses batch 50, concurrency 6, and per-host concurrency 2. The measured 8
+  and 3 setting was slower. Interactive limits did not change.
+- The final focused Vercel worker tests, `pnpm run check`, local Vercel build,
+  Preview and Production source deployments, method guard, token checks, and
+  diff hygiene passed before the guarded load run.
+- Vercel's local build downloaded Preview values to the ignored
+  `.vercel/.env.preview.local` file. A local safety rule blocked its deletion.
+  Never commit it; remove it when the environment permits an exact-file delete.
 - `src/lib/network-safety/` owns pure URL normalization, IP classification, and
   the SSRF policy. `supabase/functions/_shared/deno-pinned-network.ts` owns the
   Deno DNS and pinned-connection adapters.
@@ -108,25 +142,37 @@
 - Browser-backed IndexedDB, persistence, and multi-tab checks remain unverified.
 - The latest full-scope React Doctor remains the Phase 8D run with no skipped
   checks or findings and a 100/100 score. Phase 8F has changed no React.
+- The bounded Step 8 pass has a fresh 83-test focused run across 16 files.
+  `pnpm run check`, the local Phase 8F database gate, the full production build,
+  `pnpm audit --prod`, the client secret-name scan, and `git diff --check` pass.
+  Deno remains unavailable, so the changed shared Photon module has no fresh
+  local Deno check.
+- The rejected candidate did not proceed to the 20-sample series, slow-host
+  load, hosted asset lifecycle, browser IndexedDB checks, advisors, or final
+  activation checks.
 - Session 05 ended. Session 06 remains open.
 
 ## What's next
 
 1. Follow the required session start sequence and read the key references below.
-2. Deploy `api/durable-worker.ts` through the existing Vercel project with its
-   private `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, and
-   `REWAY_WORKER_WAKE_TOKEN` environment values.
-3. Point the Vault wake URL at that function only after its missing-token and
-   wrong-token checks pass, then rerun the 50-item live gates.
-4. Resume the remaining hosted rollback, private Storage lifecycle, advisor,
-   build, focused test, secret-scan, and diff gates only after Step 8 passes.
-5. Record Step 9, then stop at Step 10 before Phase 8G.
+2. Read `Bounded Vercel optimization checkpoint` in the Phase 8F decision
+   record.
+3. Use `grilling` and make one product decision. Choose whether an allowed
+   runtime, a performance gate, or the worker work split may change.
+4. Do not implement another runtime change until that decision is recorded.
+5. If a candidate later passes every hard gate, run the 20-sample cold and warm
+   acceptance series and the remaining hosted and browser checks.
+6. Finish Step 9 only after every gate passes, then stop at Step 10. Do not
+   start Phase 8G.
 
 ## Suggested skills
 
 - `codebase-design` - keep capture and enrichment behind the completed worker
   seam and the new outbox and fetch interfaces.
+- `performance` - measure stage costs before tuning worker startup or capacity.
 - `supabase` - verify current Edge Function and client behavior.
+- `vercel-cli` - build, deploy, inspect, and measure the V2 worker without
+  touching V1.
 - `vitest` - cover URL normalization, SSRF classes, stale generations, retries,
   outbox recovery, asset lifecycle, and metadata results.
 - `unslop` - keep changed project records direct and factual.
@@ -145,16 +191,16 @@
 
 ## Key references
 
-- `spec/integrations/features/feature-contract.md` - product behavior source.
-- `spec/integrations/supabase/phase-08-backend-plan.md` - Phase 8F scope and
+- [spec/integrations/features/feature-contract.md](../integrations/features/feature-contract.md) - product behavior source.
+- [spec/integrations/supabase/phase-08-backend-plan.md](../integrations/supabase/phase-08-backend-plan.md) - Phase 8F scope and
   work order.
 - `spec/integrations/supabase/phase-08c-schema-decisions.md` - locked durable
   job, claim, retry, retention, and queue rules.
 - `spec/integrations/supabase/phase-08d-domain-decisions.md` - completed
   adapter seam and Phase 8E boundary.
-- `spec/integrations/supabase/phase-08e-durable-jobs-decisions.md` - approved
+- [spec/integrations/supabase/phase-08e-durable-jobs-decisions.md](../integrations/supabase/phase-08e-durable-jobs-decisions.md) - approved
   and completed queue and worker contract.
-- `spec/integrations/supabase/phase-08f-capture-enrichment-decisions.md` -
+- [spec/integrations/supabase/phase-08f-capture-enrichment-decisions.md](../integrations/supabase/phase-08f-capture-enrichment-decisions.md) -
   approved Phase 8F contract and exact implementation order.
 - `supabase/migrations/20260906072738_phase_08c_core_schema.sql` - existing job,
   enrichment, claim, result, and cleanup functions.
@@ -189,7 +235,8 @@
   composition with separate settings.
 - `supabase/functions/durable-worker/` - enabled Edge implementation retained
   for comparison. Vault wake routing is absent after its live gate failure.
-- `api/durable-worker.ts` - Vercel Node worker entrypoint with the existing wake
+- `api/durable-worker.js` - small Vercel Node entry that loads the built worker.
+- `server/vercel-durable-worker.ts` - worker composition with the existing wake
   and queue interfaces.
 - `src/lib/network-safety/node-pinned-network.server.ts` - Vercel Node DNS and
   pinned-connection adapters.
@@ -197,9 +244,8 @@
 
 ## Open questions
 
-- This checkout has no Vercel login or project link. Deploy through the user's
-  existing Vercel project, then run the live gates. If Hobby misses a gate, stop
-  instead of adding a paid runtime.
+- Which contract may change after the bounded Vercel pass failed queue-wait and
+  first-12: the allowed runtime, one of those gates, or the worker work split?
 
 ## Redaction rule
 

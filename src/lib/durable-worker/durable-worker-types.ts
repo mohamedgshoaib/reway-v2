@@ -59,7 +59,12 @@ export interface ClaimedDurableWork {
   queueName: DurableQueueName
 }
 
-export type DurableWorkOutcome<Result> =
+export interface DurableHandlerStageTimings {
+  readonly assetProcessingMs: number
+  readonly fetchMs: number
+}
+
+type DurableWorkResult<Result> =
   | { result: Result; status: "succeeded" }
   | {
       code: string
@@ -67,6 +72,10 @@ export type DurableWorkOutcome<Result> =
       status: "transient_failure"
     }
   | { code: string; status: "permanent_failure" }
+
+export type DurableWorkOutcome<Result> = DurableWorkResult<Result> & {
+  readonly stageTimings?: DurableHandlerStageTimings
+}
 
 export type DurableFinishState =
   | "cancelled"
@@ -84,6 +93,8 @@ export type PoisonMessageReason =
   | "unknown_work_kind"
   | "unsupported_payload_version"
 
+export type TerminalMessageDeleteOutcome = "already_deleted" | "deleted"
+
 export interface DurableWorkerAdapter<Result> {
   claim(
     queueName: DurableQueueName,
@@ -94,7 +105,7 @@ export interface DurableWorkerAdapter<Result> {
   deleteTerminal(
     queueName: DurableQueueName,
     messageId: string
-  ): Promise<boolean>
+  ): Promise<TerminalMessageDeleteOutcome>
   finish(
     claim: ClaimedDurableWork,
     outcome: DurableWorkOutcome<Result>,
@@ -151,23 +162,32 @@ export interface DurableWorkerRequest {
 }
 
 export interface DurableWorkerSummary {
+  assetProcessingMs: number
+  claimMs: number
   claimed: number
+  completionMs: number
   completed: number
   deferred: number
   failed: number
+  fetchMs: number
   leaseLost: number
   poisonDeleted: number
+  queueReadMs: number
   queueWaitP50Ms: number
   queueWaitP95Ms: number
   queueWaitP99Ms: number
   read: number
   retried: number
+  terminalAlreadyDeleted: number
+  terminalDeletionMs: number
   terminalDeleted: number
+  workerRunMs: number
 }
 
 export interface DurableWorkerDependencies<Result> {
   adapter: DurableWorkerAdapter<Result>
   handler: DurableWorkerHandler<Result>
+  monotonicNow?: () => number
   now?: () => number
   retryPolicy: DurableRetryPolicy
   wait?: (milliseconds: number, signal: AbortSignal) => Promise<boolean>
