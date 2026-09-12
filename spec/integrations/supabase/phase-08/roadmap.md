@@ -1,4 +1,4 @@
-# Phase 8 backend plan
+# Phase 8 roadmap
 
 ## Status
 
@@ -6,51 +6,32 @@
 - Dashboard phases 0 through 7 are complete as local mock work.
 - Phase 8A and Phase 8B were completed on 2026-09-06.
 - The Phase 8C grilling pass and implementation were completed on 2026-09-06.
-  Its schema and security decisions live in `phase-08c-schema-decisions.md`.
+  Its schema and security contract lives in `phase-08c/contract.md`.
 - Phase 8C added and applied the core schema migrations, generated public
   database types, and a Docker-free migration and capacity check.
 - The Phase 8D grilling pass and implementation were completed on 2026-09-07.
   Its approved route, domain, adapter, paging, search, mutation, verification,
-  and complexity contract lives in `phase-08d-domain-decisions.md`.
+  and complexity contract lives in `phase-08d/contract.md`.
 - Phase 8D added the `/library` route, framework-free domain interface,
   matching in-memory and Supabase adapters, checked search and tag-replacement
   functions, hosted types, and focused local and hosted checks.
 - The Phase 8E decision pass was completed on 2026-09-07. Its approved queue,
   worker, lease, retry, repair, security, and operating contract lives in
-  `phase-08e-durable-jobs-decisions.md`.
+  `phase-08e/contract.md`.
 - Phase 8E installed four logged queues, bounded worker and repair functions,
   Cron repair, opaque worker RPCs, framework-free worker adapters, and a dormant
   JWT-checked Edge Function. Its local, hosted, advisor, build, and test gates
   passed.
-- The Phase 8F decision pass was completed on 2026-09-08. Its approved offline
-  capture, enrichment, asset delivery, security, performance, and runtime rules
-  live in [phase-08f-capture-enrichment-decisions.md](phase-08f-capture-enrichment-decisions.md). The first bounded
-  implementation steps are complete: URL normalization, SSRF policy, injected
-  Deno network adapters, the dormant hosted runtime boot proof, the durable
-  browser outbox, and library commands and adapters for quick save,
-  reconciliation, and manual Re-enrich. The reviewed bookmark asset migration,
-  bounded metadata parser, checked static image processor, Photon rasterizer,
-  and immutable private Storage adapter are also complete. Interactive and bulk
-  handlers, immediate and scheduled wake definitions, the unrecorded wake
-  token, and the hosted publication and preliminary runtime checks are
-  complete. The full live Edge and Vercel speed gates are not complete. Those
-  checks led to a guarded Step 9 activation. Step 9 applied the reviewed migration and
-  one bounded wake-timeout correction, regenerated hosted types, and proved the
-  service-wake authentication contract. The live Edge path completed all 50
-  items but missed the queue-wait, first-12, and total-time gates. The worker URL
-  and publishable key were removed from Vault so schedules are no-ops. Step 8 is
-  now required before Step 9 can resume. The new Reway V2 Vercel project now has
-  a separate Node worker entrypoint. It preserves the durable worker and network
-  safety interfaces without Docker or a separate backend host. The V1 account
-  and project stay live and unchanged. The Vercel worker passed its auth checks
-  and completed all 50 items, but queue wait, first-12, and total time missed the
-  gates. Vault routing is disabled and fixtures are gone. Step 9 stays paused.
-  A bounded optimization pass added stage timings, explained the 49-of-50
-  deletion count as one already-deleted terminal message, split and deferred
-  Photon, minified the worker, and measured bulk concurrency 6 and 8. The best
-  candidate now passes the 10-second total gate but still misses the 250 ms
-  queue-wait and two-second first-12 gates. The pass is complete and requires
-  an explicit product decision before more runtime work.
+- Phase 8F and its implementation-order Step 9 are complete. The approved
+  offline capture, enrichment, asset delivery, security, performance, and
+  runtime rules live in
+  [phase-08f/contract.md](phase-08f/contract.md).
+  The accepted Vercel Hobby worker uses bounded enrichment windows and active
+  Vault routing. Its 20-sample warm acceptance series passed at 262 ms
+  publication p95, 1,830.58 ms first-12 p95, and 7,103.04 ms all-50 p95. Hosted
+  Storage, browser IndexedDB, advisor, build, test, audit, secret-scan, and
+  activation checks passed. V1 remains unchanged. Phase 8G and visible mock
+  replacement have not started.
 - Session 06 remains open.
 
 ## Goal
@@ -202,7 +183,7 @@ Verified Phase 8B state:
 
 Build and test the data model before wiring feature UI.
 
-`phase-08c-schema-decisions.md` is the approved technical contract for this
+`phase-08c/contract.md` is the approved technical contract for this
 slice. Do not repeat its grilling pass or replace a decision during
 implementation without returning for approval.
 
@@ -258,7 +239,7 @@ Verified Phase 8C state:
 
 ### Phase 8D: domain modules and adapter parity
 
-Use `phase-08d-domain-decisions.md` as the approved implementation contract.
+Use `phase-08d/contract.md` as the approved implementation contract.
 Do not reopen its decisions unless current code or hosted evidence shows a
 conflict.
 
@@ -340,7 +321,7 @@ checks old active rows, expired leases, queue depth, and missing terminal state.
 
 ### Phase 8F: quick add and enrichment
 
-Use `phase-08f-capture-enrichment-decisions.md` as the approved implementation
+Use `phase-08f/contract.md` as the approved implementation
 contract. Do not reopen its decisions during implementation without recording
 the replacement and its evidence.
 
@@ -639,15 +620,19 @@ The approved Phase 8F controlled 50-link gates are:
 - Phase 8F's rollback fixture publishes 50 bookmarks, enrichment requests, and
   bulk queue messages within 1 second at p95. Phase 8G must meet the same
   one-second p95 end-to-end response after parsing and review.
-- Eligible queue wait below 250 milliseconds at p95 under normal measured load.
+- Record corrected eligible queue wait at p50, p95, and p99 as a diagnostic.
+  Do not count time before the publishing transaction commits, and do not use
+  queue wait alone as a Phase 8F acceptance gate.
 - First 12 visible bookmarks enriched within 2 seconds at p95.
 - All 50 basic metadata results and cached assets settled within 10 seconds at
   p95.
 - One slow host does not delay unrelated hosts.
 
 These gates separate Reway overhead from uncontrolled remote-site latency. If
-the selected worker runtime misses them, change the runtime or work split before
-activation.
+the selected worker runtime misses the user-visible gates, change the runtime or
+work split before activation. The approved first correction batches preparation
+and result commits for enrichment queues while preserving per-item leases,
+retries, idempotency, and failure isolation.
 
 Run load tests with duplicates, repeated hosts, slow hosts, rate limits, invalid
 HTML, large titles, long folder paths, missing images, Arabic and accented text,
@@ -701,38 +686,13 @@ Before replacing a mock path, run the old and new adapter contract suites with
 the same fixtures and compare results. Treat a faster path as a failure if its
 records differ.
 
-## Open decisions for the next discussion
+## Decision gates
 
-Phase 8A, Phase 8B, and Phase 8C have no open product question. Verify their
-project, key, migration, runtime, and database facts from the environment.
-Before each later slice, use the `grilling` skill and ask the matching questions
-below one at a time.
+Phase 8A through Phase 8F are complete. Their contracts are closed unless new
+evidence shows a regression or the user changes a product rule.
 
-Before Phase 8B:
-
-- Email and password sign-up requires email confirmation before first sign-in.
-  Production sign-in includes Google OAuth.
-- Password recovery uses a complete in-app request, return, password-change, and
-  result flow. The request response never reveals whether an account exists.
-- Supabase may link Google to an existing user only when Google returns the same
-  verified email. V1 keeps manual identity linking disabled, treats different
-  emails as separate accounts, and does not merge libraries.
-- Permanent account deletion requires fresh authentication with the current
-  sign-in method after the user types `delete`. Failure or cancellation leaves
-  the account unchanged. The server revokes active sessions as part of the
-  deletion flow.
-- Usernames remain non-unique display names. The authenticated user ID owns data
-  and authorization. Any future public identity uses a separate normalized,
-  unique handle.
-
-Before Phase 8F:
-
-- The decision pass is complete. Use
-  `phase-08f-capture-enrichment-decisions.md` for the approved durable browser
-  outbox, full bulk-enrichment coverage, private cached assets, signed delivery,
-  performance gates, and worker-runtime exit rule.
-
-Before Phase 8G:
+Phase 8G is ready for its required grilling and system-design pass. Resolve these
+questions before implementation:
 
 - Decide whether a user may run more than one mutating import at a time. Start
   with one active X or browser import per user, while allowing read-only export
@@ -742,7 +702,7 @@ Before Phase 8G:
   in-flight transaction finish. Do not attempt a large rollback.
 - Decide where root-level browser bookmarks go. Start with Uncollected.
 
-Before Phase 8H:
+Phase 8H has these later decision gates:
 
 - Lock initial export scope. Start with the whole library. Browser HTML omits
   Trash, while lossless Reway JSON includes Trash and its restore context.

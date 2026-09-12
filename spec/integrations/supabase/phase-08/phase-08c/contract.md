@@ -1,4 +1,4 @@
-# Phase 8C schema decisions
+# Phase 8C schema and security contract
 
 ## Status
 

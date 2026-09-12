@@ -20,7 +20,7 @@ behavior without an explicit product decision and a matching spec update.
 The Phase 8 direction changed by explicit product decision on 2026-09-05. The
 backend will now replace mock adapters in gated slices instead of waiting for a
 separate final mock pass. The full technical order lives in
-`spec/integrations/supabase/phase-08-backend-plan.md`.
+`spec/integrations/supabase/phase-08/roadmap.md`.
 
 ## Scope
 
@@ -679,7 +679,7 @@ behavior has been implemented and verified.
 ## Phase 8: backend, capture, transfer, and durability
 
 Build the backend from the database upward. Use
-`spec/integrations/supabase/phase-08-backend-plan.md` as the implementation
+`spec/integrations/supabase/phase-08/roadmap.md` as the implementation
 order and stop after each verified slice.
 
 Phase 8 includes:

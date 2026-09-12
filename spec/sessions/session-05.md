@@ -45,7 +45,7 @@ Write facts only. No plans, no advice, no narration.
 - Reset demo restores the account, import, bookmark, collection, tag, destination, selection, sort, and view fixtures after an import.
 - Completed the Phase 8 grilling and research pass without starting implementation.
 - Reviewed the current X import state, Supabase Queues, Edge Function limits, resumable uploads, Realtime gaps, TanStack Start server boundaries, Linear sync recovery, Vercel queue semantics, and current Karakeep and Raindrop import behavior.
-- Added `spec/integrations/supabase/phase-08-backend-plan.md` as the bottom-up implementation order for Supabase, core data, durable jobs, capture, enrichment, import, export, restore, Realtime, and mock replacement.
+- Added `spec/integrations/supabase/phase-08/roadmap.md` as the bottom-up implementation order for Supabase, core data, durable jobs, capture, enrichment, import, export, restore, Realtime, and mock replacement.
 - Updated the project DNA and feature contract to replace direct per-bookmark enrichment webhooks with transactional durable queueing and batched consumers.
 - Updated the dashboard implementation order so Phase 8 routes to the dedicated backend plan and keeps Phase 9 as the completion pass.
 - Kept this checkpoint documentation-only. No Supabase package, schema, migration, client, backend code, environment value, or MCP mutation was added.
@@ -75,7 +75,7 @@ Write facts only. No plans, no advice, no narration.
 - Hosted Confirm Email and Google OAuth settings and live authentication remain unverified after Phase 8B.
 - Completed the Phase 8C grilling pass and approved all 34 schema, security,
   concurrency, retention, and performance decisions without writing SQL.
-- Added `spec/integrations/supabase/phase-08c-schema-decisions.md` as the
+- Added `spec/integrations/supabase/phase-08/phase-08c/contract.md` as the
   complete approved question-and-answer record.
 - Reconciled the approved decisions with the feature contract. Private
   Broadcast replaces Postgres Changes, raw visit history expires after 30 days,
@@ -122,7 +122,7 @@ Write facts only. No plans, no advice, no narration.
   `git diff --check` passed. React Doctor did not apply because no React file
   changed.
 - Completed the Phase 8D grilling pass without starting implementation.
-- Added `spec/integrations/supabase/phase-08d-domain-decisions.md` as the
+- Added `spec/integrations/supabase/phase-08/phase-08d/contract.md` as the
   approved route, domain, adapter, paging, search, mutation, verification, and
   complexity contract.
 - Audited the live route and found no CSS or component behavior tied to the
@@ -182,7 +182,7 @@ Write facts only. No plans, no advice, no narration.
 - Confirmed at the decision checkpoint that the hosted project was healthy and
   current through Phase 8D. PGMQ, Cron, and pg_net were available but not
   installed, and no Edge Function was deployed.
-- Added `spec/integrations/supabase/phase-08e-durable-jobs-decisions.md` as the
+- Added `spec/integrations/supabase/phase-08/phase-08e/contract.md` as the
   approved activation, queue, message, lease, retry, repair, worker security,
   diagnostic, verification, and complexity contract.
 - Kept this checkpoint documentation-only. No migration, queue, extension,
@@ -239,7 +239,7 @@ Write facts only. No plans, no advice, no narration.
   Supabase Edge Function cannot pin destinations or meet the security,
   resource, and latency gates. The Phase 8E worker interface and durable queue
   controls remain unchanged.
-- Added `spec/integrations/supabase/phase-08f-capture-enrichment-decisions.md`
+- Added `spec/integrations/supabase/phase-08/phase-08f/contract.md`
   and reconciled the feature contract, backend plan, Supabase index, and
   handoff. This checkpoint changes documentation only.
 - Completed Phase 8F implementation-order step 1 and stopped before the browser

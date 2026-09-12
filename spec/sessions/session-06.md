@@ -10,7 +10,10 @@ Write facts only. No plans, no advice, no narration.
 ## Status at start
 
 - **Sprint goal:** Complete Phase 8F implementation-order step 6 only.
-- **Last blocker:** None
+- **Last blocker:** The final post-fix series failed when its nineteenth wake
+  reached the 15-second `pg_net` timeout. The cold candidate also missed the
+  first-12 gate. Hosted asset lifecycle, browser IndexedDB, Vercel Hobby
+  resource, and final activation checks remain.
 - **Feature state:** Phase 8F steps 1 through 5 are complete; interactive and bulk enrichment handlers have not started.
 
 ---
@@ -121,6 +124,98 @@ Write facts only. No plans, no advice, no narration.
   Deno check. The rejected candidate did not proceed to the 20-sample series,
   slow-host load, hosted asset lifecycle, browser IndexedDB checks, advisors,
   or final activation checks.
+- Diagnosed the remaining delay as repeated worker-to-Supabase HTTP calls rather
+  than slow SQL or a region mismatch. The worker and database are both in
+  London. Paid hosting is ruled out.
+- Approved an enrichment-only batched work split on the existing free plans.
+  One active window contains two interactive items or six bulk items. Results
+  commit in matching progressive batches, while each item keeps independent
+  leases, retries, idempotency, and failure isolation. Transfer queues keep the
+  per-item path.
+- Corrected queue wait is a diagnostic metric. Durable save, first-12, and
+  all-50 remain hard gates. No batch implementation had started when the prior
+  conversation hit its usage limit.
+- Documented the approved contract in the feature contract, backend plan, Phase
+  8F decision record, handoff, and this session record.
+- Added the local enrichment batch migration, optional shared-worker batch
+  adapter, Supabase batch adapter, prepared handler input, and progressive
+  two-item interactive and six-item bulk windows. Transfer queues retain their
+  per-item path.
+- Added batch orchestration, adapter, migration, bounds, terminal deletion, and
+  per-item database failure-isolation coverage. The focused run passes 69 tests
+  across 12 files. Phase 8E and Phase 8F database replays pass.
+- `pnpm run check`, the full production build, `pnpm audit --prod`, the client
+  secret-name scan, and diff hygiene pass. No hosted migration, type generation,
+  deployment, Vault change, or live benchmark ran. Deno remains unavailable.
+- Found a progressive-commit bug during the first hosted slow-host run: the
+  worker waited for all six handlers before committing the window. Added a
+  20 ms result flush and a regression test. The focused run now passes 70 tests
+  across 12 files; Phase 8E and Phase 8F database replays, static checks, and
+  the full build pass.
+- Applied `20260911030425_phase_08f_enrichment_batch_worker.sql` to the hosted
+  project and refreshed generated public types. The two public batch functions
+  exist and grant execution only to `service_role`. Supabase security and
+  performance advisors report no warnings or errors.
+- Deployed the corrected worker from source to Preview and Production. The
+  method guard returned 405 and the wrong-token guard returned 401. No project
+  URL, ID, key, or token was recorded.
+- Ran 20 complete pre-fix 50-item samples. Every request completed and every
+  fixture was removed. The series measured 216 ms publication p95, 1,721.39 ms
+  first-12 p95, and 5,612.84 ms all-50 p95. The worker changed afterward, so
+  this series is diagnostic and cannot serve as final acceptance evidence.
+- The post-fix slow-host check completed ten fast items and failed two delayed
+  JSON responses as expected. The fourth fast result committed 2,734.79 ms
+  before the first delayed item reached a terminal state, which proves a slow
+  peer no longer holds completed results in its window.
+- The post-fix 50-item sample measured 80.40 ms publication, 1,662.17 ms for
+  the first 12, and 6,098.42 ms for all 50. All 50 completed with no failures.
+  This sample passes the one-second publication, two-second first-12, and
+  10-second all-50 hard gates.
+- Removed both temporary routing values and the fixture account. Both
+  enrichment queues and all fixture rows are empty. The wake token remains;
+  V2 is dormant and V1 is unchanged.
+- The user approved the final post-fix acceptance series. The harness attempted
+  19 samples and stopped on its first bad run to limit hosted use. The cold
+  candidate and 17 warm samples each completed 50 items with no failed result.
+- The cold candidate measured 462.03 ms publication, 1,587.97 ms corrected
+  queue wait, 3,932.41 ms for the first 12, and 8,156.65 ms for all 50. Its
+  first-12 result misses the two-second gate.
+- The 17 successful warm samples measured publication p50, p95, and p99 of
+  162.88, 209.07, and 209.07 ms; corrected queue-wait values of 128.93, 227.05,
+  and 227.05 ms; first-12 values of 1,520.12, 1,770.20, and 1,770.20 ms; and
+  all-50 values of 5,769.11, 6,708.40, and 6,708.40 ms.
+- The nineteenth wake reached the `pg_net` 15-second timeout before a 50-item
+  response arrived. The harness cleaned its fixture and routing values, then
+  skipped sample 20. The partial warm percentiles are diagnostic only. The
+  failed series cannot serve as acceptance evidence.
+- Final cleanup confirmed no routing values, fixture users, or messages in
+  either enrichment queue. The wake token remains, V2 is dormant, and V1 is
+  unchanged.
+- Added one numeric Vercel summary log for non-empty wakes. It records the queue
+  name and existing numeric worker totals only. A one-item Production check
+  completed, logged the safe shape, and cleaned its fixture and routing.
+- Corrected the acceptance collector so a sample over 10.5 seconds keeps its
+  fixture until terminal evidence or a 60-second ceiling. The corrected series
+  completed 20 samples and 1,000 items with no failed work or cleanup gap.
+- The corrected series measured publication p50, p95, and p99 of 159, 186, and
+  208 ms; first-12 values of 1,516.96, 2,011.99, and 4,709.59 ms; and all-50
+  values of 5,741.66, 8,088.29, and 9,011.24 ms. First-12 p95 misses its gate by
+  11.99 ms. Publication and all-50 pass.
+- The numeric logs show that the slow warm sample kept normal queue-read,
+  claim, and completion costs. Its aggregate page-fetch time rose to 21,784.94
+  ms from the usual 18,000 to 19,000 ms range. Remote fetch variance caused the
+  first-12 tail.
+- Removed the fixed 20 ms wait before a final batch commit when every handler
+  in that window has settled. The new regression test failed before the change
+  and passed afterward. The focused run passes 27 tests across five files.
+  `pnpm run check` and the worker build pass.
+- Deployed the timing fix and numeric summary log to Preview and Production.
+  The method guard returned 405 and the wrong-token guard returned 401.
+- One post-deploy cold 50-item proof completed all work with no failures. It
+  measured 311 ms publication, 1,074 ms corrected queue wait, 2,673.89 ms for
+  the first 12, and 6,784.35 ms for all 50. The first queue read took 418.19 ms.
+  Cleanup passed, routing is absent, both queues are empty, V2 is dormant, and
+  V1 is unchanged.
 
 ---
 
@@ -178,16 +273,44 @@ Write facts only. No plans, no advice, no narration.
 - The bounded Vercel optimization pass is complete. It does not justify further
   tuning under the current contract. Resume only after an explicit product
   decision changes an allowed runtime, a gate, or the worker work split.
+- The user approved batching only for interactive and bulk enrichment queues.
+  The worker prepares one active concurrency window at a time and commits
+  results progressively in the same bound. This keeps database transactions
+  short, preserves the shared `runDurableWorker` interface, and keeps item
+  outcomes independent.
+- Queue wait no longer blocks Phase 8F by itself. The diagnostic starts when a
+  message can be read after commit, not from the transaction-start
+  `enqueued_at` timestamp. The worker summary now labels the old value enqueue
+  age. The one-second durable-save, two-second first-12, and 10-second all-50
+  gates remain hard.
+- The user approved decision 13: keep one cold run as a diagnostic, prewarm the
+  worker, and calculate the hard p95 gates over 20 warm samples.
+- The accepted series completed 20 samples and 1,000 items. Publication p95 was
+  262 ms, first-12 p95 was 1,830.58 ms, and all-50 p95 was 7,103.04 ms. Cleanup
+  passed after every sample.
+- Hosted private Storage lifecycle checks passed. A real Chrome run passed
+  native IndexedDB, reload recovery, cross-context one-winner claiming, and
+  cleanup. The linked Vercel project remains on Hobby with no purchase.
+- The production worker received a fresh private wake token. Vault routing is
+  active. A database-driven empty wake returned 200 without timeout or transport
+  error. Both enrichment queues were empty before activation.
+- Supabase advisors reported informational findings only. The full serialized
+  run passed 69 files and 433 tests. The unchanged X-import file passed all eight
+  tests alone after the default parallel run reproduced its known timeout.
+- `pnpm run check`, the production build, `pnpm audit --prod`, the client
+  secret-name scan, and `git diff --check` pass. Deno remains unavailable.
+- Phase 8F and Step 9 are complete. Phase 8G and visible mock replacement have
+  not started.
+- Reorganized the Phase 8 Supabase documents under `phase-08/`. Phase 8C through
+  Phase 8F now have subphase folders and short routers. Contracts, implementation
+  plans, checklists, and results no longer share ambiguous filenames. Phase 8F's
+  13 decisions and ten execution steps remain intact in separate files.
 
 ---
 
 ## Blockers
 
-1. No accepted runtime remains under the current free-plan and
-   no-separate-backend constraint. The bounded Vercel optimization pass still
-   misses the queue-wait and first-12 gates. Further work needs an explicit
-   product decision. Do not touch V1, loosen a gate, change the worker contract,
-   or create a paid or separate runtime without approval.
+- None for Phase 8F.
 
 ---
 

@@ -37,6 +37,12 @@ This is the authoritative record of Reway's approved feature behaviour and techn
   latency gates. Work continues if the user closes Settings, changes tabs,
   reloads, or closes the browser.
 - Quick saves and manual re-enrichment use an interactive queue. Imported bookmarks use a bulk queue with reserved worker capacity. Interactive work may pass bulk work, but bulk work must continue to make progress.
+- Enrichment workers prepare one active concurrency window at a time: two
+  interactive items or six bulk items. They perform network work outside
+  database transactions and commit completed results in progressive batches no
+  larger than the active window. Each item keeps its own lease, retry,
+  idempotency, and failure result. Transfer queues keep their existing per-item
+  worker path.
 - Enrichment fetches and extracts title, favicon, and OG-image metadata as one bounded operation regardless of the current view. Every valid imported bookmark enters the bulk enrichment queue. A missing OG image is a valid enriched result with a null image.
 - The worker fetches favicon and OG-image bytes through the same SSRF checks as
   the page, validates and sanitizes them, and stores bounded static derivatives

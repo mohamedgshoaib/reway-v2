@@ -1,4 +1,4 @@
-# Phase 8E durable jobs and queues decisions
+# Phase 8E durable jobs and queues contract
 
 ## Status
 
@@ -20,10 +20,10 @@ in their assigned later phases.
 ## Sources used
 
 - `spec/integrations/features/feature-contract.md` owns product behavior.
-- `phase-08-backend-plan.md` owns the Phase 8 order and shared job rules.
-- `phase-08c-schema-decisions.md` owns the approved schema, claim, retention,
+- `../roadmap.md` owns the Phase 8 order and shared job rules.
+- `../phase-08c/contract.md` owns the approved schema, claim, retention,
   security, and concurrency rules.
-- `phase-08d-domain-decisions.md` owns the completed library interface and the
+- `../phase-08d/contract.md` owns the completed library interface and the
   Phase 8E boundary.
 - Current Supabase Queues, Cron, Edge Functions, and PGMQ documentation was
   checked before this decision pass.
@@ -222,61 +222,6 @@ runDurableWorker(request, dependencies): Promise<WorkerRunSummary>
 - Queue and operator snapshots return a fixed set of queue and state groups.
   They never scan or return user records.
 - No Phase 8E loop or query processes an unbounded result.
-
-## Implementation order
-
-1. Add one reviewed Phase 8E migration for extensions, logged queues, message
-   binding, worker RPCs, heartbeat, retry visibility, repair, diagnostics,
-   grants, and the private operator snapshot.
-2. Extend the Docker-free database check with local stubs where PGMQ or Cron is
-   unavailable, then add one hosted rollback smoke for their real behavior.
-3. Add the framework-free worker module, typed retry policy, in-memory adapters,
-   and focused tests.
-4. Add the server-only Supabase worker adapters and narrow error mapping.
-5. Add the shared Edge Function entry path and its two-layer request check, but
-   do not enable an external work handler before Phase 8F.
-6. Apply the reviewed migration once, regenerate public types, run the final
-   checks, update the phase records, and stop before Phase 8F.
-
-## Implementation result
-
-- Four hosted migrations add the durable queue system, opaque worker RPC IDs,
-  locked grants for the extension event-trigger helper, and strict rollback when
-  a retry message is missing.
-- PGMQ, Cron, and pg_net are installed. Four logged queues exist for interactive
-  enrichment, bulk enrichment, import or restore, and export work.
-- Bookmark creation and manual Re-enrich now write the application request and
-  its queue message in one database transaction.
-- Worker RPCs cover bounded reads, exact message claims, attempt start, lease
-  renewal, retry visibility, completion, terminal deletion, poison rejection,
-  and the private operator snapshot.
-- Public worker RPCs use security-invoker behavior. Browser roles have no worker
-  grant, and PGMQ remains unavailable through browser clients.
-- The database repair function runs every 30 seconds through Cron. It repairs
-  expired leases and missing messages, closes exhausted work, removes terminal
-  messages, and clears expired private diagnostics in bounded batches.
-- `src/lib/durable-worker/` contains the framework-free worker, envelope parser,
-  retry policy, in-memory adapter, and server-only Supabase adapter.
-- The deployed `durable-worker` Edge Function requires JWT verification and the
-  separate wake token. It has no enabled queue handler in Phase 8E, so it cannot
-  consume work before Phase 8F.
-- Hosted public types use strings for worker message IDs and enrichment
-  generations. Database storage remains `bigint`.
-
-## Verification result
-
-- The Phase 8E PGLite suite passes transactional enqueue, duplicate save,
-  message reuse, retry visibility, lease repair, missing-message replacement,
-  attempt exhaustion, transfer claims, poison handling, Cron, and grant checks.
-- The applied-schema hosted rollback smoke passes and leaves no fixture data.
-- Supabase security and performance advisors report no warning or error. The
-  remaining information notices cover private RLS tables and new unused indexes.
-- The focused worker and wake run passes 22 tests across five files.
-- The full run passes 245 tests across 51 files with four workers.
-- `pnpm run check`, both production builds, the client secret-name scan, and
-  `git diff --check` pass.
-- React Doctor and browser checks do not apply because Phase 8E changes no React
-  or rendered UI.
 
 ## Rejected alternatives
 
