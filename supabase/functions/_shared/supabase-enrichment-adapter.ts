@@ -6,9 +6,18 @@ import {
 } from "../../../src/lib/bookmark-enrichment/bookmark-asset-processor.ts"
 import type {
   EnrichmentHandlerResult,
+  EnrichmentWorkInput,
   EnrichmentWorkSource,
 } from "../../../src/lib/bookmark-enrichment/enrichment-handler.ts"
-import type { DurableFinishState } from "../../../src/lib/durable-worker/durable-worker-types.ts"
+import type {
+  ClaimedDurableWork,
+  DurableBatchFinishInput,
+  DurableBatchFinishResult,
+  DurableBatchPrepareResult,
+  DurableFinishState,
+  DurableWorkerBatchAdapter,
+  DurableWorkOutcome,
+} from "../../../src/lib/durable-worker/durable-worker-types.ts"
 import {
   createDurableWorkerDatabaseError,
   createInvalidDurableWorkerResultError,
@@ -28,7 +37,17 @@ type UntypedRpc = (
 ) => Promise<RpcResult>
 
 const DECIMAL_PATTERN = /^[1-9][0-9]*$/
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const CONTROL_PATTERN = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u
+const CLAIM_STATUSES = new Set([
+  "busy",
+  "exhausted",
+  "missing",
+  "not_due",
+  "stale_message",
+  "terminal",
+])
 const FINISH_STATES = new Set<DurableFinishState>([
   "cancelled",
   "completed",
@@ -57,6 +76,178 @@ const requireBoolean = (value: unknown): boolean => {
   }
   return value
 }
+
+const requireObject = (value: unknown): Record<string, unknown> => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw createInvalidDurableWorkerResultError()
+  }
+  return value as Record<string, unknown>
+}
+
+const requireDecimalString = (value: unknown): string => {
+  if (typeof value !== "string" || !DECIMAL_PATTERN.test(value)) {
+    throw createInvalidDurableWorkerResultError()
+  }
+  return value
+}
+
+const requireUuid = (value: unknown): string => {
+  if (typeof value !== "string" || !UUID_PATTERN.test(value)) {
+    throw createInvalidDurableWorkerResultError()
+  }
+  return value
+}
+
+const requirePositiveInteger = (value: unknown): number => {
+  if (!Number.isSafeInteger(value) || (value as number) < 1) {
+    throw createInvalidDurableWorkerResultError()
+  }
+  return value as number
+}
+
+const parseBatchPrepareResult = (
+  value: unknown
+): DurableBatchPrepareResult<EnrichmentWorkInput | null> => {
+  const result = requireObject(value)
+  const messageId = requireDecimalString(result.message_id)
+  if (result.status === "claimed") {
+    const fallbackTitle = result.fallback_title
+    const url = result.url
+    const bothMissing = fallbackTitle === null && url === null
+    const bothPresent =
+      typeof fallbackTitle === "string" &&
+      fallbackTitle.trim().length > 0 &&
+      typeof url === "string" &&
+      url.length > 0
+    if (!bothMissing && !bothPresent) {
+      throw createInvalidDurableWorkerResultError()
+    }
+    return {
+      attemptCount: requirePositiveInteger(result.attempt_count),
+      leaseToken: requireUuid(result.lease_token),
+      maxAttempts: requirePositiveInteger(result.max_attempts),
+      messageId,
+      preparedInput: bothMissing
+        ? null
+        : { fallbackTitle: fallbackTitle as string, url: url as string },
+      status: "claimed",
+    }
+  }
+  if (typeof result.status === "string" && CLAIM_STATUSES.has(result.status)) {
+    return {
+      messageId,
+      status: result.status as Exclude<
+        DurableBatchPrepareResult<never>["status"],
+        "claimed"
+      >,
+    }
+  }
+  throw createInvalidDurableWorkerResultError()
+}
+
+const parseBatchFinishResult = (value: unknown): DurableBatchFinishResult => {
+  const result = requireObject(value)
+  const finishState = result.finish_state
+  const terminalDeleteOutcome = result.terminal_delete_outcome
+  if (
+    typeof finishState !== "string" ||
+    !FINISH_STATES.has(finishState as DurableFinishState)
+  ) {
+    throw createInvalidDurableWorkerResultError()
+  }
+  if (
+    terminalDeleteOutcome !== null &&
+    terminalDeleteOutcome !== "already_deleted" &&
+    terminalDeleteOutcome !== "deleted"
+  ) {
+    throw createInvalidDurableWorkerResultError()
+  }
+  return {
+    finishState: finishState as DurableFinishState,
+    messageId: requireDecimalString(result.message_id),
+    terminalDeleteOutcome,
+  }
+}
+
+const toFinishParameters = (
+  claim: ClaimedDurableWork,
+  outcome: DurableWorkOutcome<EnrichmentHandlerResult>,
+  retryAtMs: number | null
+): Record<string, unknown> => {
+  if (claim.envelope.workKind !== "enrichment") {
+    throw createInvalidDurableWorkerResultError()
+  }
+  const succeeded = outcome.status === "succeeded"
+  const result = succeeded ? outcome.result : null
+  return {
+    generation: claim.envelope.generation,
+    lease_token: claim.leaseToken,
+    message_id: claim.message.messageId,
+    request_id: claim.envelope.requestId,
+    result_domain: result?.domain ?? null,
+    result_failure_class: succeeded
+      ? null
+      : outcome.status === "transient_failure"
+        ? "transient"
+        : "permanent",
+    result_favicon_asset_id: result?.faviconAssetId ?? null,
+    result_internal_error: succeeded ? null : outcome.code,
+    result_og_image_asset_id: result?.ogImageAssetId ?? null,
+    result_public_error_code: succeeded ? null : "metadata_fetch_failed",
+    result_title: result?.title ?? null,
+    retry_at: retryAtMs === null ? null : new Date(retryAtMs).toISOString(),
+    succeeded,
+  }
+}
+
+export const createSupabaseEnrichmentBatchAdapter = (
+  client: SupabaseClient<Database>
+): DurableWorkerBatchAdapter<
+  EnrichmentHandlerResult,
+  EnrichmentWorkInput | null
+> => ({
+  finish: async (
+    inputs: readonly DurableBatchFinishInput<EnrichmentHandlerResult>[]
+  ) => {
+    if (inputs.length === 0) return []
+    const queueName = inputs[0].claim.queueName
+    if (inputs.some((input) => input.claim.queueName !== queueName)) {
+      throw createInvalidDurableWorkerResultError()
+    }
+    const response = await getRpc(client)("worker_finish_enrichment_batch", {
+      target_queue_name: queueName,
+      target_results: inputs.map(({ claim, outcome, retryAtMs }) =>
+        toFinishParameters(claim, outcome, retryAtMs)
+      ),
+    })
+    if (response.error !== null) throwDatabaseFailure(response.error)
+    if (!Array.isArray(response.data)) {
+      throw createInvalidDurableWorkerResultError()
+    }
+    return response.data.map(parseBatchFinishResult)
+  },
+  prepare: async (queueName, inputs, leaseSeconds) => {
+    if (inputs.some((input) => input.envelope.workKind !== "enrichment")) {
+      throw createInvalidDurableWorkerResultError()
+    }
+    const response = await getRpc(client)("worker_prepare_enrichment_batch", {
+      lease_seconds: leaseSeconds,
+      target_messages: inputs.map(({ envelope, message }) => ({
+        generation:
+          envelope.workKind === "enrichment" ? envelope.generation : null,
+        message_id: message.messageId,
+        request_id:
+          envelope.workKind === "enrichment" ? envelope.requestId : null,
+      })),
+      target_queue_name: queueName,
+    })
+    if (response.error !== null) throwDatabaseFailure(response.error)
+    if (!Array.isArray(response.data)) {
+      throw createInvalidDurableWorkerResultError()
+    }
+    return response.data.map(parseBatchPrepareResult)
+  },
+})
 
 export const createSupabaseEnrichmentWorkSource = (
   client: SupabaseClient<Database>
@@ -157,31 +348,22 @@ export const createSupabaseBookmarkAssetRegistry = (
 export const finishSupabaseEnrichmentClaim: SupabaseDurableWorkerFinisher<
   EnrichmentHandlerResult
 > = async (client: SupabaseDurableWorkerClient, claim, outcome, retryAtMs) => {
-  if (claim.envelope.workKind !== "enrichment") {
-    throw createInvalidDurableWorkerResultError()
-  }
-  const succeeded = outcome.status === "succeeded"
-  const result = succeeded ? outcome.result : null
-  const failureClass = succeeded
-    ? null
-    : outcome.status === "transient_failure"
-      ? "transient"
-      : "permanent"
+  const parameters = toFinishParameters(claim, outcome, retryAtMs)
   const response = await getRpc(client)("worker_finish_enrichment_message", {
-    result_domain: result?.domain ?? null,
-    result_failure_class: failureClass,
-    result_favicon_asset_id: result?.faviconAssetId ?? null,
-    result_internal_error: succeeded ? null : outcome.code,
-    result_og_image_asset_id: result?.ogImageAssetId ?? null,
-    result_public_error_code: succeeded ? null : "metadata_fetch_failed",
-    result_title: result?.title ?? null,
-    retry_at: retryAtMs === null ? null : new Date(retryAtMs).toISOString(),
-    succeeded,
-    target_generation: claim.envelope.generation,
-    target_lease_token: claim.leaseToken,
-    target_message_id: claim.message.messageId,
+    result_domain: parameters.result_domain,
+    result_failure_class: parameters.result_failure_class,
+    result_favicon_asset_id: parameters.result_favicon_asset_id,
+    result_internal_error: parameters.result_internal_error,
+    result_og_image_asset_id: parameters.result_og_image_asset_id,
+    result_public_error_code: parameters.result_public_error_code,
+    result_title: parameters.result_title,
+    retry_at: parameters.retry_at,
+    succeeded: parameters.succeeded,
+    target_generation: parameters.generation,
+    target_lease_token: parameters.lease_token,
+    target_message_id: parameters.message_id,
     target_queue_name: claim.queueName,
-    target_request_id: claim.envelope.requestId,
+    target_request_id: parameters.request_id,
   })
   if (response.error !== null) throwDatabaseFailure(response.error)
   if (

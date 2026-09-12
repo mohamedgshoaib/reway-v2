@@ -153,7 +153,10 @@ const fetchAsset = async (
 
 export const createEnrichmentHandler = (
   dependencies: EnrichmentHandlerDependencies
-): DurableWorkerHandler<EnrichmentHandlerResult> => ({
+): DurableWorkerHandler<
+  EnrichmentHandlerResult,
+  EnrichmentWorkInput | null
+> => ({
   run: async (envelope, options) => {
     if (envelope.workKind !== "enrichment") {
       return { code: "unsupported_work_kind", status: "permanent_failure" }
@@ -164,11 +167,14 @@ export const createEnrichmentHandler = (
       fetchMs: 0,
     }
     try {
-      const input = await dependencies.source.read(
-        envelope,
-        options.leaseToken,
-        options.signal
-      )
+      const input =
+        options.preparedInput === undefined
+          ? await dependencies.source.read(
+              envelope,
+              options.leaseToken,
+              options.signal
+            )
+          : options.preparedInput
       if (input === null) {
         return {
           code: "stale_generation",

@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js"
 
+import type { DurableWorkerSummary } from "../src/lib/durable-worker/durable-worker-types.ts"
 import {
   createNodeDnsAdapter,
   createNodePinnedConnectionAdapter,
@@ -52,11 +53,28 @@ const getQueueRunner = (): EnrichmentQueueRunner => {
   return queueRunner
 }
 
+const recordWorkerSummary = (
+  queueName: EdgeWorkerQueueName,
+  summary: DurableWorkerSummary
+): void => {
+  if (summary.read === 0) return
+
+  console.info(
+    JSON.stringify({
+      event: "reway_durable_worker_summary",
+      queueName,
+      ...summary,
+    })
+  )
+}
+
 const runQueue = async (
   queueName: EdgeWorkerQueueName
-): Promise<Record<string, number>> => ({
-  ...(await getQueueRunner().run(queueName)),
-})
+): Promise<Record<string, number>> => {
+  const summary = await getQueueRunner().run(queueName)
+  recordWorkerSummary(queueName, summary)
+  return { ...summary }
+}
 
 export default {
   fetch: (request: Request): Promise<Response> =>

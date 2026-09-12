@@ -341,6 +341,219 @@ try {
   assert.ok(maximumUrlBookmark.rows[0].bookmark_id)
   await database.exec("reset role;")
 
+  const firstBatchBookmarkId = await createBookmark(
+    USER_ONE,
+    "dddddddd-dddd-4ddd-8ddd-dddddddddd11",
+    "batch-one"
+  )
+  const secondBatchBookmarkId = await createBookmark(
+    USER_ONE,
+    "dddddddd-dddd-4ddd-8ddd-dddddddddd12",
+    "batch-two"
+  )
+  const firstBatchRequest = await readRequest(firstBatchBookmarkId)
+  const secondBatchRequest = await readRequest(secondBatchBookmarkId)
+  const batchMessages = [firstBatchRequest, secondBatchRequest].map(
+    (request) => ({
+      generation: String(request.generation),
+      message_id: String(request.queue_message_id),
+      request_id: request.id,
+    })
+  )
+  await database.exec("set role service_role;")
+  const preparedBatch = await database.query(
+    `select public.worker_prepare_enrichment_batch(
+      '${INTERACTIVE_QUEUE}',
+      $1::jsonb,
+      60
+    ) as prepared;`,
+    [JSON.stringify(batchMessages)]
+  )
+  assert.deepEqual(
+    preparedBatch.rows[0].prepared.map((prepared) => ({
+      attempt_count: prepared.attempt_count,
+      fallback_title: prepared.fallback_title,
+      message_id: prepared.message_id,
+      status: prepared.status,
+      url: prepared.url,
+    })),
+    [
+      {
+        attempt_count: 1,
+        fallback_title: "Bookmark batch-one",
+        message_id: String(firstBatchRequest.queue_message_id),
+        status: "claimed",
+        url: "https://example.com/batch-one",
+      },
+      {
+        attempt_count: 1,
+        fallback_title: "Bookmark batch-two",
+        message_id: String(secondBatchRequest.queue_message_id),
+        status: "claimed",
+        url: "https://example.com/batch-two",
+      },
+    ]
+  )
+  const batchResults = preparedBatch.rows[0].prepared.map(
+    (prepared, index) => ({
+      generation: batchMessages[index].generation,
+      lease_token: prepared.lease_token,
+      message_id: prepared.message_id,
+      request_id: batchMessages[index].request_id,
+      result_domain: "example.com",
+      result_failure_class: null,
+      result_favicon_asset_id: null,
+      result_internal_error: null,
+      result_og_image_asset_id: null,
+      result_public_error_code: null,
+      result_title: `Batch title ${index + 1}`,
+      retry_at: null,
+      succeeded: true,
+    })
+  )
+  const finishedBatch = await database.query(
+    `select public.worker_finish_enrichment_batch(
+      '${INTERACTIVE_QUEUE}',
+      $1::jsonb
+    ) as finished;`,
+    [JSON.stringify(batchResults)]
+  )
+  assert.deepEqual(finishedBatch.rows[0].finished, [
+    {
+      finish_state: "completed",
+      message_id: String(firstBatchRequest.queue_message_id),
+      terminal_delete_outcome: "deleted",
+    },
+    {
+      finish_state: "completed",
+      message_id: String(secondBatchRequest.queue_message_id),
+      terminal_delete_outcome: "deleted",
+    },
+  ])
+  await assert.rejects(
+    database.query(
+      `select public.worker_prepare_enrichment_batch(
+        '${INTERACTIVE_QUEUE}',
+        $1::jsonb,
+        60
+      );`,
+      [
+        JSON.stringify([
+          ...batchMessages,
+          {
+            generation: "1",
+            message_id: "999999",
+            request_id: "dddddddd-dddd-4ddd-8ddd-dddddddddd99",
+          },
+        ]),
+      ]
+    ),
+    /Invalid batch preparation/
+  )
+  await database.exec("reset role;")
+
+  const batchedBookmarks = await database.query(`
+    select id, metadata_status, title
+    from public.bookmarks
+    where id in (${firstBatchBookmarkId}, ${secondBatchBookmarkId})
+    order by id;
+  `)
+  assert.deepEqual(batchedBookmarks.rows, [
+    {
+      id: firstBatchBookmarkId,
+      metadata_status: "enriched",
+      title: "Batch title 1",
+    },
+    {
+      id: secondBatchBookmarkId,
+      metadata_status: "enriched",
+      title: "Batch title 2",
+    },
+  ])
+
+  const rejectedBatchBookmarkId = await createBookmark(
+    USER_ONE,
+    "dddddddd-dddd-4ddd-8ddd-dddddddddd13",
+    "batch-rejected"
+  )
+  const acceptedBatchBookmarkId = await createBookmark(
+    USER_ONE,
+    "dddddddd-dddd-4ddd-8ddd-dddddddddd14",
+    "batch-accepted"
+  )
+  const rejectedBatchRequest = await readRequest(rejectedBatchBookmarkId)
+  const acceptedBatchRequest = await readRequest(acceptedBatchBookmarkId)
+  const isolatedBatchMessages = [
+    rejectedBatchRequest,
+    acceptedBatchRequest,
+  ].map((request) => ({
+    generation: String(request.generation),
+    message_id: String(request.queue_message_id),
+    request_id: request.id,
+  }))
+  await database.exec("set role service_role;")
+  const isolatedPreparedBatch = await database.query(
+    `select public.worker_prepare_enrichment_batch(
+      '${INTERACTIVE_QUEUE}',
+      $1::jsonb,
+      60
+    ) as prepared;`,
+    [JSON.stringify(isolatedBatchMessages)]
+  )
+  const isolatedResults = isolatedPreparedBatch.rows[0].prepared.map(
+    (prepared, index) => ({
+      generation: isolatedBatchMessages[index].generation,
+      lease_token: prepared.lease_token,
+      message_id: prepared.message_id,
+      request_id: isolatedBatchMessages[index].request_id,
+      result_domain: "example.com",
+      result_failure_class: null,
+      result_favicon_asset_id: null,
+      result_internal_error: null,
+      result_og_image_asset_id: null,
+      result_public_error_code: null,
+      result_title: index === 0 ? "" : "Isolated success",
+      retry_at: null,
+      succeeded: true,
+    })
+  )
+  const isolatedFinishedBatch = await database.query(
+    `select public.worker_finish_enrichment_batch(
+      '${INTERACTIVE_QUEUE}',
+      $1::jsonb
+    ) as finished;`,
+    [JSON.stringify(isolatedResults)]
+  )
+  assert.deepEqual(isolatedFinishedBatch.rows[0].finished, [
+    {
+      finish_state: "rejected",
+      message_id: String(rejectedBatchRequest.queue_message_id),
+      terminal_delete_outcome: null,
+    },
+    {
+      finish_state: "completed",
+      message_id: String(acceptedBatchRequest.queue_message_id),
+      terminal_delete_outcome: "deleted",
+    },
+  ])
+  await database.exec("reset role;")
+  const isolatedRequestStates = await database.query(`
+    select id, state
+    from private.enrichment_requests
+    where id in (
+      '${rejectedBatchRequest.id}',
+      '${acceptedBatchRequest.id}'
+    )
+    order by id;
+  `)
+  assert.deepEqual(
+    new Map(isolatedRequestStates.rows.map((row) => [row.id, row.state])),
+    new Map([
+      [rejectedBatchRequest.id, "running"],
+      [acceptedBatchRequest.id, "completed"],
+    ])
+  )
+
   const bookmarkId = await createBookmark(
     USER_ONE,
     "10000000-0000-4000-8000-000000000001",
@@ -832,6 +1045,8 @@ try {
         'worker_mark_bookmark_asset_ready',
         'worker_read_enrichment_bookmark_id',
         'worker_finish_enrichment_message',
+        'worker_prepare_enrichment_batch',
+        'worker_finish_enrichment_batch',
         'worker_claim_bookmark_asset_cleanup',
         'worker_finish_bookmark_asset_cleanup'
       )
@@ -854,11 +1069,19 @@ try {
     },
     {
       grantee: "service_role",
+      routine_name: "worker_finish_enrichment_batch",
+    },
+    {
+      grantee: "service_role",
       routine_name: "worker_finish_enrichment_message",
     },
     {
       grantee: "service_role",
       routine_name: "worker_mark_bookmark_asset_ready",
+    },
+    {
+      grantee: "service_role",
+      routine_name: "worker_prepare_enrichment_batch",
     },
     {
       grantee: "service_role",
@@ -872,7 +1095,7 @@ try {
 
   console.log(
     JSON.stringify({
-      assetFunctions: 7,
+      assetFunctions: 9,
       checks: "passed",
       cleanupAttempts: 2,
       signingRows: faviconPaths.rows.length,

@@ -6,6 +6,7 @@ import { DURABLE_QUEUE_NAMES } from "../../../src/lib/durable-worker/durable-wor
 import type { Database } from "../../../src/types/database.generated"
 import {
   createSupabaseBookmarkAssetRegistry,
+  createSupabaseEnrichmentBatchAdapter,
   createSupabaseEnrichmentWorkSource,
   finishSupabaseEnrichmentClaim,
 } from "./supabase-enrichment-adapter"
@@ -23,6 +24,13 @@ const ENVELOPE = {
   workKind: "enrichment",
 } as const
 const LEASE_TOKEN = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+const MESSAGE = {
+  deliveryCount: 1,
+  enqueuedAtMs: 0,
+  envelope: {},
+  messageId: "9007199254740993",
+  visibleAtMs: 0,
+}
 
 const createClient = (
   rpc: Mock<RpcMock>,
@@ -48,6 +56,114 @@ const createClient = (
   }) as unknown as SupabaseClient<Database>
 
 describe("Supabase enrichment adapters", () => {
+  it("prepares a checked enrichment window in one RPC", async () => {
+    const rpc = vi.fn<RpcMock>().mockResolvedValue({
+      data: [
+        {
+          attempt_count: 1,
+          fallback_title: "Fallback",
+          lease_token: LEASE_TOKEN,
+          max_attempts: 3,
+          message_id: MESSAGE.messageId,
+          status: "claimed",
+          url: "https://example.com",
+        },
+      ],
+      error: null,
+    })
+    const adapter = createSupabaseEnrichmentBatchAdapter(createClient(rpc))
+
+    await expect(
+      adapter.prepare(
+        DURABLE_QUEUE_NAMES.interactiveEnrichment,
+        [{ envelope: ENVELOPE, message: MESSAGE }],
+        60
+      )
+    ).resolves.toEqual([
+      {
+        attemptCount: 1,
+        leaseToken: LEASE_TOKEN,
+        maxAttempts: 3,
+        messageId: MESSAGE.messageId,
+        preparedInput: {
+          fallbackTitle: "Fallback",
+          url: "https://example.com",
+        },
+        status: "claimed",
+      },
+    ])
+    expect(rpc).toHaveBeenCalledWith("worker_prepare_enrichment_batch", {
+      lease_seconds: 60,
+      target_messages: [
+        {
+          generation: "3",
+          message_id: MESSAGE.messageId,
+          request_id: ENVELOPE.requestId,
+        },
+      ],
+      target_queue_name: DURABLE_QUEUE_NAMES.interactiveEnrichment,
+    })
+  })
+
+  it("commits a progressive result batch with terminal deletion", async () => {
+    const rpc = vi.fn<RpcMock>().mockResolvedValue({
+      data: [
+        {
+          finish_state: "completed",
+          message_id: MESSAGE.messageId,
+          terminal_delete_outcome: "deleted",
+        },
+      ],
+      error: null,
+    })
+    const adapter = createSupabaseEnrichmentBatchAdapter(createClient(rpc))
+    const claim: ClaimedDurableWork = {
+      attemptCount: 1,
+      envelope: ENVELOPE,
+      leaseToken: LEASE_TOKEN,
+      maxAttempts: 3,
+      message: MESSAGE,
+      queueName: DURABLE_QUEUE_NAMES.bulkEnrichment,
+    }
+
+    await expect(
+      adapter.finish([
+        {
+          claim,
+          outcome: {
+            result: {
+              domain: "example.com",
+              faviconAssetId: null,
+              ogImageAssetId: null,
+              title: "Title",
+            },
+            status: "succeeded",
+          },
+          retryAtMs: null,
+        },
+      ])
+    ).resolves.toEqual([
+      {
+        finishState: "completed",
+        messageId: MESSAGE.messageId,
+        terminalDeleteOutcome: "deleted",
+      },
+    ])
+    expect(rpc).toHaveBeenCalledWith(
+      "worker_finish_enrichment_batch",
+      expect.objectContaining({
+        target_queue_name: DURABLE_QUEUE_NAMES.bulkEnrichment,
+        target_results: [
+          expect.objectContaining({
+            message_id: MESSAGE.messageId,
+            result_title: "Title",
+            succeeded: true,
+          }),
+        ],
+      })
+    )
+  })
+
   it("reads the bookmark only after the database accepts the active lease", async () => {
     const rpc = vi.fn<RpcMock>().mockResolvedValue({ data: "42", error: null })
     const client = createClient(rpc, {

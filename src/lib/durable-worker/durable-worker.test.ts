@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { runDurableWorker } from "./durable-worker"
 import { createDurableRetryPolicy } from "./durable-worker-retry"
 import {
   DURABLE_QUEUE_NAMES,
+  type DurableWorkerBatchAdapter,
   type DurableQueueMessage,
   type DurableWorkerAdapter,
   type DurableWorkerRequest,
@@ -77,14 +78,14 @@ describe("durable worker", () => {
       completionMs: 5,
       completed: 1,
       deferred: 0,
+      enqueueAgeP50Ms: 1_000,
+      enqueueAgeP95Ms: 1_000,
+      enqueueAgeP99Ms: 1_000,
       failed: 0,
       fetchMs: 7,
       leaseLost: 0,
       poisonDeleted: 0,
       queueReadMs: 5,
-      queueWaitP50Ms: 1_000,
-      queueWaitP95Ms: 1_000,
-      queueWaitP99Ms: 1_000,
       read: 1,
       retried: 0,
       terminalAlreadyDeleted: 0,
@@ -179,7 +180,7 @@ describe("durable worker", () => {
     expect(messagePresent).toBe(false)
   })
 
-  it("reports queue-wait percentiles for the messages it reads", async () => {
+  it("reports enqueue-age percentiles for the messages it reads", async () => {
     const waits = [10, 20, 30, 40]
     const adapter = createInMemoryDurableWorkerAdapter(
       waits.map((wait, index) =>
@@ -206,9 +207,184 @@ describe("durable worker", () => {
       retryPolicy,
     })
 
-    expect(summary.queueWaitP50Ms).toBe(20)
-    expect(summary.queueWaitP95Ms).toBe(40)
-    expect(summary.queueWaitP99Ms).toBe(40)
+    expect(summary.enqueueAgeP50Ms).toBe(20)
+    expect(summary.enqueueAgeP95Ms).toBe(40)
+    expect(summary.enqueueAgeP99Ms).toBe(40)
+  })
+
+  it("prepares and commits one active batch window at a time", async () => {
+    const adapter = createInMemoryDurableWorkerAdapter(
+      Array.from({ length: 4 }, (_, index) =>
+        createSeed<string>({
+          envelope: {
+            generation: "1",
+            requestId: `aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa${index}`,
+            version: 1,
+            workKind: "enrichment",
+          },
+          messageId: String(index + 1),
+        })
+      ),
+      { now: () => NOW }
+    )
+    const events: string[] = []
+    const batchAdapter: DurableWorkerBatchAdapter<string, string> = {
+      finish: async (inputs) => {
+        events.push(`finish:${inputs.length}`)
+        return Promise.all(
+          inputs.map(async (input) => {
+            const finishState = await adapter.finish(
+              input.claim,
+              input.outcome,
+              input.retryAtMs
+            )
+            const terminalDeleteOutcome =
+              finishState === "queued" || finishState === "rejected"
+                ? null
+                : await adapter.deleteTerminal(
+                    input.claim.queueName,
+                    input.claim.message.messageId
+                  )
+            return {
+              finishState,
+              messageId: input.claim.message.messageId,
+              terminalDeleteOutcome,
+            }
+          })
+        )
+      },
+      prepare: async (preparedQueueName, inputs, leaseSeconds) => {
+        events.push(`prepare:${inputs.length}`)
+        return Promise.all(
+          inputs.map(async ({ envelope, message }) => {
+            const claim = await adapter.claim(
+              preparedQueueName,
+              message,
+              envelope,
+              leaseSeconds
+            )
+            if (claim.status !== "claimed") {
+              return { messageId: message.messageId, status: claim.status }
+            }
+            const claimedWork = {
+              attemptCount: claim.attemptCount,
+              envelope,
+              leaseToken: claim.leaseToken,
+              maxAttempts: claim.maxAttempts,
+              message,
+              queueName: preparedQueueName,
+            }
+            expect(await adapter.startAttempt(claimedWork)).toBe(true)
+            return {
+              ...claim,
+              attemptCount: claim.attemptCount + 1,
+              messageId: message.messageId,
+              preparedInput: `input-${message.messageId}`,
+            }
+          })
+        )
+      },
+    }
+
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout")
+    const summary = await runDurableWorker(request, {
+      adapter,
+      batchAdapter,
+      handler: {
+        run: async (_envelope, { preparedInput }) => ({
+          result: preparedInput ?? "missing",
+          status: "succeeded",
+        }),
+      },
+      now: () => NOW,
+      retryPolicy,
+    })
+
+    expect(events).toEqual(["prepare:2", "finish:2", "prepare:2", "finish:2"])
+    expect(summary).toMatchObject({
+      claimed: 4,
+      completed: 4,
+      read: 4,
+      terminalDeleted: 4,
+    })
+    expect(setTimeoutSpy).not.toHaveBeenCalledWith(expect.any(Function), 20)
+    setTimeoutSpy.mockRestore()
+    expect(adapter.getWork("1")?.result).toBe("input-1")
+    expect(adapter.getWork("4")?.result).toBe("input-4")
+  })
+
+  it("commits fast results without waiting for a slow peer", async () => {
+    const messages: DurableQueueMessage[] = [1, 2].map((messageNumber) => ({
+      deliveryCount: 1,
+      enqueuedAtMs: NOW - 100,
+      envelope: {
+        generation: "1",
+        request_id: `aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa${messageNumber}`,
+        version: 1,
+        work_kind: "enrichment",
+      },
+      messageId: String(messageNumber),
+      visibleAtMs: NOW + 90_000,
+    }))
+    const adapter: DurableWorkerAdapter<string> = {
+      claim: async () => {
+        throw new Error("The batch path must prepare claims.")
+      },
+      deleteTerminal: async () => "deleted",
+      finish: async () => {
+        throw new Error("The batch path must finish claims.")
+      },
+      read: async () => messages,
+      rejectPoison: async () => true,
+      renew: async () => true,
+      startAttempt: async () => {
+        throw new Error("The batch path starts attempts during preparation.")
+      },
+    }
+    let releaseSlow: (() => void) | undefined
+    const slowResult = new Promise<void>((resolve) => {
+      releaseSlow = resolve
+    })
+    const finishBatches: string[][] = []
+    const batchAdapter: DurableWorkerBatchAdapter<string, string> = {
+      finish: async (inputs) => {
+        finishBatches.push(inputs.map((input) => input.claim.message.messageId))
+        if (finishBatches.length === 1) releaseSlow?.()
+        return inputs.map((input) => ({
+          finishState: "completed",
+          messageId: input.claim.message.messageId,
+          terminalDeleteOutcome: "deleted",
+        }))
+      },
+      prepare: async (_preparedQueueName, inputs) =>
+        inputs.map(({ message }) => ({
+          attemptCount: 1,
+          leaseToken: `lease-${message.messageId}`,
+          maxAttempts: 3,
+          messageId: message.messageId,
+          preparedInput: message.messageId,
+          status: "claimed",
+        })),
+    }
+
+    const summary = await runDurableWorker(
+      { ...request, batchSize: 2, concurrency: 2 },
+      {
+        adapter,
+        batchAdapter,
+        handler: {
+          run: async (_envelope, { preparedInput }) => {
+            if (preparedInput === "1") await slowResult
+            return { result: preparedInput ?? "missing", status: "succeeded" }
+          },
+        },
+        now: () => NOW,
+        retryPolicy,
+      }
+    )
+
+    expect(finishBatches).toEqual([["2"], ["1"]])
+    expect(summary).toMatchObject({ completed: 2, terminalDeleted: 2 })
   })
 
   it("keeps the same message for a bounded transient retry", async () => {

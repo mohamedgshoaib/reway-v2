@@ -9,7 +9,10 @@ import {
   type PinnedHttpFetcher,
 } from "../network-safety/pinned-http-fetch"
 import type { BookmarkAssetProcessor } from "./bookmark-asset-processor"
-import { createEnrichmentHandler } from "./enrichment-handler"
+import {
+  createEnrichmentHandler,
+  type EnrichmentWorkSource,
+} from "./enrichment-handler"
 
 const ENVELOPE = {
   generation: "3",
@@ -188,6 +191,36 @@ describe("enrichment handler", () => {
       status: "permanent_failure",
     })
     expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it("uses prepared input without another database read", async () => {
+    const read = vi.fn<EnrichmentWorkSource["read"]>(async () => null)
+    const handler = createEnrichmentHandler({
+      assets: { process: vi.fn<BookmarkAssetProcessor["process"]>() },
+      createAssetId: () => crypto.randomUUID(),
+      fetcher: {
+        fetch: async ({ url }) => ({
+          body: new TextEncoder().encode("<title>Prepared title</title>"),
+          contentType: "text/html",
+          finalUrl: url,
+        }),
+      },
+      source: { read },
+    })
+
+    await expect(
+      handler.run(ENVELOPE, {
+        ...OPTIONS,
+        preparedInput: {
+          fallbackTitle: "Prepared fallback",
+          url: "https://prepared.example",
+        },
+      })
+    ).resolves.toMatchObject({
+      result: { domain: "prepared.example", title: "Prepared title" },
+      status: "succeeded",
+    })
+    expect(read).not.toHaveBeenCalled()
   })
 
   it.each([

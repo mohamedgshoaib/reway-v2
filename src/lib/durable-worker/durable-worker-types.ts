@@ -50,6 +50,17 @@ export type DurableClaimResult =
     }
   | { status: DurableClaimStatus }
 
+export type DurableBatchPrepareResult<PreparedInput> =
+  | {
+      attemptCount: number
+      leaseToken: string
+      maxAttempts: number
+      messageId: string
+      preparedInput: PreparedInput
+      status: "claimed"
+    }
+  | { messageId: string; status: DurableClaimStatus }
+
 export interface ClaimedDurableWork {
   attemptCount: number
   envelope: DurableEnvelope
@@ -129,15 +140,42 @@ export interface DurableWorkerAdapter<Result> {
   startAttempt(claim: ClaimedDurableWork): Promise<boolean>
 }
 
-export interface DurableWorkerHandler<Result> {
+export interface DurableWorkerHandler<Result, PreparedInput = never> {
   run(
     envelope: DurableEnvelope,
     options: {
       attemptNumber: number
       leaseToken: string
+      preparedInput?: PreparedInput
       signal: AbortSignal
     }
   ): Promise<DurableWorkOutcome<Result>>
+}
+
+export interface DurableBatchFinishInput<Result> {
+  readonly claim: ClaimedDurableWork
+  readonly outcome: DurableWorkOutcome<Result>
+  readonly retryAtMs: number | null
+}
+
+export interface DurableBatchFinishResult {
+  readonly finishState: DurableFinishState
+  readonly messageId: string
+  readonly terminalDeleteOutcome: TerminalMessageDeleteOutcome | null
+}
+
+export interface DurableWorkerBatchAdapter<Result, PreparedInput> {
+  finish(
+    inputs: readonly DurableBatchFinishInput<Result>[]
+  ): Promise<readonly DurableBatchFinishResult[]>
+  prepare(
+    queueName: DurableQueueName,
+    inputs: readonly {
+      envelope: DurableEnvelope
+      message: DurableQueueMessage
+    }[],
+    leaseSeconds: number
+  ): Promise<readonly DurableBatchPrepareResult<PreparedInput>[]>
 }
 
 export interface DurableRetryInput {
@@ -168,14 +206,14 @@ export interface DurableWorkerSummary {
   completionMs: number
   completed: number
   deferred: number
+  enqueueAgeP50Ms: number
+  enqueueAgeP95Ms: number
+  enqueueAgeP99Ms: number
   failed: number
   fetchMs: number
   leaseLost: number
   poisonDeleted: number
   queueReadMs: number
-  queueWaitP50Ms: number
-  queueWaitP95Ms: number
-  queueWaitP99Ms: number
   read: number
   retried: number
   terminalAlreadyDeleted: number
@@ -184,9 +222,10 @@ export interface DurableWorkerSummary {
   workerRunMs: number
 }
 
-export interface DurableWorkerDependencies<Result> {
+export interface DurableWorkerDependencies<Result, PreparedInput = never> {
   adapter: DurableWorkerAdapter<Result>
-  handler: DurableWorkerHandler<Result>
+  batchAdapter?: DurableWorkerBatchAdapter<Result, PreparedInput>
+  handler: DurableWorkerHandler<Result, PreparedInput>
   monotonicNow?: () => number
   now?: () => number
   retryPolicy: DurableRetryPolicy

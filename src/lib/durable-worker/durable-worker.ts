@@ -4,8 +4,13 @@ import {
 } from "./durable-worker-envelope.ts"
 import type {
   ClaimedDurableWork,
+  DurableBatchFinishInput,
+  DurableBatchPrepareResult,
   DurableClaimResult,
+  DurableEnvelope,
+  DurableFinishState,
   DurableQueueMessage,
+  TerminalMessageDeleteOutcome,
   DurableWorkOutcome,
   DurableWorkerDependencies,
   DurableWorkerRequest,
@@ -17,6 +22,7 @@ const MAX_CONCURRENCY = 20
 const MAX_LEASE_SECONDS = 600
 const MAX_VISIBILITY_SECONDS = 900
 const MAX_HEARTBEAT_INTERVAL_MS = 300_000
+const BATCH_RESULT_LINGER_MS = 20
 
 const createSummary = (): DurableWorkerSummary => ({
   assetProcessingMs: 0,
@@ -25,14 +31,14 @@ const createSummary = (): DurableWorkerSummary => ({
   completionMs: 0,
   completed: 0,
   deferred: 0,
+  enqueueAgeP50Ms: 0,
+  enqueueAgeP95Ms: 0,
+  enqueueAgeP99Ms: 0,
   failed: 0,
   fetchMs: 0,
   leaseLost: 0,
   poisonDeleted: 0,
   queueReadMs: 0,
-  queueWaitP50Ms: 0,
-  queueWaitP95Ms: 0,
-  queueWaitP99Ms: 0,
   read: 0,
   retried: 0,
   terminalAlreadyDeleted: 0,
@@ -59,10 +65,10 @@ const measure = async <Result>(
   }
 }
 
-const recordTerminalDeletion = async <Result>(
+const recordTerminalDeletion = async <Result, PreparedInput = never>(
   queueName: DurableWorkerRequest["queueName"],
   messageId: string,
-  dependencies: DurableWorkerDependencies<Result>,
+  dependencies: DurableWorkerDependencies<Result, PreparedInput>,
   summary: DurableWorkerSummary,
   monotonicNow: () => number
 ): Promise<void> => {
@@ -130,10 +136,11 @@ const validateRequest = (request: DurableWorkerRequest): void => {
   }
 }
 
-const runWithHeartbeat = async <Result>(
+const runWithHeartbeat = async <Result, PreparedInput = never>(
   claim: ClaimedDurableWork,
   request: DurableWorkerRequest,
-  dependencies: DurableWorkerDependencies<Result>
+  dependencies: DurableWorkerDependencies<Result, PreparedInput>,
+  preparedInput?: PreparedInput
 ): Promise<{ leaseLost: boolean; outcome?: DurableWorkOutcome<Result> }> => {
   const workController = new AbortController()
   const heartbeatController = new AbortController()
@@ -181,6 +188,7 @@ const runWithHeartbeat = async <Result>(
     const outcome = await dependencies.handler.run(claim.envelope, {
       attemptNumber: claim.attemptCount,
       leaseToken: claim.leaseToken,
+      preparedInput,
       signal: workController.signal,
     })
     return leaseLost ? { leaseLost: true } : { leaseLost: false, outcome }
@@ -190,10 +198,10 @@ const runWithHeartbeat = async <Result>(
   }
 }
 
-const processMessage = async <Result>(
+const processMessage = async <Result, PreparedInput = never>(
   message: DurableQueueMessage,
   request: DurableWorkerRequest,
-  dependencies: DurableWorkerDependencies<Result>,
+  dependencies: DurableWorkerDependencies<Result, PreparedInput>,
   summary: DurableWorkerSummary,
   monotonicNow: () => number
 ): Promise<void> => {
@@ -333,9 +341,239 @@ const processMessage = async <Result>(
   )
 }
 
-export const runDurableWorker = async <Result>(
+interface ParsedQueueMessage {
+  envelope: DurableEnvelope
+  message: DurableQueueMessage
+}
+
+const applyBatchFinishResult = (
+  result: {
+    finishState: DurableFinishState
+    terminalDeleteOutcome: TerminalMessageDeleteOutcome | null
+  },
+  summary: DurableWorkerSummary
+): void => {
+  if (result.finishState === "queued") {
+    if (result.terminalDeleteOutcome !== null) {
+      throw new Error("Durable worker batch adapter returned an invalid retry.")
+    }
+    summary.retried += 1
+    return
+  }
+  if (result.finishState === "rejected") {
+    if (result.terminalDeleteOutcome !== null) {
+      throw new Error(
+        "Durable worker batch adapter returned an invalid rejection."
+      )
+    }
+    summary.leaseLost += 1
+    return
+  }
+  if (result.terminalDeleteOutcome === null) {
+    throw new Error("Durable worker batch adapter omitted terminal deletion.")
+  }
+  if (result.finishState === "completed") {
+    summary.completed += 1
+  } else {
+    summary.failed += 1
+  }
+  if (result.terminalDeleteOutcome === "deleted") {
+    summary.terminalDeleted += 1
+  } else {
+    summary.terminalAlreadyDeleted += 1
+  }
+}
+
+const processBatchWindow = async <Result, PreparedInput>(
+  inputs: readonly ParsedQueueMessage[],
   request: DurableWorkerRequest,
-  dependencies: DurableWorkerDependencies<Result>
+  dependencies: DurableWorkerDependencies<Result, PreparedInput>,
+  summary: DurableWorkerSummary,
+  monotonicNow: () => number
+): Promise<void> => {
+  const batchAdapter = dependencies.batchAdapter
+  if (!batchAdapter) {
+    throw new Error("Durable worker batch adapter is missing.")
+  }
+  const prepared = await measure(
+    monotonicNow,
+    (durationMs) => {
+      summary.claimMs += durationMs
+    },
+    () => batchAdapter.prepare(request.queueName, inputs, request.leaseSeconds)
+  )
+  if (prepared.length !== inputs.length) {
+    throw new Error("Durable worker batch adapter returned the wrong count.")
+  }
+
+  const preparedByMessageId = new Map<
+    string,
+    DurableBatchPrepareResult<PreparedInput>
+  >()
+  for (const result of prepared) {
+    if (preparedByMessageId.has(result.messageId)) {
+      throw new Error("Durable worker batch adapter repeated a message.")
+    }
+    preparedByMessageId.set(result.messageId, result)
+  }
+
+  const claimed: {
+    claim: ClaimedDurableWork
+    preparedInput: PreparedInput
+  }[] = []
+  for (const input of inputs) {
+    const result = preparedByMessageId.get(input.message.messageId)
+    if (!result) {
+      throw new Error("Durable worker batch adapter omitted a message.")
+    }
+    if (result.status === "missing" || result.status === "stale_message") {
+      const deleted = await dependencies.adapter.rejectPoison(
+        request.queueName,
+        input.message,
+        result.status === "missing" ? "missing_request" : "stale_message"
+      )
+      if (deleted) summary.poisonDeleted += 1
+      continue
+    }
+    if (result.status === "terminal") {
+      await recordTerminalDeletion(
+        request.queueName,
+        input.message.messageId,
+        dependencies,
+        summary,
+        monotonicNow
+      )
+      continue
+    }
+    if (result.status !== "claimed") {
+      summary.deferred += 1
+      continue
+    }
+    summary.claimed += 1
+    claimed.push({
+      claim: {
+        attemptCount: result.attemptCount,
+        envelope: input.envelope,
+        leaseToken: result.leaseToken,
+        maxAttempts: result.maxAttempts,
+        message: input.message,
+        queueName: request.queueName,
+      },
+      preparedInput: result.preparedInput,
+    })
+  }
+
+  const finishQueue: DurableBatchFinishInput<Result>[] = []
+  let settledHandlerCount = 0
+  let resolveNextCompletion: (() => void) | null = null
+  const handlerPromises = claimed.map(
+    async ({ claim, preparedInput }): Promise<void> => {
+      try {
+        let runResult: {
+          leaseLost: boolean
+          outcome?: DurableWorkOutcome<Result>
+        }
+        try {
+          runResult = await runWithHeartbeat(
+            claim,
+            request,
+            dependencies,
+            preparedInput
+          )
+        } catch {
+          runResult = {
+            leaseLost: false,
+            outcome: {
+              code: "worker_exception",
+              status: "transient_failure",
+            },
+          }
+        }
+        if (runResult.leaseLost || runResult.outcome === undefined) {
+          summary.leaseLost += 1
+          return
+        }
+        const outcome = runResult.outcome
+        if (outcome.stageTimings) {
+          summary.assetProcessingMs += outcome.stageTimings.assetProcessingMs
+          summary.fetchMs += outcome.stageTimings.fetchMs
+        }
+        const retryAtMs =
+          outcome.status === "transient_failure"
+            ? dependencies.retryPolicy.getRetryAt({
+                attemptCount: claim.attemptCount,
+                maxAttempts: claim.maxAttempts,
+                nowMs: (dependencies.now ?? Date.now)(),
+                requestKey: getDurableEnvelopeKey(claim.envelope),
+                retryAfterMs: outcome.retryAfterMs,
+              })
+            : null
+        finishQueue.push({
+          claim,
+          outcome,
+          retryAtMs,
+        })
+      } finally {
+        settledHandlerCount += 1
+        resolveNextCompletion?.()
+      }
+    }
+  )
+
+  let finishError: unknown
+  try {
+    while (settledHandlerCount < claimed.length || finishQueue.length > 0) {
+      if (finishQueue.length === 0) {
+        await new Promise<void>((resolve) => {
+          resolveNextCompletion = resolve
+        })
+        resolveNextCompletion = null
+      }
+      if (finishQueue.length === 0) continue
+      if (settledHandlerCount < claimed.length) {
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, BATCH_RESULT_LINGER_MS)
+        })
+      }
+      const finishInputs = finishQueue.splice(0, request.concurrency)
+      const finished = await measure(
+        monotonicNow,
+        (durationMs) => {
+          summary.completionMs += durationMs
+        },
+        () => batchAdapter.finish(finishInputs)
+      )
+      if (finished.length !== finishInputs.length) {
+        throw new Error(
+          "Durable worker batch adapter returned the wrong count."
+        )
+      }
+      const finishedByMessageId = new Map(
+        finished.map((result) => [result.messageId, result] as const)
+      )
+      if (finishedByMessageId.size !== finished.length) {
+        throw new Error("Durable worker batch adapter repeated a message.")
+      }
+      for (const input of finishInputs) {
+        const result = finishedByMessageId.get(input.claim.message.messageId)
+        if (!result) {
+          throw new Error("Durable worker batch adapter omitted a message.")
+        }
+        applyBatchFinishResult(result, summary)
+      }
+    }
+  } catch (error) {
+    finishError = error
+  }
+  await Promise.all(handlerPromises)
+  if (finishError !== undefined) {
+    throw finishError
+  }
+}
+
+export const runDurableWorker = async <Result, PreparedInput = never>(
+  request: DurableWorkerRequest,
+  dependencies: DurableWorkerDependencies<Result, PreparedInput>
 ): Promise<DurableWorkerSummary> => {
   const monotonicNow = dependencies.monotonicNow ?? defaultMonotonicNow
   const workerStartedAt = monotonicNow()
@@ -358,29 +596,59 @@ export const runDurableWorker = async <Result>(
   }
   summary.read = messages.length
   const readAtMs = (dependencies.now ?? Date.now)()
-  const queueWaitSamples = messages.map((message) =>
+  const enqueueAgeSamples = messages.map((message) =>
     Math.max(0, readAtMs - message.enqueuedAtMs)
   )
-  summary.queueWaitP50Ms = percentile(queueWaitSamples, 0.5)
-  summary.queueWaitP95Ms = percentile(queueWaitSamples, 0.95)
-  summary.queueWaitP99Ms = percentile(queueWaitSamples, 0.99)
+  summary.enqueueAgeP50Ms = percentile(enqueueAgeSamples, 0.5)
+  summary.enqueueAgeP95Ms = percentile(enqueueAgeSamples, 0.95)
+  summary.enqueueAgeP99Ms = percentile(enqueueAgeSamples, 0.99)
 
-  let nextMessageIndex = 0
-  const workerCount = Math.min(request.concurrency, messages.length)
-  const workers = Array.from({ length: workerCount }, async () => {
-    while (nextMessageIndex < messages.length) {
-      const message = messages[nextMessageIndex]
-      nextMessageIndex += 1
-      await processMessage(
-        message,
+  if (dependencies.batchAdapter) {
+    const parsedMessages: ParsedQueueMessage[] = []
+    for (const message of messages) {
+      const parsed = parseDurableEnvelope(message.envelope, request.queueName)
+      if (!parsed.ok) {
+        const deleted = await dependencies.adapter.rejectPoison(
+          request.queueName,
+          message,
+          parsed.reason
+        )
+        if (deleted) summary.poisonDeleted += 1
+        continue
+      }
+      parsedMessages.push({ envelope: parsed.envelope, message })
+    }
+    for (
+      let start = 0;
+      start < parsedMessages.length;
+      start += request.concurrency
+    ) {
+      await processBatchWindow(
+        parsedMessages.slice(start, start + request.concurrency),
         request,
         dependencies,
         summary,
         monotonicNow
       )
     }
-  })
-  await Promise.all(workers)
+  } else {
+    let nextMessageIndex = 0
+    const workerCount = Math.min(request.concurrency, messages.length)
+    const workers = Array.from({ length: workerCount }, async () => {
+      while (nextMessageIndex < messages.length) {
+        const message = messages[nextMessageIndex]
+        nextMessageIndex += 1
+        await processMessage(
+          message,
+          request,
+          dependencies,
+          summary,
+          monotonicNow
+        )
+      }
+    })
+    await Promise.all(workers)
+  }
   summary.workerRunMs = elapsedMilliseconds(workerStartedAt, monotonicNow)
 
   return summary

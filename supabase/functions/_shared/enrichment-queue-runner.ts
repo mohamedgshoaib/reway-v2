@@ -24,6 +24,7 @@ import type { Database } from "../../../src/types/database.generated.ts"
 import { createPhotonImageRasterizer } from "./photon-image-rasterizer.ts"
 import {
   createSupabaseBookmarkAssetRegistry,
+  createSupabaseEnrichmentBatchAdapter,
   createSupabaseEnrichmentWorkSource,
   finishSupabaseEnrichmentClaim,
 } from "./supabase-enrichment-adapter.ts"
@@ -78,6 +79,7 @@ export const createEnrichmentQueueRunner = (
       },
       {
         adapter,
+        batchAdapter: createSupabaseEnrichmentBatchAdapter(client),
         handler,
         retryPolicy: createDurableRetryPolicy({
           baseDelayMs: 5_000,

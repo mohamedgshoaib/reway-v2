@@ -646,6 +646,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      worker_finish_enrichment_batch: {
+        Args: { target_queue_name: string; target_results: Json }
+        Returns: Json
+      }
       worker_finish_enrichment_message: {
         Args: {
           result_domain?: string
@@ -695,6 +699,14 @@ export type Database = {
         Returns: boolean
       }
       worker_operator_snapshot: { Args: never; Returns: Json }
+      worker_prepare_enrichment_batch: {
+        Args: {
+          lease_seconds: number
+          target_messages: Json
+          target_queue_name: string
+        }
+        Returns: Json
+      }
       worker_read_enrichment_bookmark_id: {
         Args: {
           target_generation: string
